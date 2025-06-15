@@ -10,6 +10,7 @@ import DeviceDiscovery from "./device-discovery";
 import CoverageAnalysis from "./coverage-analysis";
 import MLAnalyticsPanel from "./ml-analytics-panel";
 import RoomManagementPanel from "./room-management-panel";
+import WiFiConnectionCheck from "./wifi-connection-check";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { Brain, Home, Zap, TrendingUp, Activity, AlertTriangle, Pen, Wifi, MapPin } from "lucide-react";
@@ -180,6 +181,16 @@ export default function Sidebar({
                 </div>
               </CardContent>
             </Card>
+
+            {/* WiFi Connection Status & Start Button */}
+            <WiFiConnectionCheck
+              devices={devices}
+              onStartMapping={() => {
+                console.log("Starting smart home mapping...");
+                // Switch to mapping tab when starting
+                onTabChange("mapping");
+              }}
+            />
 
             {/* Device Discovery */}
             <DeviceDiscovery />

@@ -7,6 +7,7 @@ import RecommendationPanel from "@/components/recommendation-panel";
 import { RoomHeatmap } from "@/components/room-heatmap";
 import { LiveAlertsFeed } from "@/components/live-alerts-feed";
 import SignalHeatmap from "@/components/signal-heatmap";
+import WiFiConnectionCheck from "@/components/wifi-connection-check";
 import { ErrorBoundary, NetworkErrorFallback } from "@/components/error-boundary";
 import { LoadingSpinner, AnalyticsLoadingState } from "@/components/loading-states";
 import { MobileNav, MobileBottomNav } from "@/components/mobile-nav";

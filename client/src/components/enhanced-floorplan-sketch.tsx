@@ -72,12 +72,18 @@ export default function EnhancedFloorplanSketch({ onSave, onLoad, initialElement
       const ctx = canvas.getContext('2d');
       if (ctx) {
         // Flash a green border briefly to indicate save
+        const originalStrokeStyle = ctx.strokeStyle;
+        const originalLineWidth = ctx.lineWidth;
+        
         ctx.strokeStyle = '#10b981';
         ctx.lineWidth = 4;
-        ctx.strokeRect(0, 0, canvas.width, canvas.height);
+        ctx.strokeRect(2, 2, canvas.width - 4, canvas.height - 4);
+        
         setTimeout(() => {
-          // Redraw canvas after save feedback
-        }, 200);
+          // Clear the green border and redraw canvas
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+          // The canvas will be redrawn by the normal drawing cycle
+        }, 300);
       }
     }
   }, [elements, onSave]);
