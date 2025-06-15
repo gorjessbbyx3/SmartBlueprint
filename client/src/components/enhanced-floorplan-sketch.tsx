@@ -61,6 +61,10 @@ export default function EnhancedFloorplanSketch({ onSave, onLoad, initialElement
   const [hasRouterPlaced, setHasRouterPlaced] = useState(false);
   const [hasLocationPlaced, setHasLocationPlaced] = useState(false);
   
+  // Template placement state
+  const [templateToPlace, setTemplateToPlace] = useState<any>(null);
+  const [isPlacingTemplate, setIsPlacingTemplate] = useState(false);
+  
   // History for undo/redo
   const [history, setHistory] = useState<DrawingElement[][]>([[]]);
   const [historyIndex, setHistoryIndex] = useState(0);
@@ -147,6 +151,20 @@ export default function EnhancedFloorplanSketch({ onSave, onLoad, initialElement
     }
   }, [backgroundImage]);
 
+  // Template placement event listener
+  useEffect(() => {
+    const handleTemplatePlace = (event: CustomEvent) => {
+      setTemplateToPlace(event.detail);
+      setIsPlacingTemplate(true);
+      setTool('select'); // Switch to select tool for placement
+    };
+
+    window.addEventListener('placeTemplate', handleTemplatePlace as EventListener);
+    return () => {
+      window.removeEventListener('placeTemplate', handleTemplatePlace as EventListener);
+    };
+  }, []);
+
   // Snap to grid helper
   const snapPoint = useCallback((point: Point): Point => {
     if (!snapToGrid) return point;
@@ -172,9 +190,37 @@ export default function EnhancedFloorplanSketch({ onSave, onLoad, initialElement
 
   // Drawing functions
   const startDrawing = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
-    if (tool === 'select') return;
-    
     const point = getMousePos(e);
+    
+    // Handle template placement
+    if (isPlacingTemplate && templateToPlace) {
+      const newElement: DrawingElement = {
+        id: Date.now().toString(),
+        type: templateToPlace.type,
+        points: [
+          point,
+          { x: point.x + templateToPlace.width, y: point.y + templateToPlace.height }
+        ],
+        style: templateToPlace.style,
+        label: templateToPlace.name
+      };
+
+      const newElements = [...elements, newElement];
+      setElements(newElements);
+      
+      // Add to history
+      const newHistory = history.slice(0, historyIndex + 1);
+      newHistory.push(newElements);
+      setHistory(newHistory);
+      setHistoryIndex(newHistory.length - 1);
+      
+      // Reset template placement state
+      setIsPlacingTemplate(false);
+      setTemplateToPlace(null);
+      return;
+    }
+    
+    if (tool === 'select') return;
     
     // Handle router and location placement as single clicks
     if (tool === 'router' || tool === 'location') {
