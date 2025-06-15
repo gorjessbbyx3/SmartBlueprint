@@ -1,4 +1,4 @@
-# Smart Home Device Mapping Platform
+# SmartBlueprint Pro - Smart Home Device Mapping Platform
 
 ## Overview
 

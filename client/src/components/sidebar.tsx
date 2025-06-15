@@ -83,7 +83,7 @@ export default function Sidebar({
             <i className="fas fa-map-marked-alt text-white text-sm"></i>
           </div>
           <div>
-            <h1 className="text-lg font-semibold text-gray-900">SmartMap Pro</h1>
+            <h1 className="text-lg font-semibold text-gray-900">SmartBlueprint Pro</h1>
             <p className="text-xs text-gray-500">v2.1.3 by GorJess & Co.</p>
           </div>
         </div>

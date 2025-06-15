@@ -19,7 +19,7 @@ export default function TermsOfService() {
         <Card>
           <CardHeader>
             <CardTitle className="text-2xl font-bold">Terms of Service</CardTitle>
-            <p className="text-gray-600">SmartMap Pro by GorJess & Co.</p>
+            <p className="text-gray-600">SmartBlueprint Pro by GorJess & Co.</p>
             <p className="text-sm text-gray-500">Last updated: June 15, 2025</p>
           </CardHeader>
           <CardContent className="prose max-w-none">
@@ -34,7 +34,7 @@ export default function TermsOfService() {
               <section>
                 <h3 className="text-lg font-semibold mb-3">2. Description of Service</h3>
                 <p className="text-gray-700">
-                  SmartMap Pro is a smart home device mapping and network optimization platform that provides real-time visualization of IoT devices, signal strength analysis, and intelligent recommendations for improving network coverage.
+                  SmartBlueprint Pro is a smart home device mapping and network optimization platform that provides real-time visualization of IoT devices, signal strength analysis, and intelligent recommendations for improving network coverage.
                 </p>
               </section>
 

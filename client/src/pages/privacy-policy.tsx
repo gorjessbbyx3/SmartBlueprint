@@ -19,7 +19,7 @@ export default function PrivacyPolicy() {
         <Card>
           <CardHeader>
             <CardTitle className="text-2xl font-bold">Privacy Policy</CardTitle>
-            <p className="text-gray-600">SmartMap Pro by GorJess & Co.</p>
+            <p className="text-gray-600">SmartBlueprint Pro by GorJess & Co.</p>
             <p className="text-sm text-gray-500">Last updated: June 15, 2025</p>
           </CardHeader>
           <CardContent className="prose max-w-none">
@@ -27,7 +27,7 @@ export default function PrivacyPolicy() {
               <section>
                 <h3 className="text-lg font-semibold mb-3">1. Information We Collect</h3>
                 <p className="text-gray-700">
-                  SmartMap Pro collects and processes the following types of information to provide network optimization services:
+                  SmartBlueprint Pro collects and processes the following types of information to provide network optimization services:
                 </p>
                 
                 <h4 className="font-semibold mt-4 mb-2">Device Information</h4>
@@ -152,7 +152,7 @@ export default function PrivacyPolicy() {
               <section>
                 <h3 className="text-lg font-semibold mb-3">9. Children's Privacy</h3>
                 <p className="text-gray-700">
-                  SmartMap Pro is not intended for use by children under 13. We do not knowingly collect personal information from children under 13. If you become aware that a child has provided us with personal information, please contact us.
+                  SmartBlueprint Pro is not intended for use by children under 13. We do not knowingly collect personal information from children under 13. If you become aware that a child has provided us with personal information, please contact us.
                 </p>
               </section>
 
