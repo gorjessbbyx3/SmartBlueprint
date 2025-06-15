@@ -100,6 +100,7 @@ export function NetworkDeviceDiscovery({ onDevicesDiscovered }: NetworkDeviceDis
   const [scanProgress, setScanProgress] = useState(0);
   const [showRoomAssignment, setShowRoomAssignment] = useState(false);
   const [discoveredDevices, setDiscoveredDevices] = useState<Device[]>([]);
+  const [isTestMode, setIsTestMode] = useState(false);
   
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -173,6 +174,78 @@ export function NetworkDeviceDiscovery({ onDevicesDiscovered }: NetworkDeviceDis
     }
   });
 
+  // Test device discovery mutation
+  const testScanMutation = useMutation({
+    mutationFn: async (scanRequest: {
+      userConsent: boolean;
+      scanIntensive: boolean;
+      includeVendorLookup: boolean;
+    }) => {
+      const response = await fetch('/api/network/test-scan', {
+        method: 'POST',
+        body: JSON.stringify(scanRequest),
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Test scan failed: ${response.statusText}`);
+      }
+      
+      return response.json();
+    },
+    onSuccess: (data) => {
+      setScanResult(data.scanResult);
+      setIsTestMode(true);
+      onDevicesDiscovered?.(data.scanResult.devices);
+      
+      // Convert network devices to Device format for room assignment
+      const deviceList: Device[] = data.scanResult.devices.map((device: NetworkDevice, index: number) => ({
+        id: Date.now() + index,
+        name: device.deviceName,
+        macAddress: device.mac,
+        deviceType: device.deviceType,
+        protocol: 'test_scan',
+        rssi: -45,
+        x: null,
+        y: null,
+        isOnline: device.isOnline,
+        lastSeen: device.lastSeen,
+        telemetryData: {
+          ip: device.ip,
+          hostname: device.hostname,
+          vendor: device.vendor,
+          services: device.services,
+          isTestDevice: true
+        }
+      }));
+      
+      setDiscoveredDevices(deviceList);
+      
+      toast({
+        title: "Test Discovery Complete",
+        description: `Simulated ${data.scanResult.devices.length} smart home devices`,
+      });
+      
+      // Refresh devices list
+      queryClient.invalidateQueries({ queryKey: ['/api/devices'] });
+      
+      setIsScanning(false);
+      setScanProgress(100);
+    },
+    onError: (error: any) => {
+      console.error('Test scan failed:', error);
+      toast({
+        title: "Test Scan Failed",
+        description: error.message || "Unable to simulate device discovery",
+        variant: "destructive"
+      });
+      setIsScanning(false);
+      setScanProgress(0);
+    }
+  });
+
   const handleStartScan = async () => {
     if (!userConsent) {
       toast({
@@ -199,6 +272,39 @@ export function NetworkDeviceDiscovery({ onDevicesDiscovered }: NetworkDeviceDis
     }, 500);
 
     networkScanMutation.mutate({
+      userConsent,
+      scanIntensive,
+      includeVendorLookup
+    });
+  };
+
+  const handleTestScan = async () => {
+    if (!userConsent) {
+      toast({
+        title: "Consent Required",
+        description: "Please agree to the privacy terms before starting the test scan",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setIsScanning(true);
+    setScanProgress(0);
+    setScanResult(null);
+    setIsTestMode(false);
+
+    // Simulate progress for better UX
+    const progressInterval = setInterval(() => {
+      setScanProgress(prev => {
+        if (prev >= 90) {
+          clearInterval(progressInterval);
+          return prev;
+        }
+        return prev + 10;
+      });
+    }, 200);
+
+    testScanMutation.mutate({
       userConsent,
       scanIntensive,
       includeVendorLookup
@@ -422,11 +528,29 @@ export function NetworkDeviceDiscovery({ onDevicesDiscovered }: NetworkDeviceDis
               Close
             </Button>
             <Button 
+              onClick={handleTestScan}
+              disabled={!userConsent || isScanning}
+              variant="secondary"
+              className="text-purple-600 border-purple-200 hover:bg-purple-50"
+            >
+              {isScanning && isTestMode ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Testing...
+                </>
+              ) : (
+                <>
+                  <FlaskConical className="h-4 w-4 mr-2" />
+                  Test Discovery
+                </>
+              )}
+            </Button>
+            <Button 
               onClick={handleStartScan} 
               disabled={!userConsent || isScanning}
               className="bg-blue-600 hover:bg-blue-700"
             >
-              {isScanning ? (
+              {isScanning && !isTestMode ? (
                 <>
                   <Search className="h-4 w-4 mr-2 animate-spin" />
                   Scanning...
@@ -434,7 +558,7 @@ export function NetworkDeviceDiscovery({ onDevicesDiscovered }: NetworkDeviceDis
               ) : (
                 <>
                   <Search className="h-4 w-4 mr-2" />
-                  Start Scan
+                  Real Scan
                 </>
               )}
             </Button>

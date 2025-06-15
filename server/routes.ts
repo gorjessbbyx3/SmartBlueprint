@@ -984,6 +984,79 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Test Device Discovery Endpoint
+  app.post("/api/network/test-scan", async (req, res) => {
+    try {
+      const scanRequest = z.object({
+        userConsent: z.boolean(),
+        scanIntensive: z.boolean().default(false),
+        includeVendorLookup: z.boolean().default(true),
+        deviceCount: z.number().optional()
+      }).parse(req.body);
+
+      if (!scanRequest.userConsent) {
+        return res.status(400).json({ 
+          message: "User consent required for network scanning",
+          error: "CONSENT_REQUIRED"
+        });
+      }
+
+      console.log('🧪 Starting test device discovery simulation...');
+      const scanResult = await testDeviceDiscovery.simulateDeviceDiscovery({
+        includeVendorLookup: scanRequest.includeVendorLookup,
+        scanIntensive: scanRequest.scanIntensive,
+        deviceCount: scanRequest.deviceCount
+      });
+      
+      // Store discovered test devices in our database
+      for (const networkDevice of scanResult.devices) {
+        try {
+          const deviceData = {
+            name: networkDevice.deviceName,
+            macAddress: networkDevice.mac,
+            deviceType: networkDevice.deviceType,
+            protocol: 'test_scan',
+            rssi: -45, // Better signal for test devices
+            x: null,
+            y: null,
+            isOnline: networkDevice.isOnline,
+            lastSeen: networkDevice.lastSeen,
+            telemetryData: {
+              ip: networkDevice.ip,
+              hostname: networkDevice.hostname,
+              vendor: networkDevice.vendor,
+              services: networkDevice.services,
+              isTestDevice: true
+            }
+          };
+
+          await storage.createDevice(deviceData);
+          console.log(`🧪 Added test device: ${networkDevice.deviceName} (${networkDevice.mac})`);
+        } catch (dbError) {
+          console.log(`⚠️ Test device already exists: ${networkDevice.deviceName}`);
+        }
+      }
+
+      res.json({
+        success: true,
+        message: `Test scan found ${scanResult.devices.length} simulated smart home devices`,
+        scanResult,
+        isTestMode: true,
+        privacy: {
+          dataStaysLocal: true,
+          noExternalTransmission: true,
+          scanDuration: scanResult.scanDuration
+        }
+      });
+    } catch (error) {
+      console.error('Test device discovery failed:', error);
+      res.status(500).json({ 
+        message: "Test device discovery failed", 
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
   app.get("/api/monitoring/alerts", async (req, res) => {
     try {
       const alerts = monitoringService.getActiveAlerts();
