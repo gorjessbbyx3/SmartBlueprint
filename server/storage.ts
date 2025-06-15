@@ -219,6 +219,7 @@ export class MemStorage implements IStorage {
       id: this.currentFloorplanId++,
       scale: insertFloorplan.scale ?? null,
       imageUrl: insertFloorplan.imageUrl ?? null,
+      sketchElements: insertFloorplan.sketchElements ?? null,
     };
     this.floorplans.set(floorplan.id, floorplan);
     return floorplan;

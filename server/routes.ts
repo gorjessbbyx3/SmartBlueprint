@@ -129,6 +129,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.put("/api/floorplans/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const updateData = insertFloorplanSchema.partial().parse(req.body);
+      const floorplan = await storage.updateFloorplan(id, updateData);
+      if (!floorplan) {
+        return res.status(404).json({ message: "Floorplan not found" });
+      }
+      res.json(floorplan);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid floorplan data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to update floorplan" });
+    }
+  });
+
   // Anomaly routes
   app.get("/api/anomalies", async (req, res) => {
     try {
