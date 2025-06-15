@@ -19,6 +19,7 @@ import { exec } from 'child_process';
 import { promisify } from 'util';
 import { mlAnalytics } from './ml-analytics';
 import { monitoringService } from './monitoring-service';
+import { networkDiscoveryService } from './network-discovery';
 
 const execAsync = promisify(exec);
 
