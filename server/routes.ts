@@ -2,10 +2,21 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { WebSocketServer, WebSocket } from "ws";
 import { storage } from "./storage";
-import { insertDeviceSchema, insertFloorplanSchema, insertAnomalySchema, insertRecommendationSchema } from "@shared/schema";
+import { 
+  insertDeviceSchema, 
+  insertFloorplanSchema, 
+  insertAnomalySchema, 
+  insertRecommendationSchema,
+  insertRoomSchema,
+  insertDeviceTelemetrySchema,
+  insertMlModelSchema,
+  insertPlatformIntegrationSchema,
+  insertPredictiveAlertSchema
+} from "@shared/schema";
 import { z } from "zod";
 import { exec } from 'child_process';
 import { promisify } from 'util';
+import { mlAnalytics } from './ml-analytics';
 
 const execAsync = promisify(exec);
 
