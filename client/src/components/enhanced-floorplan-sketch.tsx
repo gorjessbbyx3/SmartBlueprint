@@ -877,11 +877,55 @@ export default function EnhancedFloorplanSketch({ onSave, onLoad, initialElement
         >
           <canvas
             ref={canvasRef}
-            className="cursor-crosshair"
+            className={`cursor-crosshair ${isPlacingTemplate ? 'cursor-pointer' : ''}`}
             onMouseDown={startDrawing}
             onMouseMove={draw}
             onMouseUp={stopDrawing}
             onMouseLeave={stopDrawing}
+            onDragOver={(e) => {
+              e.preventDefault();
+              e.dataTransfer.dropEffect = 'copy';
+            }}
+            onDrop={(e) => {
+              e.preventDefault();
+              const templateData = e.dataTransfer.getData('template');
+              if (templateData) {
+                try {
+                  const template = JSON.parse(templateData);
+                  const rect = canvasRef.current?.getBoundingClientRect();
+                  if (rect) {
+                    const dropPoint = {
+                      x: (e.clientX - rect.left - panOffset.x) / zoom,
+                      y: (e.clientY - rect.top - panOffset.y) / zoom
+                    };
+                    
+                    const snappedPoint = snapPoint(dropPoint);
+                    
+                    const newElement: DrawingElement = {
+                      id: Date.now().toString(),
+                      type: template.type,
+                      points: [
+                        snappedPoint,
+                        { x: snappedPoint.x + template.width, y: snappedPoint.y + template.height }
+                      ],
+                      style: template.style,
+                      label: template.name
+                    };
+
+                    const newElements = [...elements, newElement];
+                    setElements(newElements);
+                    
+                    // Add to history
+                    const newHistory = history.slice(0, historyIndex + 1);
+                    newHistory.push(newElements);
+                    setHistory(newHistory);
+                    setHistoryIndex(newHistory.length - 1);
+                  }
+                } catch (error) {
+                  console.error('Error parsing dropped template:', error);
+                }
+              }
+            }}
           />
           
           {/* Status Info */}
