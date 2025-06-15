@@ -110,6 +110,7 @@ export class MemStorage implements IStorage {
       scale: "1:200",
       width: 800,
       height: 600,
+      imageUrl: null,
       data: {
         rooms: [
           { name: "Living Room", x: 50, y: 50, width: 300, height: 200 },
@@ -174,6 +175,10 @@ export class MemStorage implements IStorage {
       ...insertDevice,
       id: this.currentDeviceId++,
       lastSeen: new Date(),
+      x: insertDevice.x ?? null,
+      y: insertDevice.y ?? null,
+      isOnline: insertDevice.isOnline ?? true,
+      telemetryData: insertDevice.telemetryData ?? null,
     };
     this.devices.set(device.id, device);
     return device;
@@ -193,11 +198,11 @@ export class MemStorage implements IStorage {
   }
 
   async updateDeviceRSSI(macAddress: string, rssi: number): Promise<void> {
-    for (const [id, device] of this.devices.entries()) {
+    for (const device of this.devices.values()) {
       if (device.macAddress === macAddress) {
         device.rssi = rssi;
         device.lastSeen = new Date();
-        this.devices.set(id, device);
+        this.devices.set(device.id, device);
         break;
       }
     }
@@ -215,6 +220,8 @@ export class MemStorage implements IStorage {
     const floorplan: Floorplan = {
       ...insertFloorplan,
       id: this.currentFloorplanId++,
+      scale: insertFloorplan.scale ?? null,
+      imageUrl: insertFloorplan.imageUrl ?? null,
     };
     this.floorplans.set(floorplan.id, floorplan);
     return floorplan;
@@ -238,6 +245,8 @@ export class MemStorage implements IStorage {
       ...insertAnomaly,
       id: this.currentAnomalyId++,
       detected: new Date(),
+      deviceId: insertAnomaly.deviceId ?? null,
+      resolved: insertAnomaly.resolved ?? false,
     };
     this.anomalies.set(anomaly.id, anomaly);
     return anomaly;
@@ -260,6 +269,11 @@ export class MemStorage implements IStorage {
     const recommendation: Recommendation = {
       ...insertRecommendation,
       id: this.currentRecommendationId++,
+      x: insertRecommendation.x ?? null,
+      y: insertRecommendation.y ?? null,
+      priority: insertRecommendation.priority ?? 1,
+      applied: insertRecommendation.applied ?? false,
+      improvementScore: insertRecommendation.improvementScore ?? null,
     };
     this.recommendations.set(recommendation.id, recommendation);
     return recommendation;

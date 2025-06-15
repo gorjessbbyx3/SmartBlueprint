@@ -21,7 +21,7 @@ export default function Dashboard() {
     queryKey: ["/api/floorplans/1"],
   });
 
-  const { data: recommendations = [] } = useQuery({
+  const { data: recommendations = [] } = useQuery<Recommendation[]>({
     queryKey: ["/api/recommendations"],
   });
 
@@ -67,10 +67,10 @@ export default function Dashboard() {
               </h2>
               <div className="flex items-center space-x-2">
                 <span className="text-sm text-gray-500">Scale:</span>
-                <select className="text-sm border border-gray-300 rounded px-2 py-1">
-                  <option>1:50</option>
-                  <option>1:100</option>
-                  <option selected>1:200</option>
+                <select className="text-sm border border-gray-300 rounded px-2 py-1" defaultValue="1:200">
+                  <option value="1:50">1:50</option>
+                  <option value="1:100">1:100</option>
+                  <option value="1:200">1:200</option>
                 </select>
               </div>
             </div>
