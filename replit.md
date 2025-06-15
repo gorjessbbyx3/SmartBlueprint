@@ -101,11 +101,46 @@ This is a full-stack web application for smart home device mapping and network o
 - Build outputs to `./dist` for deployment
 - Development vs production mode detection
 
+## Advanced Features Roadmap
+
+### ML Location Fingerprinting & Anomaly Detection
+**User Experience Flow:**
+1. User enables "Advanced Analytics" in settings
+2. System collects RSSI patterns from discovered devices over time
+3. ML model automatically learns room-specific signal fingerprints
+4. Anomaly detection alerts users to unusual device behavior or signal drops
+5. Predictive alerts notify users before devices fail
+
+### Multi-Room Mapping & Auto Room Detection
+**User Experience Flow:**
+1. User uploads floorplan or draws rooms using interactive tools
+2. System automatically detects room boundaries using signal clustering
+3. Device placement optimization suggestions per room
+4. Room-specific coverage heatmaps and analytics
+5. Cross-room interference analysis and mitigation
+
+### Smart Home Platform Integration
+**User Experience Flow:**
+1. User connects accounts (Philips Hue, Nest, Alexa) via OAuth
+2. System imports device configurations and states automatically
+3. Real-time synchronization of device status and controls
+4. Unified dashboard showing all connected platforms
+5. Cross-platform automation and optimization suggestions
+
+### Predictive Analytics & Maintenance
+**User Experience Flow:**
+1. System monitors device performance patterns continuously
+2. ML models predict failure probability based on signal degradation
+3. Automated maintenance reminders and replacement suggestions
+4. Performance trend analysis with actionable insights
+5. Preventive optimization recommendations
+
 ## Changelog
 
 ```
 Changelog:
-- June 15, 2025. Initial setup
+- June 15, 2025. Initial smart home sensing platform with real device discovery
+- June 15, 2025. Added advanced features roadmap for ML analytics and integrations
 ```
 
 ## User Preferences
