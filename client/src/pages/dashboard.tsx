@@ -1,10 +1,13 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Sidebar from "@/components/sidebar";
 import FloorplanCanvas from "@/components/floorplan-canvas";
 import DeviceDetailsModal from "@/components/device-details-modal";
 import RecommendationPanel from "@/components/recommendation-panel";
 import { RoomHeatmap } from "@/components/room-heatmap";
 import { LiveAlertsFeed } from "@/components/live-alerts-feed";
+import { ErrorBoundary, NetworkErrorFallback } from "@/components/error-boundary";
+import { LoadingSpinner, AnalyticsLoadingState } from "@/components/loading-states";
+import { MobileNav, MobileBottomNav } from "@/components/mobile-nav";
 import { useQuery } from "@tanstack/react-query";
 import { Device, Floorplan, Recommendation } from "@shared/schema";
 import { useWebSocket } from "@/hooks/use-websocket";
@@ -14,6 +17,17 @@ export default function Dashboard() {
   const [activeTab, setActiveTab] = useState<"mapping" | "analytics">("mapping");
   const [showRecommendations, setShowRecommendations] = useState(true);
   const [showHeatmap, setShowHeatmap] = useState(true);
+  const [isMobile, setIsMobile] = useState(false);
+
+  // Detect mobile device for responsive UI
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   const { data: devices = [], refetch: refetchDevices } = useQuery<Device[]>({
     queryKey: ["/api/devices"],

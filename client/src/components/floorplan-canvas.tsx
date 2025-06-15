@@ -173,179 +173,97 @@ export default function FloorplanCanvas({
   }
 
   return (
-    <div className="relative w-full h-full">
-      {/* Canvas Container */}
-      <div
-        ref={canvasRef}
-        className="w-full h-full bg-white relative overflow-hidden"
-        style={{
-          backgroundImage: 'radial-gradient(circle, #e5e7eb 1px, transparent 1px)',
-          backgroundSize: '20px 20px',
-          transform: `scale(${zoom})`,
-          transformOrigin: 'top left',
-        }}
-      >
-        {/* Floorplan SVG */}
-        {floorplan && (
-          <svg className="absolute inset-0 w-full h-full pointer-events-none" viewBox="0 0 800 600">
-            {/* Room boundaries */}
-            {floorplan.data?.rooms?.map((room: any, index: number) => (
-              <g key={index}>
-                <rect
-                  x={room.x}
-                  y={room.y}
-                  width={room.width}
-                  height={room.height}
-                  fill="none"
-                  stroke="#9CA3AF"
-                  strokeWidth="3"
-                />
-                <text
-                  x={room.x + room.width / 2}
-                  y={room.y + room.height / 2}
-                  textAnchor="middle"
-                  className="text-sm fill-gray-500"
-                  fontFamily="Inter"
-                >
-                  {room.name}
-                </text>
-              </g>
-            ))}
-            
-            {/* Doors */}
-            {floorplan.data?.doors?.map((door: any, index: number) => (
-              <line
-                key={index}
-                x1={door.x1}
-                y1={door.y1}
-                x2={door.x2}
-                y2={door.y2}
-                stroke="#6B7280"
-                strokeWidth="4"
-              />
-            ))}
-            
-            {/* Windows */}
-            {floorplan.data?.windows?.map((window: any, index: number) => (
-              <line
-                key={index}
-                x1={window.x1}
-                y1={window.y1}
-                x2={window.x2}
-                y2={window.y2}
-                stroke="#3B82F6"
-                strokeWidth="3"
-              />
-            ))}
-          </svg>
+    <ErrorBoundary fallback={MappingErrorFallback}>
+      <div className="canvas-responsive canvas-container swipe-area">
+        {/* Mobile-optimized toolbar */}
+        <div className={`absolute top-4 left-4 z-10 bg-white rounded-lg shadow-md p-2 flex ${isMobile ? 'flex-col space-y-1' : 'items-center space-x-2'}`}>
+          <Button
+            variant={selectedTool === "select" ? "default" : "outline"}
+            size={isMobile ? "sm" : "sm"}
+            onClick={() => setSelectedTool("select")}
+            className="touch-friendly"
+          >
+            <Move className="w-4 h-4" />
+          </Button>
+          {!isMobile && (
+            <>
+              <Button
+                variant={selectedTool === "draw" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setSelectedTool("draw")}
+              >
+                ✏️
+              </Button>
+              <Button
+                variant={selectedTool === "room" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setSelectedTool("room")}
+              >
+                🏠
+              </Button>
+              <Button
+                variant={selectedTool === "measure" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setSelectedTool("measure")}
+              >
+                📏
+              </Button>
+            </>
+          )}
+        </div>
+
+        {/* Enhanced zoom controls */}
+        <div className={`absolute top-4 right-4 z-10 bg-white rounded-lg shadow-md p-2 flex ${isMobile ? 'flex-col space-y-1' : 'flex-col space-y-2'}`}>
+          <Button size="sm" onClick={handleZoomIn} className="touch-friendly">
+            <ZoomIn className="w-4 h-4" />
+          </Button>
+          <Button size="sm" onClick={handleZoomOut} className="touch-friendly">
+            <ZoomOut className="w-4 h-4" />
+          </Button>
+          <Button size="sm" onClick={handleResetZoom} className="touch-friendly">
+            <RotateCcw className="w-4 h-4" />
+          </Button>
+          {!isMobile && (
+            <Button size="sm" onClick={() => setZoom(1.5)} className="touch-friendly">
+              <Maximize2 className="w-4 h-4" />
+            </Button>
+          )}
+        </div>
+
+        {/* Performance status indicator */}
+        {isLoading && (
+          <div className="absolute bottom-4 left-4 z-10 bg-white rounded-lg shadow-md p-2 flex items-center gap-2">
+            <InlineLoading size="sm" />
+            <span className="text-xs text-gray-600">Processing...</span>
+          </div>
         )}
 
-        {/* Heatmap Overlay */}
-        {renderHeatmap()}
-
-        {/* Device Markers */}
-        {devices.map((device) => {
-          if (!device.x || !device.y) return null;
-          
-          return (
-            <div
-              key={device.id}
-              className="absolute cursor-pointer transform -translate-x-2 -translate-y-2 transition-transform hover:scale-125"
-              style={{ left: device.x, top: device.y }}
-              onClick={() => onDeviceClick(device)}
-            >
-              <div className={`w-4 h-4 ${getDeviceColor(device)} rounded-full border-2 border-white shadow-lg`}>
-                {!device.isOnline && (
-                  <div className="absolute inset-0 bg-gray-600 rounded-full opacity-50"></div>
-                )}
-              </div>
-              <div className="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-gray-900 text-white px-2 py-1 rounded text-xs whitespace-nowrap opacity-0 hover:opacity-100 transition-opacity z-10">
-                {device.name} ({device.rssi}dBm)
-              </div>
-            </div>
-          );
-        })}
-
-        {/* Recommended Placement */}
-        <div
-          className="absolute cursor-pointer transform -translate-x-2 -translate-y-2 animate-pulse"
-          style={{ left: 320, top: 340 }}
+        {/* Optimized floorplan container */}
+        <div 
+          ref={canvasRef}
+          className="w-full h-full relative overflow-hidden grid-pattern"
+          style={{ 
+            transform: `scale(${zoom}) translate(${panOffset.x}px, ${panOffset.y}px)`,
+            transformOrigin: 'top left',
+            cursor: isDragging ? 'grabbing' : 'grab'
+          }}
+          onPointerDown={handlePointerDown}
+          onPointerUp={handlePointerUp}
         >
-          <div className="w-4 h-4 bg-purple-500 rounded-full border-2 border-white shadow-lg"></div>
-          <div className="absolute -top-12 left-1/2 transform -translate-x-1/2 bg-purple-600 text-white px-2 py-1 rounded text-xs whitespace-nowrap">
-            <i className="fas fa-lightbulb mr-1"></i>
-            Recommended: Wi-Fi Extender
-          </div>
-        </div>
-      </div>
+          {/* Heatmap Layer with lazy loading */}
+          {renderedHeatmap}
 
-      {/* Tools Overlay */}
-      <div className="absolute top-4 left-4 bg-white rounded-lg shadow-lg border border-gray-200 p-2">
-        <div className="flex space-x-2">
-          <Button
-            variant={selectedTool === "select" ? "default" : "ghost"}
-            size="sm"
-            onClick={() => setSelectedTool("select")}
-            className="p-2"
-          >
-            <i className="fas fa-mouse-pointer"></i>
-          </Button>
-          <Button
-            variant={selectedTool === "draw" ? "default" : "ghost"}
-            size="sm"
-            onClick={() => setSelectedTool("draw")}
-            className="p-2"
-          >
-            <i className="fas fa-pencil-alt"></i>
-          </Button>
-          <Button
-            variant={selectedTool === "room" ? "default" : "ghost"}
-            size="sm"
-            onClick={() => setSelectedTool("room")}
-            className="p-2"
-          >
-            <i className="fas fa-square"></i>
-          </Button>
-          <Button
-            variant={selectedTool === "measure" ? "default" : "ghost"}
-            size="sm"
-            onClick={() => setSelectedTool("measure")}
-            className="p-2"
-          >
-            <i className="fas fa-ruler"></i>
-          </Button>
-        </div>
-      </div>
+          {/* Optimized device rendering */}
+          {renderedDevices}
 
-      {/* Zoom Controls */}
-      <div className="absolute bottom-4 right-4 bg-white rounded-lg shadow-lg border border-gray-200 p-2">
-        <div className="flex flex-col space-y-1">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setZoom(Math.min(2, zoom + 0.1))}
-            className="p-2"
-          >
-            <i className="fas fa-plus"></i>
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setZoom(Math.max(0.5, zoom - 0.1))}
-            className="p-2"
-          >
-            <i className="fas fa-minus"></i>
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setZoom(1)}
-            className="p-2"
-          >
-            <i className="fas fa-expand"></i>
-          </Button>
+          {/* Device count indicator for mobile */}
+          {isMobile && (
+            <div className="absolute bottom-4 right-4 bg-black/70 text-white rounded-lg px-3 py-1 text-sm">
+              {devices.filter(d => d.isOnline).length}/{devices.length} online
+            </div>
+          )}
         </div>
       </div>
-    </div>
+    </ErrorBoundary>
   );
 }

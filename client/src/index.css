@@ -117,7 +117,7 @@
   }
 
   .spinner {
-    @apply animate-spin rounded-full border-2 border-gray-300 border-t-primary;
+    @apply animate-spin rounded-full border-2 border-gray-300 border-t-blue-600;
   }
 
   /* Error States */
@@ -135,23 +135,23 @@
 
   /* Visual Consistency - Icons */
   .icon-primary {
-    @apply text-primary w-5 h-5;
+    @apply text-blue-600 w-5 h-5;
   }
 
   .icon-secondary {
-    @apply text-muted-foreground w-4 h-4;
+    @apply text-gray-500 w-4 h-4;
   }
 
   .icon-status-online {
-    @apply text-success w-3 h-3;
+    @apply text-green-600 w-3 h-3;
   }
 
   .icon-status-offline {
-    @apply text-destructive w-3 h-3;
+    @apply text-red-600 w-3 h-3;
   }
 
   .icon-status-warning {
-    @apply text-accent w-3 h-3;
+    @apply text-yellow-600 w-3 h-3;
   }
 
   /* Performance - Reduce Layout Shifts */
