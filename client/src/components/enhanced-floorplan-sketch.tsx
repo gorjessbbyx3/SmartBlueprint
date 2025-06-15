@@ -459,7 +459,12 @@ export default function EnhancedFloorplanSketch({ onSave, onLoad, initialElement
                   <Undo className="h-4 w-4" />
                 </Button>
               </TooltipTrigger>
-              <TooltipContent>Undo</TooltipContent>
+              <TooltipContent>
+                <div className="text-center">
+                  <div className="font-semibold">Undo</div>
+                  <div className="text-xs text-gray-500 mt-1">Go back one step to reverse your last drawing action</div>
+                </div>
+              </TooltipContent>
             </Tooltip>
 
             <Tooltip>
@@ -473,7 +478,12 @@ export default function EnhancedFloorplanSketch({ onSave, onLoad, initialElement
                   <Redo className="h-4 w-4" />
                 </Button>
               </TooltipTrigger>
-              <TooltipContent>Redo</TooltipContent>
+              <TooltipContent>
+                <div className="text-center">
+                  <div className="font-semibold">Redo</div>
+                  <div className="text-xs text-gray-500 mt-1">Restore the last action you undid to move forward again</div>
+                </div>
+              </TooltipContent>
             </Tooltip>
 
             <Tooltip>
@@ -486,7 +496,12 @@ export default function EnhancedFloorplanSketch({ onSave, onLoad, initialElement
                   <Eraser className="h-4 w-4" />
                 </Button>
               </TooltipTrigger>
-              <TooltipContent>Clear All</TooltipContent>
+              <TooltipContent>
+                <div className="text-center">
+                  <div className="font-semibold">Clear All</div>
+                  <div className="text-xs text-gray-500 mt-1">Remove everything from the canvas to start with a completely blank floor plan</div>
+                </div>
+              </TooltipContent>
             </Tooltip>
           </div>
 
@@ -500,7 +515,12 @@ export default function EnhancedFloorplanSketch({ onSave, onLoad, initialElement
                   <ZoomIn className="h-4 w-4" />
                 </Button>
               </TooltipTrigger>
-              <TooltipContent>Zoom In</TooltipContent>
+              <TooltipContent>
+                <div className="text-center">
+                  <div className="font-semibold">Zoom In</div>
+                  <div className="text-xs text-gray-500 mt-1">Get a closer view for detailed drawing and precise positioning</div>
+                </div>
+              </TooltipContent>
             </Tooltip>
 
             <Badge variant="secondary" className="px-2 py-1 text-xs">
@@ -513,7 +533,12 @@ export default function EnhancedFloorplanSketch({ onSave, onLoad, initialElement
                   <ZoomOut className="h-4 w-4" />
                 </Button>
               </TooltipTrigger>
-              <TooltipContent>Zoom Out</TooltipContent>
+              <TooltipContent>
+                <div className="text-center">
+                  <div className="font-semibold">Zoom Out</div>
+                  <div className="text-xs text-gray-500 mt-1">See more of your floor plan at once for a broader overview</div>
+                </div>
+              </TooltipContent>
             </Tooltip>
 
             <Tooltip>
@@ -522,7 +547,12 @@ export default function EnhancedFloorplanSketch({ onSave, onLoad, initialElement
                   <RotateCcw className="h-4 w-4" />
                 </Button>
               </TooltipTrigger>
-              <TooltipContent>Reset View</TooltipContent>
+              <TooltipContent>
+                <div className="text-center">
+                  <div className="font-semibold">Reset View</div>
+                  <div className="text-xs text-gray-500 mt-1">Return to the default zoom level and center position</div>
+                </div>
+              </TooltipContent>
             </Tooltip>
 
             <Tooltip>
@@ -535,7 +565,12 @@ export default function EnhancedFloorplanSketch({ onSave, onLoad, initialElement
                   <Grid3X3 className="h-4 w-4" />
                 </Button>
               </TooltipTrigger>
-              <TooltipContent>Toggle Grid</TooltipContent>
+              <TooltipContent>
+                <div className="text-center">
+                  <div className="font-semibold">Toggle Grid</div>
+                  <div className="text-xs text-gray-500 mt-1">Show or hide the alignment grid to help draw straight lines and keep things organized</div>
+                </div>
+              </TooltipContent>
             </Tooltip>
           </div>
 
@@ -549,7 +584,12 @@ export default function EnhancedFloorplanSketch({ onSave, onLoad, initialElement
                   <Save className="h-4 w-4" />
                 </Button>
               </TooltipTrigger>
-              <TooltipContent>Save Sketch</TooltipContent>
+              <TooltipContent>
+                <div className="text-center">
+                  <div className="font-semibold">Save Sketch</div>
+                  <div className="text-xs text-gray-500 mt-1">Save your current floor plan design so you can use it for device mapping</div>
+                </div>
+              </TooltipContent>
             </Tooltip>
           </div>
 
@@ -558,18 +598,22 @@ export default function EnhancedFloorplanSketch({ onSave, onLoad, initialElement
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button variant="ghost" size="sm">
-                  <Help className="h-4 w-4" />
+                  <HelpCircle className="h-4 w-4" />
                 </Button>
               </TooltipTrigger>
               <TooltipContent>
                 <div className="max-w-xs">
-                  <p className="font-semibold mb-2">Drawing Tips:</p>
+                  <div className="text-center mb-2">
+                    <div className="font-semibold">Drawing Tips & Help</div>
+                    <div className="text-xs text-gray-500 mt-1">Quick guide to get you started</div>
+                  </div>
                   <ul className="text-sm space-y-1">
-                    <li>• Use walls to outline your space</li>
-                    <li>• Draw rooms to define areas</li>
+                    <li>• Use walls to outline your space boundaries</li>
+                    <li>• Draw rooms to define separate areas</li>
                     <li>• Add doors and windows for accuracy</li>
                     <li>• Grid snapping helps with precision</li>
                     <li>• Zoom in for detailed work</li>
+                    <li>• Use undo/redo to fix mistakes</li>
                   </ul>
                 </div>
               </TooltipContent>

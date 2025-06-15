@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import Sidebar from "@/components/sidebar";
 import FloorplanCanvas from "@/components/floorplan-canvas";
+import EnhancedFloorplanSketch from "@/components/enhanced-floorplan-sketch";
 import DeviceDetailsModal from "@/components/device-details-modal";
 import RecommendationPanel from "@/components/recommendation-panel";
 import { RoomHeatmap } from "@/components/room-heatmap";
