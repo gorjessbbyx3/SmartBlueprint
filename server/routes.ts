@@ -1172,13 +1172,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
   });
 
-  // Auto-start monitoring service
-  if (!monitoringService.isRunning()) {
-    console.log('Auto-starting 24/7 monitoring service...');
-    monitoringService.startMonitoring().catch(error => {
-      console.error('Failed to auto-start monitoring service:', error);
-    });
-  }
+  // Monitoring service available but not auto-started
+  // Users must manually start monitoring after setting up their floor plan and devices
 
   return httpServer;
 }
