@@ -24,6 +24,7 @@ export const floorplans = pgTable("floorplans", {
   height: real("height").notNull(),
   data: jsonb("data").notNull(), // SVG path data or room boundaries
   imageUrl: text("image_url"), // For uploaded blueprints
+  sketchElements: text("sketch_elements"), // JSON string of drawing elements
 });
 
 export const anomalies = pgTable("anomalies", {

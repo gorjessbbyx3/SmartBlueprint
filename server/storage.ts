@@ -127,6 +127,7 @@ export class MemStorage implements IStorage {
       width: 800,
       height: 600,
       imageUrl: null,
+      sketchElements: null,
       data: {
         rooms: [
           { name: "Main Area", x: 50, y: 50, width: 700, height: 500 }

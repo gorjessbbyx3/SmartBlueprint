@@ -11,9 +11,11 @@ import WiFiConnectionCheck from "@/components/wifi-connection-check";
 import { ErrorBoundary, NetworkErrorFallback } from "@/components/error-boundary";
 import { LoadingSpinner, AnalyticsLoadingState } from "@/components/loading-states";
 import { MobileNav, MobileBottomNav } from "@/components/mobile-nav";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Device, Floorplan, Recommendation } from "@shared/schema";
 import { useWebSocket } from "@/hooks/use-websocket";
+import { apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 
 export default function Dashboard() {
   const [selectedDevice, setSelectedDevice] = useState<Device | null>(null);
@@ -22,6 +24,10 @@ export default function Dashboard() {
   const [showHeatmap, setShowHeatmap] = useState(true);
   const [isMobile, setIsMobile] = useState(false);
   const [uploadedBlueprint, setUploadedBlueprint] = useState<string | null>(null);
+  
+  // Add hooks
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
 
   // Detect mobile device for responsive UI
   useEffect(() => {
@@ -158,11 +164,44 @@ export default function Dashboard() {
             ) : activeTab === "sketch" ? (
               <div className="h-full">
                 <EnhancedFloorplanSketch
-                  onSave={(elements) => {
-                    console.log("Saved floor plan elements:", elements);
-                    // Here you would save the floor plan elements to the backend
+                  onSave={async (elements) => {
+                    try {
+                      console.log("Saving floor plan elements:", elements);
+                      
+                      // Save sketch elements to the floorplan
+                      const response = await fetch(`/api/floorplans/${floorplan?.id || 1}`, {
+                        method: 'PUT',
+                        headers: {
+                          'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                          sketchElements: JSON.stringify(elements),
+                          width: 800,
+                          height: 600,
+                          scale: "1:200"
+                        })
+                      });
+
+                      if (response.ok) {
+                        toast({
+                          title: "Floor plan saved",
+                          description: "Your sketch has been saved successfully",
+                        });
+                        
+                        // Refresh floorplan data
+                        queryClient.invalidateQueries({ queryKey: ['/api/floorplans/1'] });
+                      } else {
+                        throw new Error('Failed to save floor plan');
+                      }
+                    } catch (error) {
+                      toast({
+                        title: "Save failed",
+                        description: "Could not save your floor plan sketch",
+                        variant: "destructive",
+                      });
+                    }
                   }}
-                  initialElements={[]}
+                  initialElements={floorplan?.sketchElements ? JSON.parse(floorplan.sketchElements) : []}
                   backgroundImage={uploadedBlueprint || undefined}
                 />
               </div>
