@@ -346,6 +346,58 @@ export default function Sidebar({
               </CardContent>
             </Card>
 
+            {/* Network Reference Points */}
+            <Card>
+              <CardContent className="p-4">
+                <h3 className="text-sm font-semibold text-gray-900 mb-3 flex items-center">
+                  <Wifi className="w-4 h-4 mr-2" />
+                  Network Reference Points
+                </h3>
+                <div className="space-y-3">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full h-auto p-3 flex items-center justify-start bg-purple-50 hover:bg-purple-100"
+                    onClick={() => onTabChange("sketch")}
+                  >
+                    <div className="flex items-center">
+                      <div className="w-8 h-8 bg-purple-600 rounded-lg flex items-center justify-center mr-3">
+                        <Wifi className="w-4 h-4 text-white" />
+                      </div>
+                      <div className="text-left">
+                        <div className="text-sm font-medium">Mark WiFi Router</div>
+                        <div className="text-xs text-gray-500">Click to place router on floor plan</div>
+                      </div>
+                    </div>
+                  </Button>
+                  
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full h-auto p-3 flex items-center justify-start bg-orange-50 hover:bg-orange-100"
+                    onClick={() => onTabChange("sketch")}
+                  >
+                    <div className="flex items-center">
+                      <div className="w-8 h-8 bg-orange-600 rounded-lg flex items-center justify-center mr-3">
+                        <MapPin className="w-4 h-4 text-white" />
+                      </div>
+                      <div className="text-left">
+                        <div className="text-sm font-medium">Mark Your Location</div>
+                        <div className="text-xs text-gray-500">Show where you currently are</div>
+                      </div>
+                    </div>
+                  </Button>
+                  
+                  <div className="bg-blue-50 p-3 rounded-lg text-xs">
+                    <div className="font-medium text-blue-900 mb-1">Auto-Detection</div>
+                    <div className="text-blue-700">
+                      Gateway detected: {devices.find(d => d.macAddress.includes('02:00:31:128'))?.name || 'Scanning...'}
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
             {/* Drawing Templates */}
             <Card>
               <CardContent className="p-4">

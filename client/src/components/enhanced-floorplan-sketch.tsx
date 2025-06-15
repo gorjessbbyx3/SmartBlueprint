@@ -8,7 +8,8 @@ import {
   Pen, Square, Circle, Move, Eraser, Undo, Redo, 
   ZoomIn, ZoomOut, RotateCcw, Grid3X3, Ruler, 
   Save, Download, Upload, Settings, HelpCircle,
-  MousePointer, RectangleHorizontal, Home, DoorOpen
+  MousePointer, RectangleHorizontal, Home, DoorOpen,
+  Wifi, MapPin, Router
 } from "lucide-react";
 
 interface Point {
@@ -18,7 +19,7 @@ interface Point {
 
 interface DrawingElement {
   id: string;
-  type: 'wall' | 'room' | 'door' | 'window' | 'line' | 'rectangle' | 'circle';
+  type: 'wall' | 'room' | 'door' | 'window' | 'line' | 'rectangle' | 'circle' | 'router' | 'location';
   points: Point[];
   style: {
     color: string;
@@ -41,7 +42,7 @@ export default function EnhancedFloorplanSketch({ onSave, onLoad, initialElement
   const containerRef = useRef<HTMLDivElement>(null);
   
   // Drawing state
-  const [tool, setTool] = useState<'select' | 'pen' | 'wall' | 'room' | 'door' | 'window' | 'rectangle' | 'circle' | 'eraser'>('select');
+  const [tool, setTool] = useState<'select' | 'pen' | 'wall' | 'room' | 'door' | 'window' | 'rectangle' | 'circle' | 'eraser' | 'router' | 'location'>('select');
   const [isDrawing, setIsDrawing] = useState(false);
   const [currentPath, setCurrentPath] = useState<Point[]>([]);
   const [elements, setElements] = useState<DrawingElement[]>(initialElements);
@@ -68,7 +69,9 @@ export default function EnhancedFloorplanSketch({ onSave, onLoad, initialElement
     window: { color: '#06b6d4', width: 3 },
     line: { color: '#6b7280', width: 2 },
     rectangle: { color: '#ef4444', width: 2 },
-    circle: { color: '#10b981', width: 2 }
+    circle: { color: '#10b981', width: 2 },
+    router: { color: '#8b5cf6', width: 4, fill: '#8b5cf6' },
+    location: { color: '#f59e0b', width: 4, fill: '#f59e0b' }
   };
 
   // Initialize canvas
@@ -132,9 +135,31 @@ export default function EnhancedFloorplanSketch({ onSave, onLoad, initialElement
     if (tool === 'select') return;
     
     const point = getMousePos(e);
+    
+    // Handle router and location placement as single clicks
+    if (tool === 'router' || tool === 'location') {
+      const newElement: DrawingElement = {
+        id: Date.now().toString(),
+        type: tool,
+        points: [point],
+        style: toolStyles[tool],
+        label: tool === 'router' ? 'WiFi Router' : 'Current Location'
+      };
+
+      const newElements = [...elements, newElement];
+      setElements(newElements);
+      
+      // Add to history
+      const newHistory = history.slice(0, historyIndex + 1);
+      newHistory.push(newElements);
+      setHistory(newHistory);
+      setHistoryIndex(newHistory.length - 1);
+      return;
+    }
+    
     setIsDrawing(true);
     setCurrentPath([point]);
-  }, [tool, getMousePos]);
+  }, [tool, getMousePos, elements, history, historyIndex, toolStyles]);
 
   const draw = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
     if (!isDrawing || tool === 'select') return;
@@ -256,6 +281,52 @@ export default function EnhancedFloorplanSketch({ onSave, onLoad, initialElement
           ctx.arc(start.x, start.y, radius, 0, 2 * Math.PI);
           if (element.style.fill) ctx.fill();
           ctx.stroke();
+        } else if (element.type === 'router' && element.points.length >= 1) {
+          const [point] = element.points;
+          const size = 20 / zoom;
+          
+          // Draw router icon (antenna symbol)
+          ctx.fillStyle = element.style.color;
+          ctx.fillRect(point.x - size/2, point.y - size/2, size, size);
+          
+          // Draw antenna lines
+          ctx.strokeStyle = element.style.color;
+          ctx.lineWidth = 2 / zoom;
+          ctx.beginPath();
+          // Vertical antenna
+          ctx.moveTo(point.x, point.y - size/2);
+          ctx.lineTo(point.x, point.y - size);
+          // Signal waves
+          ctx.arc(point.x, point.y, size * 0.8, -Math.PI/4, Math.PI/4, false);
+          ctx.arc(point.x, point.y, size * 1.2, -Math.PI/6, Math.PI/6, false);
+          ctx.stroke();
+          
+          // Add label
+          ctx.fillStyle = '#000';
+          ctx.font = `${12 / zoom}px Arial`;
+          ctx.fillText('Router', point.x + size, point.y - size/2);
+        } else if (element.type === 'location' && element.points.length >= 1) {
+          const [point] = element.points;
+          const size = 16 / zoom;
+          
+          // Draw location pin
+          ctx.fillStyle = element.style.color;
+          ctx.beginPath();
+          ctx.arc(point.x, point.y - size/2, size/2, 0, 2 * Math.PI);
+          ctx.fill();
+          
+          // Draw pin point
+          ctx.beginPath();
+          ctx.moveTo(point.x, point.y);
+          ctx.lineTo(point.x - size/4, point.y - size/2);
+          ctx.lineTo(point.x + size/4, point.y - size/2);
+          ctx.closePath();
+          ctx.fill();
+          
+          // Add label
+          ctx.fillStyle = '#000';
+          ctx.font = `${12 / zoom}px Arial`;
+          ctx.fillText('You are here', point.x + size, point.y - size/2);
         } else {
           // Draw line/path
           ctx.moveTo(element.points[0].x, element.points[0].y);
@@ -473,6 +544,44 @@ export default function EnhancedFloorplanSketch({ onSave, onLoad, initialElement
                 <div className="text-center">
                   <div className="font-semibold">Circle Tool</div>
                   <div className="text-xs text-gray-500 mt-1">Draw circular shapes for round tables, fixtures, or architectural features</div>
+                </div>
+              </TooltipContent>
+            </Tooltip>
+
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant={tool === 'router' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setTool('router')}
+                  className={tool === 'router' ? 'bg-purple-600 hover:bg-purple-700' : ''}
+                >
+                  <Router className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <div className="text-center">
+                  <div className="font-semibold">WiFi Router</div>
+                  <div className="text-xs text-gray-500 mt-1">Mark the location of your WiFi router for accurate signal mapping and coverage analysis</div>
+                </div>
+              </TooltipContent>
+            </Tooltip>
+
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant={tool === 'location' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setTool('location')}
+                  className={tool === 'location' ? 'bg-orange-600 hover:bg-orange-700' : ''}
+                >
+                  <MapPin className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <div className="text-center">
+                  <div className="font-semibold">Current Location</div>
+                  <div className="text-xs text-gray-500 mt-1">Mark where you are currently standing to help calibrate device positioning and signal strength</div>
                 </div>
               </TooltipContent>
             </Tooltip>
