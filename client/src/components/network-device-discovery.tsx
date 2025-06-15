@@ -24,7 +24,9 @@ import {
   Tv,
   Home,
   Clock,
-  MapPin
+  MapPin,
+  FlaskConical,
+  Loader2
 } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
