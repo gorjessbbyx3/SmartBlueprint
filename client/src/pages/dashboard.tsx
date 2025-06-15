@@ -3,6 +3,8 @@ import Sidebar from "@/components/sidebar";
 import FloorplanCanvas from "@/components/floorplan-canvas";
 import DeviceDetailsModal from "@/components/device-details-modal";
 import RecommendationPanel from "@/components/recommendation-panel";
+import { RoomHeatmap } from "@/components/room-heatmap";
+import { LiveAlertsFeed } from "@/components/live-alerts-feed";
 import { useQuery } from "@tanstack/react-query";
 import { Device, Floorplan, Recommendation } from "@shared/schema";
 import { useWebSocket } from "@/hooks/use-websocket";
@@ -90,14 +92,41 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Canvas Area */}
-        <div className="flex-1 relative bg-white">
-          <FloorplanCanvas
-            devices={devices}
-            floorplan={floorplan}
-            onDeviceClick={handleDeviceClick}
-            showHeatmap={showHeatmap}
-          />
+        {/* Main Content Area */}
+        <div className="flex-1 relative bg-gray-50">
+          {activeTab === "mapping" ? (
+            <div className="h-full bg-white">
+              <FloorplanCanvas
+                devices={devices}
+                floorplan={floorplan}
+                onDeviceClick={handleDeviceClick}
+                showHeatmap={showHeatmap}
+              />
+            </div>
+          ) : (
+            <div className="h-full overflow-auto p-6">
+              <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 max-w-7xl mx-auto">
+                {/* Room Heatmap - Takes 2 columns */}
+                <div className="xl:col-span-2">
+                  <RoomHeatmap 
+                    enableTimelinePlayback={true}
+                    overlayFloorplan={true}
+                    className="h-full"
+                  />
+                </div>
+                
+                {/* Live Alerts Feed - Takes 1 column */}
+                <div className="xl:col-span-1">
+                  <LiveAlertsFeed 
+                    maxAlerts={20}
+                    showToastNotifications={true}
+                    autoRefresh={true}
+                    className="h-full"
+                  />
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
