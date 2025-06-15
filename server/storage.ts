@@ -50,116 +50,32 @@ export class MemStorage implements IStorage {
   private currentRecommendationId = 1;
 
   constructor() {
-    // Initialize with sample data
-    this.initializeSampleData();
+    // Initialize empty storage - devices will be discovered through network scanning
+    this.initializeBasicData();
   }
 
-  private initializeSampleData() {
-    // Sample devices
-    const sampleDevices: Device[] = [
-      {
-        id: 1,
-        name: "Smart TV - Living Room",
-        macAddress: "AA:BB:CC:DD:EE:FF",
-        deviceType: "smart_tv",
-        protocol: "wifi",
-        rssi: -45,
-        x: 180,
-        y: 80,
-        isOnline: true,
-        lastSeen: new Date(),
-        telemetryData: { temperature: 22, powerConsumption: 85 }
-      },
-      {
-        id: 2,
-        name: "Philips Hue Bridge",
-        macAddress: "11:22:33:44:55:66",
-        deviceType: "hue_bridge",
-        protocol: "zigbee",
-        rssi: -38,
-        x: 420,
-        y: 120,
-        isOnline: true,
-        lastSeen: new Date(),
-        telemetryData: { connectedDevices: 8 }
-      },
-      {
-        id: 3,
-        name: "Nest Thermostat",
-        macAddress: "77:88:99:AA:BB:CC",
-        deviceType: "thermostat",
-        protocol: "wifi",
-        rssi: -52,
-        x: 120,
-        y: 280,
-        isOnline: true,
-        lastSeen: new Date(),
-        telemetryData: { temperature: 21.5, humidity: 45, targetTemp: 22 }
-      }
-    ];
-
-    sampleDevices.forEach(device => {
-      this.devices.set(device.id, device);
-    });
-    this.currentDeviceId = 4;
-
-    // Sample floorplan
-    const sampleFloorplan: Floorplan = {
+  private initializeBasicData() {
+    // Initialize with a basic default floorplan that users can replace
+    const defaultFloorplan: Floorplan = {
       id: 1,
-      name: "Living Area",
+      name: "Default Floor Plan",
       scale: "1:200",
       width: 800,
       height: 600,
       imageUrl: null,
       data: {
         rooms: [
-          { name: "Living Room", x: 50, y: 50, width: 300, height: 200 },
-          { name: "Kitchen", x: 350, y: 50, width: 200, height: 200 },
-          { name: "Bedroom", x: 50, y: 250, width: 200, height: 150 },
-          { name: "Bathroom", x: 250, y: 250, width: 300, height: 150 }
+          { name: "Main Area", x: 50, y: 50, width: 700, height: 500 }
         ],
-        doors: [
-          { x1: 200, y1: 50, x2: 220, y2: 50 },
-          { x1: 350, y1: 150, x2: 370, y2: 150 }
-        ],
-        windows: [
-          { x1: 80, y1: 50, x2: 120, y2: 50 },
-          { x1: 480, y1: 50, x2: 520, y2: 50 }
-        ]
+        doors: [],
+        windows: []
       }
     };
 
-    this.floorplans.set(1, sampleFloorplan);
+    this.floorplans.set(1, defaultFloorplan);
     this.currentFloorplanId = 2;
-
-    // Sample anomaly
-    const sampleAnomaly: Anomaly = {
-      id: 1,
-      deviceId: 1,
-      type: "signal_drop",
-      severity: "medium",
-      description: "Smart TV signal dropped 15dB",
-      detected: new Date(Date.now() - 2 * 60 * 1000), // 2 minutes ago
-      resolved: false
-    };
-
-    this.anomalies.set(1, sampleAnomaly);
-    this.currentAnomalyId = 2;
-
-    // Sample recommendation
-    const sampleRecommendation: Recommendation = {
-      id: 1,
-      type: "wifi_extender",
-      description: "Add Wi-Fi extender to improve coverage by 23%",
-      x: 320,
-      y: 340,
-      priority: 1,
-      applied: false,
-      improvementScore: 23
-    };
-
-    this.recommendations.set(1, sampleRecommendation);
-    this.currentRecommendationId = 2;
+    
+    // No sample devices, anomalies, or recommendations - these will be generated from real data
   }
 
   async getDevices(): Promise<Device[]> {
@@ -198,7 +114,8 @@ export class MemStorage implements IStorage {
   }
 
   async updateDeviceRSSI(macAddress: string, rssi: number): Promise<void> {
-    for (const device of this.devices.values()) {
+    const devices = Array.from(this.devices.values());
+    for (const device of devices) {
       if (device.macAddress === macAddress) {
         device.rssi = rssi;
         device.lastSeen = new Date();

@@ -182,34 +182,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Device discovery simulation
+  // Real device discovery using network scanning
   app.post("/api/devices/scan", async (req, res) => {
     try {
-      // Simulate device discovery
-      const discoveredDevices = [
-        {
-          name: "Amazon Echo Dot",
-          macAddress: "DD:EE:FF:00:11:22",
-          deviceType: "smart_speaker",
-          protocol: "wifi",
-          rssi: -48,
-          isOnline: true,
-          telemetryData: { volume: 60, playing: false }
-        },
-        {
-          name: "Samsung Smart Fridge",
-          macAddress: "33:44:55:66:77:88",
-          deviceType: "smart_fridge",
-          protocol: "wifi",
-          rssi: -41,
-          isOnline: true,
-          telemetryData: { temperature: 4, freezerTemp: -18 }
-        }
-      ];
+      const { networkScanner } = await import("./device-scanner");
       
-      res.json({ devices: discoveredDevices, scanTime: new Date() });
+      if (networkScanner.isScanning()) {
+        return res.status(409).json({ message: "Scan already in progress" });
+      }
+      
+      console.log("Starting network device scan...");
+      const discoveredDevices = await networkScanner.startScan();
+      
+      // Convert scanned devices to our device format
+      const formattedDevices = discoveredDevices.map(device => ({
+        name: device.name,
+        macAddress: device.macAddress,
+        deviceType: device.deviceType,
+        protocol: device.protocol,
+        rssi: device.rssi,
+        isOnline: device.isOnline,
+        telemetryData: device.manufacturer ? { manufacturer: device.manufacturer, model: device.model } : null
+      }));
+      
+      console.log(`Network scan completed. Found ${formattedDevices.length} devices.`);
+      res.json({ devices: formattedDevices, scanTime: new Date() });
     } catch (error) {
-      res.status(500).json({ message: "Failed to scan for devices" });
+      console.error("Device scan failed:", error);
+      res.status(500).json({ 
+        message: "Failed to scan for devices", 
+        error: error instanceof Error ? error.message : "Unknown error"
+      });
     }
   });
 
@@ -276,46 +279,57 @@ export async function registerRoutes(app: Express): Promise<Server> {
       message: 'Connected to SmartMap Pro'
     }));
     
-    // Simulate real-time RSSI updates
+    // Real-time monitoring of discovered devices
     const interval = setInterval(async () => {
       try {
         const devices = await storage.getDevices();
         
-        // Simulate RSSI fluctuations
-        for (const device of devices) {
-          const variation = Math.floor(Math.random() * 6) - 3; // ±3 dBm
-          const newRSSI = device.rssi + variation;
-          await storage.updateDeviceRSSI(device.macAddress, newRSSI);
-          
-          // Check for anomalies (simple threshold-based)
-          if (Math.abs(variation) > 2) {
-            const anomaly = {
-              deviceId: device.id,
-              type: "signal_fluctuation" as const,
-              severity: Math.abs(variation) > 4 ? "high" as const : "medium" as const,
-              description: `${device.name} signal ${variation > 0 ? 'increased' : 'decreased'} by ${Math.abs(variation)}dB`,
-            };
-            
-            await storage.createAnomaly(anomaly);
-            
-            ws.send(JSON.stringify({
-              type: 'anomaly',
-              data: anomaly
-            }));
+        if (devices.length > 0) {
+          // Perform periodic ping checks on discovered devices to update their status
+          for (const device of devices) {
+            try {
+              const { ping } = await import('ping');
+              const result = await ping.promise.probe(device.macAddress, { timeout: 2 });
+              
+              if (!result.alive && device.isOnline) {
+                // Device went offline
+                await storage.updateDevice(device.id, { isOnline: false });
+                
+                const anomaly = {
+                  deviceId: device.id,
+                  type: "device_offline" as const,
+                  severity: "medium" as const,
+                  description: `${device.name} has gone offline`,
+                };
+                
+                await storage.createAnomaly(anomaly);
+                
+                ws.send(JSON.stringify({
+                  type: 'anomaly',
+                  data: anomaly
+                }));
+              } else if (result.alive && !device.isOnline) {
+                // Device came back online
+                await storage.updateDevice(device.id, { isOnline: true });
+              }
+            } catch (error) {
+              // If we can't ping by MAC, skip this device
+              continue;
+            }
           }
+          
+          // Send updated device data
+          const updatedDevices = await storage.getDevices();
+          ws.send(JSON.stringify({
+            type: 'devices_update',
+            data: updatedDevices
+          }));
         }
-        
-        // Send updated device data
-        const updatedDevices = await storage.getDevices();
-        ws.send(JSON.stringify({
-          type: 'devices_update',
-          data: updatedDevices
-        }));
         
       } catch (error) {
         console.error('Error in WebSocket update:', error);
       }
-    }, 5000); // Update every 5 seconds
+    }, 15000); // Check every 15 seconds
     
     ws.on('close', () => {
       console.log('WebSocket client disconnected');

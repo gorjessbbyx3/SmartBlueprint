@@ -4,7 +4,7 @@ import FloorplanCanvas from "@/components/floorplan-canvas";
 import DeviceDetailsModal from "@/components/device-details-modal";
 import RecommendationPanel from "@/components/recommendation-panel";
 import { useQuery } from "@tanstack/react-query";
-import { Device, Floorplan } from "@shared/schema";
+import { Device, Floorplan, Recommendation } from "@shared/schema";
 import { useWebSocket } from "@/hooks/use-websocket";
 
 export default function Dashboard() {
