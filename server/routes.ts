@@ -20,6 +20,7 @@ import { promisify } from 'util';
 import { mlAnalytics } from './ml-analytics';
 import { monitoringService } from './monitoring-service';
 import { networkDiscoveryService } from './network-discovery';
+import { testDeviceDiscovery } from './test-device-discovery';
 
 const execAsync = promisify(exec);
 

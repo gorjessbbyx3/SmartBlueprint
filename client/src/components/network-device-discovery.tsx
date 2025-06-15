@@ -29,6 +29,8 @@ import {
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
+import { DeviceRoomAssignment } from './device-room-assignment';
+import { Device } from '@shared/schema';
 
 interface NetworkDevice {
   ip: string;
@@ -96,6 +98,8 @@ export function NetworkDeviceDiscovery({ onDevicesDiscovered }: NetworkDeviceDis
   const [scanResult, setScanResult] = useState<NetworkScanResult | null>(null);
   const [isScanning, setIsScanning] = useState(false);
   const [scanProgress, setScanProgress] = useState(0);
+  const [showRoomAssignment, setShowRoomAssignment] = useState(false);
+  const [discoveredDevices, setDiscoveredDevices] = useState<Device[]>([]);
   
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -123,6 +127,28 @@ export function NetworkDeviceDiscovery({ onDevicesDiscovered }: NetworkDeviceDis
     onSuccess: (data) => {
       setScanResult(data.scanResult);
       onDevicesDiscovered?.(data.scanResult.devices);
+      
+      // Convert network devices to Device format for room assignment
+      const deviceList: Device[] = data.scanResult.devices.map((device: NetworkDevice, index: number) => ({
+        id: Date.now() + index,
+        name: device.deviceName,
+        macAddress: device.mac,
+        deviceType: device.deviceType,
+        protocol: 'network_scan',
+        rssi: -50,
+        x: null,
+        y: null,
+        isOnline: device.isOnline,
+        lastSeen: device.lastSeen,
+        telemetryData: {
+          ip: device.ip,
+          hostname: device.hostname,
+          vendor: device.vendor,
+          services: device.services
+        }
+      }));
+      
+      setDiscoveredDevices(deviceList);
       
       toast({
         title: "Network Scan Complete",
@@ -304,9 +330,22 @@ export function NetworkDeviceDiscovery({ onDevicesDiscovered }: NetworkDeviceDis
               
               <div className="flex items-center justify-between">
                 <h3 className="text-sm font-semibold">Discovered Devices</h3>
-                <Badge variant="secondary">
-                  {scanResult.devices.length} devices found
-                </Badge>
+                <div className="flex items-center gap-2">
+                  <Badge variant="secondary">
+                    {scanResult.devices.length} devices found
+                  </Badge>
+                  {scanResult.devices.length > 0 && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => setShowRoomAssignment(true)}
+                      className="h-6 px-2 text-xs"
+                    >
+                      <Home className="h-3 w-3 mr-1" />
+                      Assign to Rooms
+                    </Button>
+                  )}
+                </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4 text-xs">
@@ -402,6 +441,13 @@ export function NetworkDeviceDiscovery({ onDevicesDiscovered }: NetworkDeviceDis
           </div>
         </DialogFooter>
       </DialogContent>
+
+      {/* Device Room Assignment Dialog */}
+      <DeviceRoomAssignment
+        isOpen={showRoomAssignment}
+        onClose={() => setShowRoomAssignment(false)}
+        devices={discoveredDevices}
+      />
     </Dialog>
   );
 }
