@@ -102,6 +102,15 @@ export const predictiveAlerts = pgTable("predictive_alerts", {
   createdAt: timestamp("created_at").defaultNow()
 });
 
+export const fusionResults = pgTable("fusion_results", {
+  id: serial("id").primaryKey(),
+  room: text("room").notNull(),
+  confidenceScore: real("confidence_score").notNull(),
+  alertType: text("alert_type").notNull(),
+  timestamp: timestamp("timestamp").defaultNow(),
+  metadata: jsonb("metadata") // Additional fusion data
+});
+
 export const insertDeviceSchema = createInsertSchema(devices).omit({
   id: true,
   lastSeen: true,
@@ -147,6 +156,11 @@ export const insertPredictiveAlertSchema = createInsertSchema(predictiveAlerts).
   createdAt: true,
 });
 
+export const insertFusionResultSchema = createInsertSchema(fusionResults).omit({
+  id: true,
+  timestamp: true,
+});
+
 export type Device = typeof devices.$inferSelect;
 export type InsertDevice = z.infer<typeof insertDeviceSchema>;
 export type Floorplan = typeof floorplans.$inferSelect;
@@ -165,3 +179,5 @@ export type PlatformIntegration = typeof platformIntegrations.$inferSelect;
 export type InsertPlatformIntegration = z.infer<typeof insertPlatformIntegrationSchema>;
 export type PredictiveAlert = typeof predictiveAlerts.$inferSelect;
 export type InsertPredictiveAlert = z.infer<typeof insertPredictiveAlertSchema>;
+export type FusionResult = typeof fusionResults.$inferSelect;
+export type InsertFusionResult = z.infer<typeof insertFusionResultSchema>;

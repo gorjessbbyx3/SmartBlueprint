@@ -8,6 +8,7 @@ import {
   mlModels,
   platformIntegrations,
   predictiveAlerts,
+  fusionResults,
   type Device, 
   type InsertDevice,
   type Floorplan,
@@ -25,7 +26,9 @@ import {
   type PlatformIntegration,
   type InsertPlatformIntegration,
   type PredictiveAlert,
-  type InsertPredictiveAlert
+  type InsertPredictiveAlert,
+  type FusionResult,
+  type InsertFusionResult
 } from "@shared/schema";
 
 export interface IStorage {
@@ -82,6 +85,10 @@ export interface IStorage {
   getPredictiveAlerts(deviceId?: number): Promise<PredictiveAlert[]>;
   createPredictiveAlert(alert: InsertPredictiveAlert): Promise<PredictiveAlert>;
   resolvePredictiveAlert(id: number): Promise<boolean>;
+
+  // Fusion result operations
+  getFusionResults(): Promise<FusionResult[]>;
+  createFusionResult(result: InsertFusionResult): Promise<FusionResult>;
 }
 
 export class MemStorage implements IStorage {
@@ -94,6 +101,7 @@ export class MemStorage implements IStorage {
   private mlModels: Map<number, MlModel> = new Map();
   private platformIntegrations: Map<number, PlatformIntegration> = new Map();
   private predictiveAlerts: Map<number, PredictiveAlert> = new Map();
+  private fusionResults: Map<number, FusionResult> = new Map();
   private currentDeviceId = 1;
   private currentFloorplanId = 1;
   private currentAnomalyId = 1;
@@ -103,6 +111,7 @@ export class MemStorage implements IStorage {
   private currentMlModelId = 1;
   private currentIntegrationId = 1;
   private currentAlertId = 1;
+  private currentFusionId = 1;
 
   constructor() {
     // Initialize empty storage - devices will be discovered through network scanning
@@ -433,6 +442,21 @@ export class MemStorage implements IStorage {
       return true;
     }
     return false;
+  }
+
+  // Fusion result operations
+  async getFusionResults(): Promise<FusionResult[]> {
+    return Array.from(this.fusionResults.values());
+  }
+
+  async createFusionResult(result: InsertFusionResult): Promise<FusionResult> {
+    const fusionResult: FusionResult = {
+      ...result,
+      id: this.currentFusionId++,
+      timestamp: new Date(),
+    };
+    this.fusionResults.set(fusionResult.id, fusionResult);
+    return fusionResult;
   }
 }
 
