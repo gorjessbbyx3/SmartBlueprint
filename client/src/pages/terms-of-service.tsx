@@ -19,7 +19,7 @@ export default function TermsOfService() {
         <Card>
           <CardHeader>
             <CardTitle className="text-2xl font-bold">Terms of Service</CardTitle>
-            <p className="text-gray-600">SmartMap Pro by GorJessCo.</p>
+            <p className="text-gray-600">SmartMap Pro by GorJess & Co.</p>
             <p className="text-sm text-gray-500">Last updated: June 15, 2025</p>
           </CardHeader>
           <CardContent className="prose max-w-none">
@@ -91,7 +91,7 @@ export default function TermsOfService() {
               <section>
                 <h3 className="text-lg font-semibold mb-3">8. Intellectual Property</h3>
                 <p className="text-gray-700">
-                  The Service and its original content, features, and functionality are and will remain the exclusive property of GorJessCo and its licensors. The service is protected by copyright, trademark, and other laws.
+                  The Service and its original content, features, and functionality are and will remain the exclusive property of GorJess & Co. and its licensors. The service is protected by copyright, trademark, and other laws.
                 </p>
               </section>
 

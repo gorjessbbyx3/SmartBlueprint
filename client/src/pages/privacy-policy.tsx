@@ -19,7 +19,7 @@ export default function PrivacyPolicy() {
         <Card>
           <CardHeader>
             <CardTitle className="text-2xl font-bold">Privacy Policy</CardTitle>
-            <p className="text-gray-600">SmartMap Pro by GorJessCo.</p>
+            <p className="text-gray-600">SmartMap Pro by GorJess & Co.</p>
             <p className="text-sm text-gray-500">Last updated: June 15, 2025</p>
           </CardHeader>
           <CardContent className="prose max-w-none">
