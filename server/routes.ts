@@ -17,6 +17,7 @@ import { z } from "zod";
 import { exec } from 'child_process';
 import { promisify } from 'util';
 import { mlAnalytics } from './ml-analytics';
+import { monitoringService } from './monitoring-service';
 
 const execAsync = promisify(exec);
 
@@ -604,6 +605,134 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Room auto-detection failed", error: error.message });
     }
   });
+
+  // 24/7 Monitoring Service Endpoints
+  app.post("/api/monitoring/start", async (req, res) => {
+    try {
+      await monitoringService.startMonitoring();
+      res.json({ 
+        message: "24/7 monitoring service started",
+        status: "active"
+      });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to start monitoring service" });
+    }
+  });
+
+  app.post("/api/monitoring/stop", async (req, res) => {
+    try {
+      await monitoringService.stopMonitoring();
+      res.json({ 
+        message: "Monitoring service stopped",
+        status: "inactive"
+      });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to stop monitoring service" });
+    }
+  });
+
+  app.get("/api/monitoring/status", async (req, res) => {
+    try {
+      const isRunning = monitoringService.isRunning();
+      const activeAlerts = monitoringService.getActiveAlerts();
+      const environmentMetrics = monitoringService.getEnvironmentMetrics();
+      
+      res.json({
+        isActive: isRunning,
+        activeAlerts: activeAlerts.length,
+        criticalAlerts: activeAlerts.filter(a => a.severity === 'critical').length,
+        environmentMetrics: environmentMetrics,
+        lastUpdate: new Date()
+      });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to get monitoring status" });
+    }
+  });
+
+  app.get("/api/monitoring/alerts", async (req, res) => {
+    try {
+      const alerts = monitoringService.getActiveAlerts();
+      res.json(alerts);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch alerts" });
+    }
+  });
+
+  app.post("/api/monitoring/alerts/:id/resolve", async (req, res) => {
+    try {
+      const alertId = req.params.id;
+      const resolved = await monitoringService.resolveAlert(alertId);
+      
+      if (resolved) {
+        res.json({ message: "Alert resolved successfully" });
+      } else {
+        res.status(404).json({ message: "Alert not found" });
+      }
+    } catch (error) {
+      res.status(500).json({ message: "Failed to resolve alert" });
+    }
+  });
+
+  app.get("/api/monitoring/environment", async (req, res) => {
+    try {
+      const hours = parseInt(req.query.hours as string) || 24;
+      const history = monitoringService.getEnvironmentHistory(hours);
+      const currentMetrics = monitoringService.getEnvironmentMetrics();
+      
+      res.json({
+        current: currentMetrics,
+        history: history,
+        timeRange: `${hours} hours`
+      });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch environment data" });
+    }
+  });
+
+  // WebSocket connection handler with monitoring integration
+  wss.on('connection', (ws: WebSocket) => {
+    console.log('WebSocket client connected');
+    
+    // Send initial monitoring status
+    ws.send(JSON.stringify({
+      type: 'monitoring_status',
+      data: {
+        isActive: monitoringService.isRunning(),
+        activeAlerts: monitoringService.getActiveAlerts().length,
+        environmentMetrics: monitoringService.getEnvironmentMetrics()
+      }
+    }));
+
+    // Enhance monitoring service to broadcast alerts via WebSocket
+    const originalBroadcast = (monitoringService as any).broadcastAlert;
+    (monitoringService as any).broadcastAlert = (alert: any) => {
+      // Send alert to all connected WebSocket clients
+      wss.clients.forEach((client) => {
+        if (client.readyState === WebSocket.OPEN) {
+          client.send(JSON.stringify({
+            type: 'alert',
+            data: alert
+          }));
+        }
+      });
+      
+      if (originalBroadcast) {
+        originalBroadcast.call(monitoringService, alert);
+      }
+    };
+    
+    ws.on('close', () => {
+      console.log('WebSocket client disconnected');
+    });
+  });
+
+  // Auto-start monitoring service
+  if (!monitoringService.isRunning()) {
+    console.log('Auto-starting 24/7 monitoring service...');
+    monitoringService.startMonitoring().catch(error => {
+      console.error('Failed to auto-start monitoring service:', error);
+    });
+  }
 
   return httpServer;
 }
