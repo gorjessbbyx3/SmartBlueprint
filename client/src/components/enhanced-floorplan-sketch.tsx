@@ -61,6 +61,27 @@ export default function EnhancedFloorplanSketch({ onSave, onLoad, initialElement
   const [history, setHistory] = useState<DrawingElement[][]>([[]]);
   const [historyIndex, setHistoryIndex] = useState(0);
 
+  // Save function
+  const handleSaveSketch = useCallback(() => {
+    console.log("Saving floor plan elements:", elements);
+    onSave(elements);
+    
+    // Show visual feedback that save was successful
+    const canvas = canvasRef.current;
+    if (canvas) {
+      const ctx = canvas.getContext('2d');
+      if (ctx) {
+        // Flash a green border briefly to indicate save
+        ctx.strokeStyle = '#10b981';
+        ctx.lineWidth = 4;
+        ctx.strokeRect(0, 0, canvas.width, canvas.height);
+        setTimeout(() => {
+          drawCanvas();
+        }, 200);
+      }
+    }
+  }, [elements, onSave]);
+
   // Drawing colors and styles
   const toolStyles = {
     wall: { color: '#374151', width: 4 },
@@ -410,10 +431,7 @@ export default function EnhancedFloorplanSketch({ onSave, onLoad, initialElement
     setHistoryIndex(0);
   }, []);
 
-  // Save sketch
-  const handleSave = useCallback(() => {
-    onSave(elements);
-  }, [elements, onSave]);
+
 
   return (
     <TooltipProvider>
