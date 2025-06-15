@@ -237,6 +237,7 @@ Changelog:
 - June 15, 2025. Implemented advanced ML models for location fingerprinting and anomaly detection with LSTM, Isolation Forest, and ensemble methods
 - June 15, 2025. Enhanced floor plan sketch interface with detailed tooltips, blueprint upload integration, and user-friendly drawing tools
 - June 15, 2025. Implemented interactive floor plan heat map with real-time WiFi signal visualization, dynamic color-coded overlay, and advanced interpolation algorithms
+- June 15, 2025. Added WiFi connection detection with start button, popup notifications for connectivity issues, and visual check marks for router and location placement on blueprints
 ```
 
 ## User Preferences

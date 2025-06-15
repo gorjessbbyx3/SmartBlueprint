@@ -368,7 +368,7 @@ export default function Sidebar({
                   <Button
                     variant="outline"
                     size="sm"
-                    className="w-full h-auto p-3 flex items-center justify-start bg-purple-50 hover:bg-purple-100"
+                    className="w-full h-auto p-3 flex items-center justify-between bg-purple-50 hover:bg-purple-100"
                     onClick={() => onTabChange("sketch")}
                   >
                     <div className="flex items-center">
@@ -380,12 +380,15 @@ export default function Sidebar({
                         <div className="text-xs text-gray-500">Click to place router on floor plan</div>
                       </div>
                     </div>
+                    <div className="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center opacity-0">
+                      <span className="text-white text-xs">✓</span>
+                    </div>
                   </Button>
                   
                   <Button
                     variant="outline"
                     size="sm"
-                    className="w-full h-auto p-3 flex items-center justify-start bg-orange-50 hover:bg-orange-100"
+                    className="w-full h-auto p-3 flex items-center justify-between bg-orange-50 hover:bg-orange-100"
                     onClick={() => onTabChange("sketch")}
                   >
                     <div className="flex items-center">
@@ -396,6 +399,9 @@ export default function Sidebar({
                         <div className="text-sm font-medium">Mark Your Location</div>
                         <div className="text-xs text-gray-500">Show where you currently are</div>
                       </div>
+                    </div>
+                    <div className="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center opacity-0">
+                      <span className="text-white text-xs">✓</span>
                     </div>
                   </Button>
                   

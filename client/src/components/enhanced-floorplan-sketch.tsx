@@ -57,6 +57,10 @@ export default function EnhancedFloorplanSketch({ onSave, onLoad, initialElement
   const [gridSize] = useState(20);
   const [backgroundImageElement, setBackgroundImageElement] = useState<HTMLImageElement | null>(null);
   
+  // Track reference points placement
+  const [hasRouterPlaced, setHasRouterPlaced] = useState(false);
+  const [hasLocationPlaced, setHasLocationPlaced] = useState(false);
+  
   // History for undo/redo
   const [history, setHistory] = useState<DrawingElement[][]>([[]]);
   const [historyIndex, setHistoryIndex] = useState(0);
@@ -100,6 +104,15 @@ export default function EnhancedFloorplanSketch({ onSave, onLoad, initialElement
     router: { color: '#8b5cf6', width: 4, fill: '#8b5cf6' },
     location: { color: '#f59e0b', width: 4, fill: '#f59e0b' }
   };
+
+  // Check for router and location placement in elements
+  useEffect(() => {
+    const hasRouter = elements.some(element => element.type === 'router');
+    const hasLocation = elements.some(element => element.type === 'location');
+    
+    setHasRouterPlaced(hasRouter);
+    setHasLocationPlaced(hasLocation);
+  }, [elements]);
 
   // Initialize canvas
   useEffect(() => {
@@ -175,6 +188,13 @@ export default function EnhancedFloorplanSketch({ onSave, onLoad, initialElement
 
       const newElements = [...elements, newElement];
       setElements(newElements);
+      
+      // Update placement status
+      if (tool === 'router') {
+        setHasRouterPlaced(true);
+      } else if (tool === 'location') {
+        setHasLocationPlaced(true);
+      }
       
       // Add to history
       const newHistory = history.slice(0, historyIndex + 1);
@@ -578,14 +598,22 @@ export default function EnhancedFloorplanSketch({ onSave, onLoad, initialElement
                   variant={tool === 'router' ? 'default' : 'outline'}
                   size="sm"
                   onClick={() => setTool('router')}
-                  className={tool === 'router' ? 'bg-purple-600 hover:bg-purple-700' : ''}
+                  className={`relative ${tool === 'router' ? 'bg-purple-600 hover:bg-purple-700' : ''} ${hasRouterPlaced ? 'border-green-500 bg-green-50' : ''}`}
                 >
                   <Router className="h-4 w-4" />
+                  {hasRouterPlaced && (
+                    <div className="absolute -top-1 -right-1 w-3 h-3 bg-green-500 rounded-full flex items-center justify-center">
+                      <span className="text-white text-xs">✓</span>
+                    </div>
+                  )}
                 </Button>
               </TooltipTrigger>
               <TooltipContent>
                 <div className="text-center">
-                  <div className="font-semibold">WiFi Router</div>
+                  <div className="font-semibold flex items-center gap-1">
+                    WiFi Router
+                    {hasRouterPlaced && <span className="text-green-600 text-xs">✓ Placed</span>}
+                  </div>
                   <div className="text-xs text-gray-500 mt-1">Mark the location of your WiFi router for accurate signal mapping and coverage analysis</div>
                 </div>
               </TooltipContent>
@@ -597,14 +625,22 @@ export default function EnhancedFloorplanSketch({ onSave, onLoad, initialElement
                   variant={tool === 'location' ? 'default' : 'outline'}
                   size="sm"
                   onClick={() => setTool('location')}
-                  className={tool === 'location' ? 'bg-orange-600 hover:bg-orange-700' : ''}
+                  className={`relative ${tool === 'location' ? 'bg-orange-600 hover:bg-orange-700' : ''} ${hasLocationPlaced ? 'border-green-500 bg-green-50' : ''}`}
                 >
                   <MapPin className="h-4 w-4" />
+                  {hasLocationPlaced && (
+                    <div className="absolute -top-1 -right-1 w-3 h-3 bg-green-500 rounded-full flex items-center justify-center">
+                      <span className="text-white text-xs">✓</span>
+                    </div>
+                  )}
                 </Button>
               </TooltipTrigger>
               <TooltipContent>
                 <div className="text-center">
-                  <div className="font-semibold">Current Location</div>
+                  <div className="font-semibold flex items-center gap-1">
+                    Current Location
+                    {hasLocationPlaced && <span className="text-green-600 text-xs">✓ Placed</span>}
+                  </div>
                   <div className="text-xs text-gray-500 mt-1">Mark where you are currently standing to help calibrate device positioning and signal strength</div>
                 </div>
               </TooltipContent>
