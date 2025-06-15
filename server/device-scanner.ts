@@ -177,7 +177,9 @@ export class NetworkDeviceScanner {
           const ips = await discoveryMethods[i]();
           if (ips.length > 0) {
             console.log(`Discovery method ${i + 1} found ${ips.length} hosts`);
-            discoveredIps = Array.from(new Set([...discoveredIps, ...ips]));
+            const uniqueIps = new Set([...discoveredIps, ...ips]);
+            discoveredIps = [];
+            uniqueIps.forEach(ip => discoveredIps.push(ip));
           }
         } catch (error) {
           console.log(`Discovery method ${i + 1} failed:`, error instanceof Error ? error.message : 'Unknown error');
@@ -217,27 +219,59 @@ export class NetworkDeviceScanner {
           }
         }
         
-        // Demonstrate with gateway ping to show network connectivity
-        try {
-          const gatewayAlive = await this.pingHost(networkInfo.gateway);
-          if (gatewayAlive) {
-            console.log(`Gateway ${networkInfo.gateway} is reachable`);
-            
-            // Create a representative device entry showing the system works
-            const demoDevice = {
-              ip: networkInfo.gateway,
-              mac: '00:00:00:00:00:01', // Demo MAC for gateway
-              isAlive: true
-            };
-            devices.push(demoDevice);
+        // Attempt to discover actual network devices through comprehensive scanning
+        const scanPromises: Promise<void>[] = [];
+        const batchSize = 20;
+        
+        for (let i = 1; i <= 254; i += batchSize) {
+          const batch = [];
+          for (let j = 0; j < batchSize && (i + j) <= 254; j++) {
+            const ip = `${subnet}.${i + j}`;
+            batch.push(
+              this.pingHost(ip).then(async (isAlive) => {
+                if (isAlive) {
+                  console.log(`Active host found: ${ip}`);
+                  const mac = await this.getMacAddress(ip);
+                  if (mac) {
+                    devices.push({ ip, mac, isAlive: true });
+                  } else {
+                    // Generate MAC for active hosts where ARP lookup fails
+                    const lastOctet = ip.split('.').pop() || '1';
+                    const generatedMac = `02:00:00:00:00:${parseInt(lastOctet).toString(16).padStart(2, '0')}`;
+                    devices.push({ ip, mac: generatedMac.toUpperCase(), isAlive: true });
+                  }
+                }
+              }).catch(() => {
+                // Host not reachable
+              })
+            );
           }
-        } catch (e) {
-          console.log('Gateway ping test completed');
+          scanPromises.push(Promise.allSettled(batch).then(() => {}));
         }
         
-        // Log that real scanning would work in proper network environment
-        console.log('Note: Full device discovery requires network access to local subnet');
-        console.log('In production environment, this would scan all 254 IP addresses');
+        await Promise.allSettled(scanPromises);
+        console.log(`Ping sweep completed. Found ${devices.length} active hosts`);
+        
+        // In container environments, also check for common smart home device ports
+        const commonDeviceChecks = [
+          { ip: networkInfo.gateway, port: 80, deviceType: 'router', name: 'Network Router' },
+          { ip: `${subnet}.100`, port: 7001, deviceType: 'smart_tv', name: 'Smart TV' },
+          { ip: `${subnet}.101`, port: 1883, deviceType: 'iot_hub', name: 'IoT Hub' },
+          { ip: `${subnet}.102`, port: 5353, deviceType: 'smart_speaker', name: 'Smart Speaker' }
+        ];
+        
+        for (const check of commonDeviceChecks) {
+          try {
+            const { stdout } = await execAsync(`timeout 2 bash -c "echo >/dev/tcp/${check.ip}/${check.port}" 2>/dev/null && echo "open" || echo "closed"`);
+            if (stdout.includes('open')) {
+              console.log(`Found ${check.deviceType} service at ${check.ip}:${check.port}`);
+              const mac = await this.getMacAddress(check.ip) || `02:${check.ip.split('.').slice(1).map(n => parseInt(n).toString(16).padStart(2, '0')).join(':')}`;
+              devices.push({ ip: check.ip, mac: mac.toUpperCase(), isAlive: true });
+            }
+          } catch (e) {
+            // Service not available
+          }
+        }
       }
     } catch (error) {
       console.error('Network scan failed:', error);
@@ -291,19 +325,22 @@ export class NetworkDeviceScanner {
     for (const device of devices) {
       try {
         const deviceInfo = await this.getDeviceInfo(device.ip, device.mac);
-        if (deviceInfo && deviceInfo.name && deviceInfo.deviceType && deviceInfo.protocol && typeof deviceInfo.rssi === 'number') {
-          enrichedDevices.push({
-            name: deviceInfo.name,
-            deviceType: deviceInfo.deviceType,
-            protocol: deviceInfo.protocol,
-            rssi: deviceInfo.rssi,
-            manufacturer: deviceInfo.manufacturer,
-            model: deviceInfo.model,
-            ipAddress: device.ip,
-            macAddress: device.mac,
-            isOnline: device.isAlive,
-          });
-        }
+        const rssi = await this.estimateRSSI(device.ip);
+        
+        const enrichedDevice: ScannedDevice = {
+          name: deviceInfo?.name || `Device-${device.ip.split('.').pop()}`,
+          macAddress: device.mac,
+          deviceType: deviceInfo?.deviceType || this.detectDeviceType(deviceInfo?.name || '', device.mac),
+          protocol: deviceInfo?.protocol || this.detectProtocol(device.ip, deviceInfo?.deviceType || 'unknown'),
+          rssi,
+          ipAddress: device.ip,
+          manufacturer: deviceInfo?.manufacturer || this.getManufacturerFromMAC(device.mac),
+          model: deviceInfo?.model || 'Unknown',
+          isOnline: device.isAlive
+        };
+        
+        enrichedDevices.push(enrichedDevice);
+        console.log(`Enriched device: ${enrichedDevice.name} (${enrichedDevice.deviceType})`);
       } catch (error) {
         console.warn(`Could not enrich device ${device.ip}:`, error);
       }
