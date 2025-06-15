@@ -1,6 +1,3 @@
-import * as arp from 'node-arp';
-const ping = require('ping');
-import * as wifi from 'node-wifi';
 import { exec } from 'child_process';
 import { promisify } from 'util';
 
@@ -87,52 +84,98 @@ export class NetworkDeviceScanner {
     
     console.log(`Scanning subnet ${subnet}.0/24...`);
     
-    // Ping sweep to discover active hosts
-    const pingPromises: Promise<void>[] = [];
-    
-    for (let i = 1; i <= 254; i++) {
-      const ip = `${subnet}.${i}`;
-      
-      pingPromises.push(
-        ping.promise.probe(ip, { timeout: 1, min_reply: 1 })
-          .then(async (result: any) => {
-            if (result.alive) {
-              console.log(`Found active host: ${ip}`);
-              
-              // Get MAC address using ARP
-              try {
-                const mac = await this.getMacAddress(ip);
-                if (mac) {
-                  devices.push({ ip, mac, isAlive: true });
-                }
-              } catch (error) {
-                console.warn(`Could not get MAC for ${ip}:`, error);
-              }
+    try {
+      // Use nmap for network discovery (if available)
+      try {
+        const { stdout } = await execAsync(`nmap -sn ${subnet}.0/24 2>/dev/null || true`);
+        const lines = stdout.split('\n');
+        
+        for (const line of lines) {
+          const ipMatch = line.match(/Nmap scan report for (\d+\.\d+\.\d+\.\d+)/);
+          if (ipMatch) {
+            const ip = ipMatch[1];
+            console.log(`Found active host: ${ip}`);
+            
+            const mac = await this.getMacAddress(ip);
+            if (mac) {
+              devices.push({ ip, mac, isAlive: true });
             }
-          })
-          .catch((error: any) => {
-            // Ignore ping failures for individual IPs
-          })
-      );
+          }
+        }
+      } catch (nmapError) {
+        console.warn('nmap not available, using ping sweep...');
+        
+        // Fallback to ping sweep with system commands
+        const pingPromises: Promise<void>[] = [];
+        
+        for (let i = 1; i <= 254; i++) {
+          const ip = `${subnet}.${i}`;
+          
+          pingPromises.push(
+            this.pingHost(ip)
+              .then(async (isAlive) => {
+                if (isAlive) {
+                  console.log(`Found active host: ${ip}`);
+                  
+                  const mac = await this.getMacAddress(ip);
+                  if (mac) {
+                    devices.push({ ip, mac, isAlive: true });
+                  }
+                }
+              })
+              .catch(() => {
+                // Ignore ping failures for individual IPs
+              })
+          );
+        }
+        
+        // Wait for all ping operations
+        await Promise.allSettled(pingPromises);
+      }
+    } catch (error) {
+      console.error('Network scan failed:', error);
     }
-    
-    // Wait for all ping operations with a reasonable timeout
-    await Promise.allSettled(pingPromises);
     
     console.log(`Network scan found ${devices.length} active devices`);
     return devices;
   }
 
+  private async pingHost(ip: string): Promise<boolean> {
+    try {
+      const { stdout } = await execAsync(`ping -c 1 -W 1 ${ip} 2>/dev/null || true`);
+      return stdout.includes('1 received') || stdout.includes('1 packets transmitted, 1 received');
+    } catch {
+      return false;
+    }
+  }
+
   private async getMacAddress(ip: string): Promise<string | null> {
-    return new Promise((resolve) => {
-      arp.getMAC(ip, (err: any, mac: string) => {
-        if (err || !mac) {
-          resolve(null);
-        } else {
-          resolve(mac.toUpperCase());
+    try {
+      // Use system ARP table to get MAC address
+      const { stdout } = await execAsync(`arp -n ${ip} 2>/dev/null || true`);
+      const macMatch = stdout.match(/([0-9a-fA-F]{2}[:-]){5}[0-9a-fA-F]{2}/);
+      
+      if (macMatch) {
+        return macMatch[0].toUpperCase().replace(/:/g, ':');
+      }
+      
+      // Alternative: try ip neighbor command
+      try {
+        const { stdout: ipOutput } = await execAsync(`ip neighbor show ${ip} 2>/dev/null || true`);
+        const ipMacMatch = ipOutput.match(/([0-9a-fA-F]{2}[:-]){5}[0-9a-fA-F]{2}/);
+        
+        if (ipMacMatch) {
+          return ipMacMatch[0].toUpperCase().replace(/:/g, ':');
         }
-      });
-    });
+      } catch {
+        // Ignore error
+      }
+      
+      return null;
+    } catch (error) {
+      console.warn(`Could not get MAC for ${ip}:`, error);
+      return null;
+    }
   }
 
   private async enrichDeviceData(devices: { ip: string; mac: string; isAlive: boolean }[]): Promise<ScannedDevice[]> {
@@ -209,12 +252,18 @@ export class NetworkDeviceScanner {
 
   private async estimateRSSI(ip: string): Promise<number> {
     try {
-      const result: any = await ping.promise.probe(ip, { timeout: 2 });
-      if (result.alive && result.time !== 'unknown') {
+      // Use ping to estimate signal quality based on response time
+      const { stdout } = await execAsync(`ping -c 3 -W 2 ${ip} 2>/dev/null || true`);
+      
+      const timeMatch = stdout.match(/time=(\d+\.?\d*)/g);
+      if (timeMatch && timeMatch.length > 0) {
+        // Calculate average ping time
+        const times = timeMatch.map(t => parseFloat(t.replace('time=', '')));
+        const avgTime = times.reduce((sum, time) => sum + time, 0) / times.length;
+        
         // Convert ping time to estimated RSSI
         // Lower ping time = better signal = higher RSSI
-        const pingTime = typeof result.time === 'number' ? result.time : parseFloat(result.time as string);
-        const rssi = Math.max(-80, -30 - (pingTime * 2)); // Rough estimation
+        const rssi = Math.max(-80, -30 - (avgTime * 2)); // Rough estimation
         return Math.round(rssi);
       }
     } catch (error) {

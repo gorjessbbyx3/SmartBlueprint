@@ -4,6 +4,10 @@ import { WebSocketServer, WebSocket } from "ws";
 import { storage } from "./storage";
 import { insertDeviceSchema, insertFloorplanSchema, insertAnomalySchema, insertRecommendationSchema } from "@shared/schema";
 import { z } from "zod";
+import { exec } from 'child_process';
+import { promisify } from 'util';
+
+const execAsync = promisify(exec);
 
 export async function registerRoutes(app: Express): Promise<Server> {
   const httpServer = createServer(app);
@@ -288,10 +292,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Perform periodic ping checks on discovered devices to update their status
           for (const device of devices) {
             try {
-              const ping = await import('ping');
-              const result = await ping.promise.probe(device.macAddress, { timeout: 2 });
+              // Use system ping to check device status
+              const { stdout } = await execAsync(`ping -c 1 -W 1 ${device.macAddress} 2>/dev/null || true`);
+              const isAlive = stdout.includes('1 received') || stdout.includes('1 packets transmitted, 1 received');
               
-              if (!result.alive && device.isOnline) {
+              if (!isAlive && device.isOnline) {
                 // Device went offline
                 await storage.updateDevice(device.id, { isOnline: false });
                 
@@ -308,7 +313,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                   type: 'anomaly',
                   data: anomaly
                 }));
-              } else if (result.alive && !device.isOnline) {
+              } else if (isAlive && !device.isOnline) {
                 // Device came back online
                 await storage.updateDevice(device.id, { isOnline: true });
               }
