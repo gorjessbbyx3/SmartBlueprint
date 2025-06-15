@@ -59,9 +59,15 @@ function getSeverityBadgeVariant(severity: string) {
   }
 }
 
-function formatTimeAgo(timestamp: Date): string {
+function formatTimeAgo(timestamp: Date | string): string {
   const now = new Date();
-  const diffMs = now.getTime() - timestamp.getTime();
+  const date = typeof timestamp === 'string' ? new Date(timestamp) : timestamp;
+  
+  if (!(date instanceof Date) || isNaN(date.getTime())) {
+    return 'Unknown time';
+  }
+  
+  const diffMs = now.getTime() - date.getTime();
   const diffMins = Math.floor(diffMs / 60000);
   const diffHours = Math.floor(diffMins / 60);
   const diffDays = Math.floor(diffHours / 24);

@@ -239,6 +239,7 @@ Changelog:
 - June 15, 2025. Implemented interactive floor plan heat map with real-time WiFi signal visualization, dynamic color-coded overlay, and advanced interpolation algorithms
 - June 15, 2025. Added WiFi connection detection with start button, popup notifications for connectivity issues, and visual check marks for router and location placement on blueprints
 - June 15, 2025. Implemented comprehensive network device discovery system with privacy controls, multi-protocol scanning (SSDP/mDNS/ARP), vendor identification, and automatic device classification for smart home IoT devices
+- June 15, 2025. Fixed device discovery to show only real network devices, removed test device storage, and corrected timestamp formatting in alerts system for production deployment
 ```
 
 ## User Preferences
