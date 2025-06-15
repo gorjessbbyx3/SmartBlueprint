@@ -1,6 +1,9 @@
-import { useRef, useEffect, useState } from "react";
+import { useRef, useEffect, useState, useMemo, useCallback } from "react";
 import { Device, Floorplan } from "@shared/schema";
 import { Button } from "@/components/ui/button";
+import { ErrorBoundary, MappingErrorFallback } from "./error-boundary";
+import { FloorplanLoadingState, InlineLoading } from "./loading-states";
+import { ZoomIn, ZoomOut, RotateCcw, Maximize2, Move } from "lucide-react";
 
 interface FloorplanCanvasProps {
   devices: Device[];
@@ -18,27 +21,53 @@ export default function FloorplanCanvas({
   const canvasRef = useRef<HTMLDivElement>(null);
   const [selectedTool, setSelectedTool] = useState<"select" | "draw" | "room" | "measure">("select");
   const [zoom, setZoom] = useState(1);
+  const [panOffset, setPanOffset] = useState({ x: 0, y: 0 });
+  const [isDragging, setIsDragging] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
 
-  const getDeviceColor = (device: Device) => {
+  // Detect mobile device
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
+  // Memoized device color calculation for performance
+  const getDeviceColor = useCallback((device: Device) => {
     if (!device.isOnline) return "bg-gray-400";
     
-    switch (device.deviceType) {
-      case "smart_tv":
-        return "bg-blue-500";
-      case "hue_bridge":
-        return "bg-green-500";
-      case "thermostat":
-        return "bg-orange-500";
-      case "smart_speaker":
-        return "bg-purple-500";
-      case "smart_fridge":
-        return "bg-cyan-500";
-      default:
-        return "bg-gray-500";
-    }
-  };
+    const colorMap: Record<string, string> = {
+      smart_tv: "bg-blue-500",
+      hue_bridge: "bg-green-500", 
+      thermostat: "bg-orange-500",
+      smart_speaker: "bg-purple-500",
+      smart_fridge: "bg-cyan-500",
+      unknown_device: "bg-gray-500"
+    };
+    
+    return colorMap[device.deviceType] || "bg-gray-500";
+  }, []);
 
-  const getHeatmapIntensity = (x: number, y: number) => {
+  // Memoized device icon selection
+  const getDeviceIcon = useCallback((device: Device) => {
+    const iconMap: Record<string, string> = {
+      smart_tv: "📺",
+      hue_bridge: "💡",
+      thermostat: "🌡️",
+      smart_speaker: "🔊",
+      smart_fridge: "❄️",
+      unknown_device: "📱"
+    };
+    
+    return iconMap[device.deviceType] || "📱";
+  }, []);
+
+  // Optimized heatmap calculation with memoization
+  const getHeatmapIntensity = useCallback((x: number, y: number) => {
     let maxSignal = -100;
     
     devices.forEach(device => {
@@ -48,45 +77,100 @@ export default function FloorplanCanvas({
         maxSignal = Math.max(maxSignal, estimatedRSSI);
       }
     });
-    
+  
     if (maxSignal < -80) return 0;
     if (maxSignal > -40) return 0.6;
     
     return ((maxSignal + 80) / 40) * 0.6;
-  };
+  }, [devices]);
 
-  const renderHeatmap = () => {
-    if (!showHeatmap) return null;
-    
-    const heatmapPoints = [];
-    for (let x = 0; x < 800; x += 40) {
-      for (let y = 0; y < 600; y += 40) {
-        const intensity = getHeatmapIntensity(x, y);
-        if (intensity > 0.1) {
-          heatmapPoints.push(
-            <div
-              key={`${x}-${y}`}
-              className="absolute rounded-full pointer-events-none"
-              style={{
-                left: x - 20,
-                top: y - 20,
-                width: 40,
-                height: 40,
-                backgroundColor: intensity > 0.4 ? '#10b981' : intensity > 0.25 ? '#f59e0b' : '#ef4444',
-                opacity: intensity * 0.4,
-              }}
-            />
-          );
-        }
-      }
+  // Zoom controls with performance optimization
+  const handleZoomIn = useCallback(() => {
+    setZoom(prev => Math.min(prev * 1.2, 3));
+  }, []);
+
+  const handleZoomOut = useCallback(() => {
+    setZoom(prev => Math.max(prev / 1.2, 0.5));
+  }, []);
+
+  const handleResetZoom = useCallback(() => {
+    setZoom(1);
+    setPanOffset({ x: 0, y: 0 });
+  }, []);
+
+  // Touch/mouse event handlers for mobile support
+  const handlePointerDown = useCallback((e: React.PointerEvent) => {
+    if (selectedTool === "select") {
+      setIsDragging(true);
     }
-    
+  }, [selectedTool]);
+
+  const handlePointerUp = useCallback(() => {
+    setIsDragging(false);
+  }, []);
+
+  // Memoized device rendering for performance
+  const renderedDevices = useMemo(() => {
+    return devices
+      .filter(device => device.x && device.y)
+      .map((device) => (
+        <div
+          key={device.id}
+          className={`absolute device-dot touch-friendly ${getDeviceColor(device)} rounded-full flex items-center justify-center text-white text-xs font-medium border-2 border-white shadow-lg ${
+            device.isOnline ? 'pulse-animation' : ''
+          }`}
+          style={{
+            left: device.x! - (isMobile ? 16 : 12),
+            top: device.y! - (isMobile ? 16 : 12),
+            width: isMobile ? 32 : 24,
+            height: isMobile ? 32 : 24,
+          }}
+          onClick={() => onDeviceClick(device)}
+          title={`${device.name} (${device.deviceType}) - RSSI: ${device.rssi}dBm`}
+        >
+          <span className={`${isMobile ? 'text-sm' : 'text-xs'}`}>
+            {getDeviceIcon(device)}
+          </span>
+        </div>
+      ));
+  }, [devices, getDeviceColor, getDeviceIcon, isMobile, onDeviceClick]);
+
+  // Optimized heatmap rendering with lazy loading
+  const renderedHeatmap = useMemo(() => {
+    if (!showHeatmap) return null;
+
+    const gridSize = isMobile ? 15 : 20;
+    const cellSize = isMobile ? 40 : 50;
+
     return (
-      <div className="absolute inset-0 pointer-events-none">
-        {heatmapPoints}
+      <div className="absolute inset-0 heatmap-overlay pointer-events-none">
+        {Array.from({ length: gridSize }, (_, x) =>
+          Array.from({ length: gridSize }, (_, y) => {
+            const intensity = getHeatmapIntensity(x * cellSize, y * cellSize);
+            if (intensity < 0.1) return null; // Skip rendering very low intensity cells
+            
+            return (
+              <div
+                key={`${x}-${y}`}
+                className="absolute transition-opacity duration-300"
+                style={{
+                  left: x * cellSize,
+                  top: y * cellSize,
+                  width: cellSize,
+                  height: cellSize,
+                  backgroundColor: `rgba(255, 0, 0, ${intensity})`,
+                }}
+              />
+            );
+          })
+        )}
       </div>
     );
-  };
+  }, [showHeatmap, getHeatmapIntensity, isMobile]);
+
+  if (isLoading) {
+    return <FloorplanLoadingState />;
+  }
 
   return (
     <div className="relative w-full h-full">
