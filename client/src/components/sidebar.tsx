@@ -11,6 +11,7 @@ import CoverageAnalysis from "./coverage-analysis";
 import MLAnalyticsPanel from "./ml-analytics-panel";
 import RoomManagementPanel from "./room-management-panel";
 import WiFiConnectionCheck from "./wifi-connection-check";
+import { NetworkDeviceDiscovery } from "./network-device-discovery";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { Brain, Home, Zap, TrendingUp, Activity, AlertTriangle, Pen, Wifi, MapPin } from "lucide-react";

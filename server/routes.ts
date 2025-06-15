@@ -901,6 +901,88 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Network Device Discovery Endpoints
+  app.post("/api/network/scan", async (req, res) => {
+    try {
+      const scanRequest = z.object({
+        userConsent: z.boolean(),
+        scanIntensive: z.boolean().default(false),
+        includeVendorLookup: z.boolean().default(true)
+      }).parse(req.body);
+
+      if (!scanRequest.userConsent) {
+        return res.status(400).json({ 
+          message: "User consent required for network scanning",
+          error: "CONSENT_REQUIRED"
+        });
+      }
+
+      console.log('🔍 Starting network device discovery with user consent...');
+      const scanResult = await networkDiscoveryService.startNetworkScan(scanRequest);
+      
+      // Store discovered devices in our database
+      for (const networkDevice of scanResult.devices) {
+        try {
+          const deviceData = {
+            name: networkDevice.deviceName,
+            macAddress: networkDevice.mac,
+            deviceType: networkDevice.deviceType,
+            protocol: 'network_scan',
+            rssi: -50, // Default RSSI for discovered devices
+            x: null,
+            y: null,
+            isOnline: networkDevice.isOnline,
+            lastSeen: networkDevice.lastSeen,
+            telemetryData: {
+              ip: networkDevice.ip,
+              hostname: networkDevice.hostname,
+              vendor: networkDevice.vendor,
+              services: networkDevice.services
+            }
+          };
+
+          await storage.createDevice(deviceData);
+          console.log(`📱 Added discovered device: ${networkDevice.deviceName} (${networkDevice.mac})`);
+        } catch (dbError) {
+          console.log(`⚠️ Device already exists: ${networkDevice.deviceName}`);
+        }
+      }
+
+      res.json({
+        success: true,
+        message: `Found ${scanResult.devices.length} devices on your network`,
+        scanResult,
+        privacy: {
+          dataStaysLocal: true,
+          noExternalTransmission: true,
+          scanDuration: scanResult.scanDuration
+        }
+      });
+    } catch (error) {
+      console.error('Network scan failed:', error);
+      res.status(500).json({ 
+        message: "Network scan failed", 
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  app.get("/api/network/scan-status", async (req, res) => {
+    try {
+      res.json({
+        isScanning: false, // Simple implementation - no persistent scanning state
+        lastScanTime: null,
+        devicesFound: 0,
+        privacy: {
+          dataStaysLocal: true,
+          noExternalTransmission: true
+        }
+      });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to get scan status" });
+    }
+  });
+
   app.get("/api/monitoring/alerts", async (req, res) => {
     try {
       const alerts = monitoringService.getActiveAlerts();
