@@ -15,7 +15,7 @@ import { useWebSocket } from "@/hooks/use-websocket";
 
 export default function Dashboard() {
   const [selectedDevice, setSelectedDevice] = useState<Device | null>(null);
-  const [activeTab, setActiveTab] = useState<"mapping" | "analytics">("mapping");
+  const [activeTab, setActiveTab] = useState<"mapping" | "analytics" | "sketch">("mapping");
   const [showRecommendations, setShowRecommendations] = useState(true);
   const [showHeatmap, setShowHeatmap] = useState(true);
   const [isMobile, setIsMobile] = useState(false);
@@ -134,6 +134,16 @@ export default function Dashboard() {
                   floorplan={floorplan}
                   onDeviceClick={handleDeviceClick}
                   showHeatmap={showHeatmap}
+                />
+              </div>
+            ) : activeTab === "sketch" ? (
+              <div className="h-full">
+                <EnhancedFloorplanSketch
+                  onSave={(elements) => {
+                    console.log("Saved floor plan elements:", elements);
+                    // Here you would save the floor plan elements to the backend
+                  }}
+                  initialElements={[]}
                 />
               </div>
             ) : (

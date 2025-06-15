@@ -12,11 +12,11 @@ import MLAnalyticsPanel from "./ml-analytics-panel";
 import RoomManagementPanel from "./room-management-panel";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
-import { Brain, Home, Zap, TrendingUp, Activity, AlertTriangle } from "lucide-react";
+import { Brain, Home, Zap, TrendingUp, Activity, AlertTriangle, Pen } from "lucide-react";
 
 interface SidebarProps {
-  activeTab: "mapping" | "analytics";
-  onTabChange: (tab: "mapping" | "analytics") => void;
+  activeTab: "mapping" | "analytics" | "sketch";
+  onTabChange: (tab: "mapping" | "analytics" | "sketch") => void;
   devices: Device[];
   onDeviceSelect: (device: Device) => void;
   showHeatmap: boolean;
@@ -92,24 +92,37 @@ export default function Sidebar({
       {/* Navigation Tabs */}
       <div className="flex border-b border-gray-200">
         <button
-          className={`flex-1 px-4 py-3 text-sm font-medium ${
+          className={`flex-1 px-3 py-3 text-sm font-medium ${
             activeTab === "mapping"
               ? "text-primary border-b-2 border-primary bg-blue-50"
               : "text-gray-500 hover:text-gray-700"
           }`}
           onClick={() => onTabChange("mapping")}
         >
-          <i className="fas fa-map mr-2"></i>Mapping
+          <Home className="w-4 h-4 mx-auto mb-1" />
+          <span className="block text-xs">Mapping</span>
         </button>
         <button
-          className={`flex-1 px-4 py-3 text-sm font-medium ${
+          className={`flex-1 px-3 py-3 text-sm font-medium ${
+            activeTab === "sketch"
+              ? "text-primary border-b-2 border-primary bg-blue-50"
+              : "text-gray-500 hover:text-gray-700"
+          }`}
+          onClick={() => onTabChange("sketch")}
+        >
+          <Pen className="w-4 h-4 mx-auto mb-1" />
+          <span className="block text-xs">Sketch</span>
+        </button>
+        <button
+          className={`flex-1 px-3 py-3 text-sm font-medium ${
             activeTab === "analytics"
               ? "text-primary border-b-2 border-primary bg-blue-50"
               : "text-gray-500 hover:text-gray-700"
           }`}
           onClick={() => onTabChange("analytics")}
         >
-          <i className="fas fa-chart-line mr-2"></i>Analytics
+          <TrendingUp className="w-4 h-4 mx-auto mb-1" />
+          <span className="block text-xs">Analytics</span>
         </button>
       </div>
 
@@ -279,6 +292,105 @@ export default function Sidebar({
                     <span>Bluetooth Devices</span>
                     <span>{devices.filter(d => d.protocol === 'bluetooth').length}</span>
                   </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
+        {activeTab === "sketch" && (
+          <div className="space-y-4">
+            {/* Sketch Tools Guide */}
+            <Card>
+              <CardContent className="p-4">
+                <h3 className="text-sm font-semibold text-gray-900 mb-3 flex items-center">
+                  <Pen className="w-4 h-4 mr-2" />
+                  Floor Plan Sketch Tools
+                </h3>
+                <div className="space-y-3 text-xs">
+                  <div className="bg-blue-50 p-3 rounded-lg">
+                    <h4 className="font-medium text-blue-900 mb-2">Getting Started</h4>
+                    <ul className="space-y-1 text-blue-700">
+                      <li>• Select a drawing tool from the toolbar</li>
+                      <li>• Use walls to outline room boundaries</li>
+                      <li>• Add doors and windows for accuracy</li>
+                      <li>• Draw rooms to define separate areas</li>
+                    </ul>
+                  </div>
+                  
+                  <div className="bg-green-50 p-3 rounded-lg">
+                    <h4 className="font-medium text-green-900 mb-2">Pro Tips</h4>
+                    <ul className="space-y-1 text-green-700">
+                      <li>• Enable grid snap for precise alignment</li>
+                      <li>• Zoom in for detailed work</li>
+                      <li>• Use undo/redo to fix mistakes</li>
+                      <li>• Save frequently to preserve your work</li>
+                    </ul>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Drawing Templates */}
+            <Card>
+              <CardContent className="p-4">
+                <h3 className="text-sm font-semibold text-gray-900 mb-3">Quick Templates</h3>
+                <div className="grid grid-cols-2 gap-2">
+                  <Button variant="outline" size="sm" className="h-auto p-3 flex flex-col">
+                    <Home className="w-6 h-6 mb-1" />
+                    <span className="text-xs">Living Room</span>
+                  </Button>
+                  <Button variant="outline" size="sm" className="h-auto p-3 flex flex-col">
+                    <Home className="w-6 h-6 mb-1" />
+                    <span className="text-xs">Bedroom</span>
+                  </Button>
+                  <Button variant="outline" size="sm" className="h-auto p-3 flex flex-col">
+                    <Home className="w-6 h-6 mb-1" />
+                    <span className="text-xs">Kitchen</span>
+                  </Button>
+                  <Button variant="outline" size="sm" className="h-auto p-3 flex flex-col">
+                    <Home className="w-6 h-6 mb-1" />
+                    <span className="text-xs">Office</span>
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Sketch Settings */}
+            <Card>
+              <CardContent className="p-4">
+                <h3 className="text-sm font-semibold text-gray-900 mb-3">Sketch Settings</h3>
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs">Grid Snapping</span>
+                    <Switch defaultChecked />
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs">Show Measurements</span>
+                    <Switch />
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs">Auto-Save</span>
+                    <Switch defaultChecked />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Export Options */}
+            <Card>
+              <CardContent className="p-4">
+                <h3 className="text-sm font-semibold text-gray-900 mb-3">Export & Share</h3>
+                <div className="space-y-2">
+                  <Button variant="outline" size="sm" className="w-full text-xs">
+                    Export as PNG
+                  </Button>
+                  <Button variant="outline" size="sm" className="w-full text-xs">
+                    Export as PDF
+                  </Button>
+                  <Button variant="outline" size="sm" className="w-full text-xs">
+                    Share Link
+                  </Button>
                 </div>
               </CardContent>
             </Card>
