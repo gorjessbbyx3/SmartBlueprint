@@ -41,7 +41,7 @@ export default function CoverageAnalysis({ showHeatmap, onToggleHeatmap }: Cover
     },
   });
 
-  const coverageScore = coverageData?.coverageScore || 82;
+  const coverageScore = coverageData?.coverageScore || 0;
 
   return (
     <Card>

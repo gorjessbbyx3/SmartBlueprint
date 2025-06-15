@@ -265,21 +265,51 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const coverageScore = Math.round((totalCoverage / coveragePoints) * 100);
       
+      // Calculate actual weak spots based on real device data
+      const weakSpots = [];
+      const recommendations = [];
+      
+      // Only calculate weak spots if we have real devices
+      if (devices.length > 0) {
+        for (let x = 0; x < 800; x += 40) {
+          for (let y = 0; y < 600; y += 40) {
+            let maxSignal = -100;
+            devices.forEach(device => {
+              if (device.x && device.y) {
+                const distance = Math.sqrt(Math.pow(x - device.x, 2) + Math.pow(y - device.y, 2));
+                const estimatedRSSI = device.rssi - (distance * 0.1);
+                maxSignal = Math.max(maxSignal, estimatedRSSI);
+              }
+            });
+            
+            // Only add actual weak spots (poor signal areas)
+            if (maxSignal < -75 && maxSignal > -100) {
+              weakSpots.push({ x, y, strength: maxSignal });
+            }
+          }
+        }
+        
+        // Generate recommendations only for actual weak spots
+        if (weakSpots.length > 0) {
+          // Find the weakest spot for extender recommendation
+          const weakestSpot = weakSpots.reduce((prev, current) => 
+            current.strength < prev.strength ? current : prev
+          );
+          
+          recommendations.push({
+            type: "wifi_extender",
+            description: "Add Wi-Fi extender to improve coverage in weak signal area",
+            x: weakestSpot.x,
+            y: weakestSpot.y,
+            improvementScore: Math.round(Math.abs(weakestSpot.strength + 50))
+          });
+        }
+      }
+      
       res.json({
         coverageScore,
-        weakSpots: [
-          { x: 300, y: 320, strength: -75 },
-          { x: 500, y: 280, strength: -72 }
-        ],
-        recommendations: [
-          {
-            type: "wifi_extender",
-            description: "Add Wi-Fi extender to improve coverage",
-            x: 320,
-            y: 340,
-            improvementScore: 23
-          }
-        ]
+        weakSpots: weakSpots.slice(0, 10), // Limit to top 10 actual weak spots
+        recommendations
       });
     } catch (error) {
       res.status(500).json({ message: "Failed to analyze coverage" });
@@ -592,9 +622,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         detectionMethod: anomaly.severity === 'high' ? 'ensemble' : 'statistical',
         anomalyScore: anomaly.confidence,
         baseline: {
-          mean: -50,
-          variance: 100,
-          threshold: -70
+          mean: validDevices.length > 0 ? validDevices.reduce((sum, d) => sum + d.rssi, 0) / validDevices.length : 0,
+          variance: validDevices.length > 0 ? (() => {
+            const mean = validDevices.reduce((sum, d) => sum + d.rssi, 0) / validDevices.length;
+            return validDevices.reduce((sum, d) => sum + Math.pow(d.rssi - mean, 2), 0) / validDevices.length;
+          })() : 0,
+          threshold: validDevices.length > 0 ? Math.min(...validDevices.map(d => d.rssi)) - 10 : -70
         },
         contextualFactors: ['temporal_pattern', 'environmental_context'],
         timestamp: new Date()
