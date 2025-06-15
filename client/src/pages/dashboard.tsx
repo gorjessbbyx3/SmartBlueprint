@@ -84,6 +84,7 @@ export default function Dashboard() {
             onDeviceSelect={setSelectedDevice}
             showHeatmap={showHeatmap}
             onToggleHeatmap={setShowHeatmap}
+            onBlueprintUpload={setUploadedBlueprint}
           />
         </div>
         

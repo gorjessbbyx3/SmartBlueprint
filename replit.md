@@ -216,6 +216,7 @@ Changelog:
 - June 15, 2025. Enhanced calibration system with semi-automated beacon walks and room clustering
 - June 15, 2025. Completed comprehensive performance optimization and mobile responsiveness implementation
 - June 15, 2025. Implemented advanced ML models for location fingerprinting and anomaly detection with LSTM, Isolation Forest, and ensemble methods
+- June 15, 2025. Enhanced floor plan sketch interface with detailed tooltips, blueprint upload integration, and user-friendly drawing tools
 ```
 
 ## User Preferences

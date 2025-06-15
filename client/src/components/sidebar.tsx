@@ -31,6 +31,7 @@ export default function Sidebar({
   onDeviceSelect,
   showHeatmap,
   onToggleHeatmap,
+  onBlueprintUpload,
 }: SidebarProps) {
   const [uploadingBlueprint, setUploadingBlueprint] = useState(false);
 
@@ -44,10 +45,23 @@ export default function Sidebar({
     const file = event.target.files?.[0];
     if (file) {
       setUploadingBlueprint(true);
-      // Simulate upload processing
-      setTimeout(() => {
+      
+      // Convert file to data URL for display in sketch interface
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const result = e.target?.result as string;
+        if (result && onBlueprintUpload) {
+          onBlueprintUpload(result);
+          // Switch to sketch tab to show the uploaded blueprint
+          onTabChange("sketch");
+        }
         setUploadingBlueprint(false);
-      }, 2000);
+      };
+      reader.onerror = () => {
+        setUploadingBlueprint(false);
+        console.error("Failed to read file");
+      };
+      reader.readAsDataURL(file);
     }
   };
 
