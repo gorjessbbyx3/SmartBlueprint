@@ -1008,34 +1008,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         deviceCount: scanRequest.deviceCount
       });
       
-      // Store discovered test devices in our database
-      for (const networkDevice of scanResult.devices) {
-        try {
-          const deviceData = {
-            name: networkDevice.deviceName,
-            macAddress: networkDevice.mac,
-            deviceType: networkDevice.deviceType,
-            protocol: 'test_scan',
-            rssi: -45, // Better signal for test devices
-            x: null,
-            y: null,
-            isOnline: networkDevice.isOnline,
-            lastSeen: networkDevice.lastSeen,
-            telemetryData: {
-              ip: networkDevice.ip,
-              hostname: networkDevice.hostname,
-              vendor: networkDevice.vendor,
-              services: networkDevice.services,
-              isTestDevice: true
-            }
-          };
-
-          await storage.createDevice(deviceData);
-          console.log(`🧪 Added test device: ${networkDevice.deviceName} (${networkDevice.mac})`);
-        } catch (dbError) {
-          console.log(`⚠️ Test device already exists: ${networkDevice.deviceName}`);
-        }
-      }
+      // Test mode - do NOT store devices in database, only return simulation results
+      console.log(`🧪 Test mode completed with ${scanResult.devices.length} simulated devices`);
 
       res.json({
         success: true,

@@ -177,6 +177,21 @@ export class MemStorage implements IStorage {
     return this.devices.delete(id);
   }
 
+  async clearTestDevices(): Promise<void> {
+    const realDevices = new Map<number, Device>();
+    for (const [id, device] of this.devices) {
+      // Keep only real network devices, exclude test devices
+      if (device.protocol !== 'test_scan' && 
+          !(device.telemetryData && 
+            typeof device.telemetryData === 'object' && 
+            'isTestDevice' in device.telemetryData && 
+            device.telemetryData.isTestDevice)) {
+        realDevices.set(id, device);
+      }
+    }
+    this.devices = realDevices;
+  }
+
   async updateDeviceRSSI(macAddress: string, rssi: number): Promise<void> {
     const devices = Array.from(this.devices.values());
     for (const device of devices) {
