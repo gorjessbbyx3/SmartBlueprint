@@ -412,6 +412,13 @@ export default function Sidebar({
                       Gateway detected: {devices.find(d => d.macAddress.includes('02:00:31:128'))?.name || 'Scanning...'}
                     </div>
                   </div>
+                  
+                  {/* Smart Device Discovery */}
+                  <NetworkDeviceDiscovery 
+                    onDevicesDiscovered={(discoveredDevices) => {
+                      console.log('Discovered devices:', discoveredDevices);
+                    }}
+                  />
                 </div>
               </CardContent>
             </Card>
