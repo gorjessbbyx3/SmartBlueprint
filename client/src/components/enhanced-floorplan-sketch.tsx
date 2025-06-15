@@ -76,7 +76,7 @@ export default function EnhancedFloorplanSketch({ onSave, onLoad, initialElement
         ctx.lineWidth = 4;
         ctx.strokeRect(0, 0, canvas.width, canvas.height);
         setTimeout(() => {
-          drawCanvas();
+          // Redraw canvas after save feedback
         }, 200);
       }
     }
@@ -741,7 +741,7 @@ export default function EnhancedFloorplanSketch({ onSave, onLoad, initialElement
           <div className="flex items-center gap-1">
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button variant="outline" size="sm" onClick={handleSave}>
+                <Button variant="outline" size="sm" onClick={handleSaveSketch}>
                   <Save className="h-4 w-4" />
                 </Button>
               </TooltipTrigger>

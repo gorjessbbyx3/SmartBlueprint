@@ -6,6 +6,7 @@ import DeviceDetailsModal from "@/components/device-details-modal";
 import RecommendationPanel from "@/components/recommendation-panel";
 import { RoomHeatmap } from "@/components/room-heatmap";
 import { LiveAlertsFeed } from "@/components/live-alerts-feed";
+import SignalHeatmap from "@/components/signal-heatmap";
 import { ErrorBoundary, NetworkErrorFallback } from "@/components/error-boundary";
 import { LoadingSpinner, AnalyticsLoadingState } from "@/components/loading-states";
 import { MobileNav, MobileBottomNav } from "@/components/mobile-nav";
@@ -131,12 +132,27 @@ export default function Dashboard() {
           <div className="flex-1 relative bg-gray-50 overflow-hidden">
             {activeTab === "mapping" ? (
               <div className="h-full bg-white">
-                <FloorplanCanvas
-                  devices={devices}
-                  floorplan={floorplan}
-                  onDeviceClick={handleDeviceClick}
-                  showHeatmap={showHeatmap}
-                />
+                {showHeatmap ? (
+                  <SignalHeatmap
+                    devices={devices}
+                    floorplan={{
+                      width: Number(floorplan?.width) || 800,
+                      height: Number(floorplan?.height) || 600,
+                      scale: Number(floorplan?.scale) || 1,
+                      backgroundImage: uploadedBlueprint || undefined
+                    }}
+                    className="h-full"
+                    showControls={true}
+                    realTimeUpdate={true}
+                  />
+                ) : (
+                  <FloorplanCanvas
+                    devices={devices}
+                    floorplan={floorplan}
+                    onDeviceClick={handleDeviceClick}
+                    showHeatmap={false}
+                  />
+                )}
               </div>
             ) : activeTab === "sketch" ? (
               <div className="h-full">

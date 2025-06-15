@@ -204,6 +204,25 @@ This is a full-stack web application for smart home device mapping and network o
 4. **Ensemble Analysis** - `/api/ml/ensemble-anomaly-detection` with voting algorithms
 5. **Model Status Monitoring** - `/api/ml/model-status` for performance metrics
 
+## Interactive Signal Heatmap Feature - IMPLEMENTED ✓ COMPLETED
+
+### Real-time WiFi Signal Visualization
+**Production-Ready Heatmap Implementation:**
+1. **Dynamic Color-Coded Overlay** - Real-time signal strength visualization from -100 to -30 dBm with smooth color gradients (red=poor to green=excellent)
+2. **Inverse Distance Weighting Interpolation** - Advanced mathematical interpolation between device measurement points for smooth signal coverage visualization
+3. **Interactive Controls** - Adjustable heatmap intensity, interpolation radius, animation speed, device labels, and signal contour toggles
+4. **Device Signal Indicators** - Real-time RSSI values with signal strength bars for each detected device
+5. **Blueprint Integration** - Seamless overlay on uploaded floor plan images with proper scaling and positioning
+6. **Real-time Animation** - Live updates as devices are detected and signal strength changes across the network
+
+### Advanced Visualization Features
+**Enhanced User Experience:**
+1. **Signal Contour Lines** - Optional equal-strength signal zones with configurable visibility
+2. **Responsive Controls** - Mobile-optimized interface with touch-friendly sliders and toggles
+3. **Performance Optimization** - Canvas-based rendering with smooth 60fps animations and efficient memory usage
+4. **Legend Integration** - Clear signal strength ranges with color coding for easy interpretation
+5. **Toggle Integration** - Seamless switching between basic mapping and heatmap visualization modes
+
 ## Changelog
 
 ```
@@ -217,6 +236,7 @@ Changelog:
 - June 15, 2025. Completed comprehensive performance optimization and mobile responsiveness implementation
 - June 15, 2025. Implemented advanced ML models for location fingerprinting and anomaly detection with LSTM, Isolation Forest, and ensemble methods
 - June 15, 2025. Enhanced floor plan sketch interface with detailed tooltips, blueprint upload integration, and user-friendly drawing tools
+- June 15, 2025. Implemented interactive floor plan heat map with real-time WiFi signal visualization, dynamic color-coded overlay, and advanced interpolation algorithms
 ```
 
 ## User Preferences
