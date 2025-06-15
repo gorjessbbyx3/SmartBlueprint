@@ -84,7 +84,7 @@ export default function Sidebar({
           </div>
           <div>
             <h1 className="text-lg font-semibold text-gray-900">SmartMap Pro</h1>
-            <p className="text-xs text-gray-500">v2.1.3</p>
+            <p className="text-xs text-gray-500">v2.1.3 by GorJessCo</p>
           </div>
         </div>
       </div>
