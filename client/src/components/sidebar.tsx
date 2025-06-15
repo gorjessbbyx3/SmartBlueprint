@@ -84,7 +84,7 @@ export default function Sidebar({
           </div>
           <div>
             <h1 className="text-lg font-semibold text-gray-900">SmartMap Pro</h1>
-            <p className="text-xs text-gray-500">v2.1.3 by GorJessCo</p>
+            <p className="text-xs text-gray-500">v2.1.3 by GorJessCo.</p>
           </div>
         </div>
       </div>
@@ -284,6 +284,19 @@ export default function Sidebar({
             </Card>
           </div>
         )}
+      </div>
+
+      {/* Footer with Legal Links */}
+      <div className="border-t border-gray-200 p-4">
+        <div className="space-y-2">
+          <div className="flex justify-between items-center text-xs text-gray-500">
+            <a href="/terms" className="hover:text-primary underline">Terms of Service</a>
+            <a href="/privacy" className="hover:text-primary underline">Privacy Policy</a>
+          </div>
+          <div className="text-center text-xs text-gray-400">
+            © 2025 GorJessCo. All rights reserved.
+          </div>
+        </div>
       </div>
     </div>
   );
