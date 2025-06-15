@@ -19,6 +19,7 @@ export default function Dashboard() {
   const [showRecommendations, setShowRecommendations] = useState(true);
   const [showHeatmap, setShowHeatmap] = useState(true);
   const [isMobile, setIsMobile] = useState(false);
+  const [uploadedBlueprint, setUploadedBlueprint] = useState<string | null>(null);
 
   // Detect mobile device for responsive UI
   useEffect(() => {
@@ -144,6 +145,7 @@ export default function Dashboard() {
                     // Here you would save the floor plan elements to the backend
                   }}
                   initialElements={[]}
+                  backgroundImage={uploadedBlueprint || undefined}
                 />
               </div>
             ) : (

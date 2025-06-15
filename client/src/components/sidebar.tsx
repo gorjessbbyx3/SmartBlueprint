@@ -21,6 +21,7 @@ interface SidebarProps {
   onDeviceSelect: (device: Device) => void;
   showHeatmap: boolean;
   onToggleHeatmap: (show: boolean) => void;
+  onBlueprintUpload?: (imageUrl: string) => void;
 }
 
 export default function Sidebar({

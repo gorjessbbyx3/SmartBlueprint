@@ -33,9 +33,10 @@ interface SketchToolsProps {
   onSave: (elements: DrawingElement[]) => void;
   onLoad?: (elements: DrawingElement[]) => void;
   initialElements?: DrawingElement[];
+  backgroundImage?: string;
 }
 
-export default function EnhancedFloorplanSketch({ onSave, onLoad, initialElements = [] }: SketchToolsProps) {
+export default function EnhancedFloorplanSketch({ onSave, onLoad, initialElements = [], backgroundImage }: SketchToolsProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   
@@ -53,6 +54,7 @@ export default function EnhancedFloorplanSketch({ onSave, onLoad, initialElement
   const [showGrid, setShowGrid] = useState(true);
   const [snapToGrid, setSnapToGrid] = useState(true);
   const [gridSize] = useState(20);
+  const [backgroundImageElement, setBackgroundImageElement] = useState<HTMLImageElement | null>(null);
   
   // History for undo/redo
   const [history, setHistory] = useState<DrawingElement[][]>([[]]);
@@ -88,6 +90,19 @@ export default function EnhancedFloorplanSketch({ onSave, onLoad, initialElement
     window.addEventListener('resize', updateCanvasSize);
     return () => window.removeEventListener('resize', updateCanvasSize);
   }, []);
+
+  // Load background image when provided
+  useEffect(() => {
+    if (backgroundImage) {
+      const img = new Image();
+      img.onload = () => {
+        setBackgroundImageElement(img);
+      };
+      img.src = backgroundImage;
+    } else {
+      setBackgroundImageElement(null);
+    }
+  }, [backgroundImage]);
 
   // Snap to grid helper
   const snapPoint = useCallback((point: Point): Point => {
@@ -172,6 +187,25 @@ export default function EnhancedFloorplanSketch({ onSave, onLoad, initialElement
     ctx.save();
     ctx.translate(panOffset.x, panOffset.y);
     ctx.scale(zoom, zoom);
+
+    // Draw background image if available
+    if (backgroundImageElement) {
+      const imgAspect = backgroundImageElement.width / backgroundImageElement.height;
+      const canvasAspect = (canvasSize.width / zoom) / (canvasSize.height / zoom);
+      
+      let drawWidth, drawHeight;
+      if (imgAspect > canvasAspect) {
+        drawWidth = canvasSize.width / zoom;
+        drawHeight = drawWidth / imgAspect;
+      } else {
+        drawHeight = canvasSize.height / zoom;
+        drawWidth = drawHeight * imgAspect;
+      }
+      
+      ctx.globalAlpha = 0.7;
+      ctx.drawImage(backgroundImageElement, 0, 0, drawWidth, drawHeight);
+      ctx.globalAlpha = 1;
+    }
 
     // Draw grid
     if (showGrid) {
