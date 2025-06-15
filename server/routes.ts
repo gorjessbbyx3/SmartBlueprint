@@ -288,7 +288,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Perform periodic ping checks on discovered devices to update their status
           for (const device of devices) {
             try {
-              const { ping } = await import('ping');
+              const ping = await import('ping');
               const result = await ping.promise.probe(device.macAddress, { timeout: 2 });
               
               if (!result.alive && device.isOnline) {

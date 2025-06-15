@@ -1,5 +1,5 @@
 import * as arp from 'node-arp';
-import { ping } from 'ping';
+const ping = require('ping');
 import * as wifi from 'node-wifi';
 import { exec } from 'child_process';
 import { promisify } from 'util';
@@ -95,7 +95,7 @@ export class NetworkDeviceScanner {
       
       pingPromises.push(
         ping.promise.probe(ip, { timeout: 1, min_reply: 1 })
-          .then(async (result) => {
+          .then(async (result: any) => {
             if (result.alive) {
               console.log(`Found active host: ${ip}`);
               
@@ -110,7 +110,7 @@ export class NetworkDeviceScanner {
               }
             }
           })
-          .catch((error) => {
+          .catch((error: any) => {
             // Ignore ping failures for individual IPs
           })
       );
@@ -209,7 +209,7 @@ export class NetworkDeviceScanner {
 
   private async estimateRSSI(ip: string): Promise<number> {
     try {
-      const result = await ping.promise.probe(ip, { timeout: 2 });
+      const result: any = await ping.promise.probe(ip, { timeout: 2 });
       if (result.alive && result.time !== 'unknown') {
         // Convert ping time to estimated RSSI
         // Lower ping time = better signal = higher RSSI
