@@ -1,20 +1,46 @@
 import { storage } from './storage';
 import { Device, DeviceTelemetry, MlModel } from '@shared/schema';
+import { 
+  AdvancedLocationEngine, 
+  LSTMAnomalyDetector, 
+  IsolationForestDetector,
+  LSTMAutoencoder,
+  IsolationForest,
+  AnomalyDetectionResult
+} from './advanced-ml-models';
 
 export interface LocationFingerprint {
   location: { x: number; y: number };
   signalPattern: Map<string, number>; // deviceMac -> averageRSSI
   roomId?: number;
   confidence: number;
+  timestamp: Date;
+  environmentalFactors: {
+    temperature?: number;
+    humidity?: number;
+    timeOfDay: number;
+    dayOfWeek: number;
+  };
+  signalVariance: Map<string, number>; // deviceMac -> variance
+  measurements: number; // number of samples used
 }
 
 export interface AnomalyDetection {
   deviceId: number;
-  anomalyType: 'signal_drop' | 'device_offline' | 'performance_degradation' | 'unusual_pattern';
+  anomalyType: 'signal_drop' | 'device_offline' | 'performance_degradation' | 'unusual_pattern' | 'location_drift' | 'interference_spike' | 'temporal_anomaly';
   severity: 'low' | 'medium' | 'high' | 'critical';
   confidence: number;
   description: string;
   recommendedAction?: string;
+  detectionMethod: 'statistical' | 'lstm_autoencoder' | 'isolation_forest' | 'ensemble';
+  anomalyScore: number; // 0-1 scale
+  baseline: {
+    mean: number;
+    variance: number;
+    threshold: number;
+  };
+  contextualFactors: string[];
+  timestamp: Date;
 }
 
 export interface PredictiveMaintenanceResult {
@@ -25,16 +51,56 @@ export interface PredictiveMaintenanceResult {
   priorityScore: number;
 }
 
+// Advanced ML Model Interfaces
+interface LSTMAutoencoder {
+  sequenceLength: number;
+  hiddenDim: number;
+  encodingDim: number;
+  reconstructionThreshold: number;
+  weights: number[][];
+  biases: number[];
+}
+
+interface IsolationForest {
+  numTrees: number;
+  maxSamples: number;
+  trees: IsolationTree[];
+  anomalyThreshold: number;
+}
+
+interface IsolationTree {
+  splitFeature: number;
+  splitValue: number;
+  left?: IsolationTree;
+  right?: IsolationTree;
+  pathLength: number;
+}
+
+interface SignalPattern {
+  deviceMac: string;
+  rssiHistory: number[];
+  timestamps: Date[];
+  location: { x: number; y: number };
+  features: number[]; // Extracted features for ML
+}
+
+interface TemporalSequence {
+  deviceId: number;
+  sequences: number[][]; // Time-windowed RSSI sequences
+  labels: number[]; // 0 = normal, 1 = anomaly
+  lastUpdate: Date;
+}
+
 export class MLAnalyticsEngine {
   private locationFingerprints: LocationFingerprint[] = [];
   private anomalyThresholds = {
-    rssiDrop: -10, // dBm drop threshold
-    packetLossThreshold: 0.05, // 5% packet loss
-    latencyThreshold: 100, // milliseconds
-    offlineThreshold: 300000 // 5 minutes
+    rssiDrop: -10,
+    packetLossThreshold: 0.05,
+    latencyThreshold: 100,
+    offlineThreshold: 300000
   };
   
-  // Enhanced ML models with adaptive thresholds
+  // Advanced ML Components
   private adaptiveThresholds = new Map<number, any>();
   private deviceProfiles = new Map<number, any>();
   private environmentalFactors = {
@@ -42,6 +108,18 @@ export class MLAnalyticsEngine {
     dayOfWeek: new Date().getDay(),
     seasonalFactor: this.getSeasonalFactor()
   };
+  
+  // Advanced ML Components
+  private advancedLocationEngine: AdvancedLocationEngine;
+  private lstmDetector?: LSTMAnomalyDetector;
+  private isolationDetector?: IsolationForestDetector;
+  private signalPatternDB = new Map<string, SignalPattern[]>();
+  private temporalSequences = new Map<number, TemporalSequence>();
+  private fingerprintDB = new Map<string, LocationFingerprint[]>();
+
+  constructor() {
+    this.advancedLocationEngine = new AdvancedLocationEngine();
+  }
 
   async initializeModels(): Promise<void> {
     // Enhanced location fingerprinting with ensemble methods
