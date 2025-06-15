@@ -12,7 +12,7 @@ import MLAnalyticsPanel from "./ml-analytics-panel";
 import RoomManagementPanel from "./room-management-panel";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
-import { Brain, Home, Zap, TrendingUp, Activity, AlertTriangle, Pen } from "lucide-react";
+import { Brain, Home, Zap, TrendingUp, Activity, AlertTriangle, Pen, Wifi, MapPin } from "lucide-react";
 
 interface SidebarProps {
   activeTab: "mapping" | "analytics" | "sketch";
@@ -350,7 +350,7 @@ export default function Sidebar({
             <Card>
               <CardContent className="p-4">
                 <h3 className="text-sm font-semibold text-gray-900 mb-3 flex items-center">
-                  <Wifi className="w-4 h-4 mr-2" />
+                  <Activity className="w-4 h-4 mr-2" />
                   Network Reference Points
                 </h3>
                 <div className="space-y-3">
@@ -362,7 +362,7 @@ export default function Sidebar({
                   >
                     <div className="flex items-center">
                       <div className="w-8 h-8 bg-purple-600 rounded-lg flex items-center justify-center mr-3">
-                        <Wifi className="w-4 h-4 text-white" />
+                        <Activity className="w-4 h-4 text-white" />
                       </div>
                       <div className="text-left">
                         <div className="text-sm font-medium">Mark WiFi Router</div>
@@ -379,7 +379,7 @@ export default function Sidebar({
                   >
                     <div className="flex items-center">
                       <div className="w-8 h-8 bg-orange-600 rounded-lg flex items-center justify-center mr-3">
-                        <MapPin className="w-4 h-4 text-white" />
+                        <Home className="w-4 h-4 text-white" />
                       </div>
                       <div className="text-left">
                         <div className="text-sm font-medium">Mark Your Location</div>
