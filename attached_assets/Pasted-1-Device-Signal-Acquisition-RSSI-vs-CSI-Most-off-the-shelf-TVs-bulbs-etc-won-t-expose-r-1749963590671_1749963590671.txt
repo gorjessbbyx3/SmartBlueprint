@@ -1,0 +1,69 @@
+1. Device Signal Acquisition
+	•	RSSI vs. CSI:
+	•	Most off-the-shelf TVs, bulbs, etc., won’t expose raw CSI—only coarse RSSI readings via the AP. RSSI alone gives meter-level granularity at best and can fluctuate wildly with multipath.
+	•	What’s needed: either retrofit a Wi-Fi NIC in monitor mode to capture CSI from all traffic (you’ll need a compatible driver and possibly root access), or augment with Bluetooth/BLE beacons that you control for finer-grained measurements.
+	•	Telemetry APIs & Authentication:
+	•	Many smart bulbs (e.g. Philips Hue), TVs (e.g. Samsung SmartThings), and thermostats expose proprietary cloud APIs. Pulling “power usage” or “light sensor” data may require API keys, OAuth flows, and introduce latency.
+	•	What’s needed: a unified “device adapter” layer that handles local LAN discovery (mDNS/SSDP), authenticates, polls each device’s telemetry, and normalizes it into a common format.
+
+⸻
+
+2. Calibration & Blueprint Scaling
+	•	Manual Clicks Are Tedious: calibrating each device via manual clicks works for a handful but won’t scale.
+	•	What’s needed: a semi-automated calibration mode where the user walks around with a known beacon (phone) and the system infers room assignments; or uses BLE beacon “zone” detection to auto-label rooms.
+	•	Scaling Pixel → Meters: will require the user to specify at least one real-world distance (e.g., door width) so you can map canvas coordinates to actual units.
+
+⸻
+
+3. Mapping Algorithm
+	•	Simple Weighted Centroid:
+	•	Good for a quick demo, but highly sensitive to RSSI noise.
+	•	What’s needed:
+	•	Build a small fingerprint database: record RSSI vectors at several known points to train a k-NN or light MLP regressor.
+	•	Model path-loss exponent per room (i.e., fit a log-distance model) so you can convert RSSI→distance more reliably.
+
+⸻
+
+4. Anomaly Detection
+	•	Static Thresholds Will Drift:
+	•	Environments change—furniture moves, people come and go.
+	•	What’s needed:
+	•	Use a running baseline model (e.g., an exponentially weighted Gaussian) to adapt threshold over hours/days.
+	•	Or train a simple time-series autoencoder/LSTM on “normal” location sequences, then flag reconstruction error spikes.
+
+⸻
+
+5. Coverage & Recommendation Engine
+	•	Single “Cold Cell” Greedy Suggestion:
+	•	May propose placing an extender in a location without a power outlet or behind thick walls.
+	•	What’s needed:
+	•	Model realistic candidate sites: filter grid cells to only those near outlets or existing network drops.
+	•	Introduce obstacle maps (e.g., walls drawn on the blueprint) so your coverage model accounts for path-loss through structures.
+	•	Consider a more robust solver (e.g., weighted set-cover formulation) if you have >1 extender to place.
+
+⸻
+
+6. Real-Time Data Pipeline
+	•	Integration & Latency:
+	•	Pulling RSSI scans every second via iw scan is blocking and slows down the network.
+	•	What’s needed:
+	•	Use promiscuous‐mode packet sniffing (e.g., with pyshark or scapy) to passively listen for beacon frames.
+	•	Stream data over MQTT/WebSocket for your React front end—ensure you have buffering, back-pressure handling, and reconnection logic.
+
+⸻
+
+7. User Interface & UX
+	•	Canvas Editing Essentials:
+	•	Zoom/pan, undo/redo, discrete “room” vs. “wall” drawing modes, snapping to grid.
+	•	Device Management:
+	•	Show a list of discovered devices, allow renaming, grouping (e.g., “Lights” vs. “Speakers”), and ability to exclude faulty readings.
+	•	Error Feedback:
+	•	Indicate mapping confidence (e.g., color-code heatmap cells by variance) so users know where the system is uncertain.
+
+⸻
+
+8. Testing & Validation
+	•	Ground-Truth Collection:
+	•	You’ll need a way to validate your location estimates—perhaps by walking a beacon along a known path (with timestamps) and comparing to your inferred trace.
+	•	Multi-Room / Multi-Floor:
+	•	Test how well the system generalizes when devices span more than one room or level—radio propagation varies drastically.

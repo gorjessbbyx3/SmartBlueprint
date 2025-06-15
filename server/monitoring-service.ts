@@ -307,6 +307,16 @@ export class ContinuousMonitoringService {
   private async handleNewDeviceDetected(scannedDevice: any): Promise<void> {
     console.log(`🆕 New device detected: ${scannedDevice.name} (${scannedDevice.macAddress})`);
     
+    // Only alert for truly new devices, not repeated detections
+    const alertKey = `new-device-${scannedDevice.macAddress}`;
+    const now = Date.now();
+    const lastAlert = this.alertCooldowns.get(alertKey) || 0;
+
+    // 24 hour cooldown for new device alerts to prevent spam
+    if (now - lastAlert < 86400000) {
+      return;
+    }
+
     await this.createAlert({
       severity: 'low',
       type: 'network_anomaly',
@@ -314,6 +324,8 @@ export class ContinuousMonitoringService {
       details: `Device: ${scannedDevice.name} (${scannedDevice.macAddress}), Type: ${scannedDevice.deviceType}`,
       recommendedAction: 'Verify this is an authorized device and configure if needed'
     });
+
+    this.alertCooldowns.set(alertKey, now);
   }
 
   private async updateDeviceStatus(scannedDevice: any): Promise<void> {
