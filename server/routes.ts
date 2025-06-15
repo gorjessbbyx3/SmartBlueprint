@@ -358,5 +358,303 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
   });
 
+  // Room management routes
+  app.get("/api/rooms", async (req, res) => {
+    try {
+      const floorplanId = req.query.floorplanId ? parseInt(req.query.floorplanId as string) : undefined;
+      const rooms = await storage.getRooms(floorplanId);
+      res.json(rooms);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to get rooms", error: error.message });
+    }
+  });
+
+  app.post("/api/rooms", async (req, res) => {
+    try {
+      const roomData = insertRoomSchema.parse(req.body);
+      const room = await storage.createRoom(roomData);
+      res.status(201).json(room);
+    } catch (error) {
+      res.status(400).json({ message: "Failed to create room", error: error.message });
+    }
+  });
+
+  app.put("/api/rooms/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const updates = insertRoomSchema.partial().parse(req.body);
+      const room = await storage.updateRoom(id, updates);
+      if (!room) {
+        return res.status(404).json({ message: "Room not found" });
+      }
+      res.json(room);
+    } catch (error) {
+      res.status(400).json({ message: "Failed to update room", error: error.message });
+    }
+  });
+
+  app.delete("/api/rooms/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const success = await storage.deleteRoom(id);
+      if (!success) {
+        return res.status(404).json({ message: "Room not found" });
+      }
+      res.json({ message: "Room deleted successfully" });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to delete room", error: error.message });
+    }
+  });
+
+  // Device telemetry routes
+  app.get("/api/devices/:deviceId/telemetry", async (req, res) => {
+    try {
+      const deviceId = parseInt(req.params.deviceId);
+      const limit = req.query.limit ? parseInt(req.query.limit as string) : 100;
+      const telemetry = await storage.getDeviceTelemetry(deviceId, limit);
+      res.json(telemetry);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to get telemetry", error: error.message });
+    }
+  });
+
+  app.post("/api/devices/:deviceId/telemetry", async (req, res) => {
+    try {
+      const deviceId = parseInt(req.params.deviceId);
+      const telemetryData = insertDeviceTelemetrySchema.parse({
+        ...req.body,
+        deviceId
+      });
+      const telemetry = await storage.addDeviceTelemetry(telemetryData);
+      res.status(201).json(telemetry);
+    } catch (error) {
+      res.status(400).json({ message: "Failed to add telemetry", error: error.message });
+    }
+  });
+
+  // ML model management routes
+  app.get("/api/ml/models", async (req, res) => {
+    try {
+      const modelType = req.query.type as string | undefined;
+      const models = await storage.getMlModels(modelType);
+      res.json(models);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to get ML models", error: error.message });
+    }
+  });
+
+  app.post("/api/ml/models", async (req, res) => {
+    try {
+      const modelData = insertMlModelSchema.parse(req.body);
+      const model = await storage.createMlModel(modelData);
+      res.status(201).json(model);
+    } catch (error) {
+      res.status(400).json({ message: "Failed to create ML model", error: error.message });
+    }
+  });
+
+  app.put("/api/ml/models/:id/activate", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const { modelType } = req.body;
+      const success = await storage.setActiveModel(id, modelType);
+      if (!success) {
+        return res.status(404).json({ message: "Model not found" });
+      }
+      res.json({ message: "Model activated successfully" });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to activate model", error: error.message });
+    }
+  });
+
+  // ML analytics routes
+  app.post("/api/ml/analyze", async (req, res) => {
+    try {
+      await mlAnalytics.initializeModels();
+      const devices = await storage.getDevices();
+      
+      // Perform ML analysis
+      const fingerprints = await mlAnalytics.performLocationFingerprinting(devices);
+      const anomalies = await mlAnalytics.detectAnomalies(devices);
+      const maintenance = await mlAnalytics.performPredictiveMaintenance(devices);
+      
+      res.json({
+        locationFingerprints: fingerprints.length,
+        anomaliesDetected: anomalies.length,
+        maintenanceAlerts: maintenance.length,
+        analysis: {
+          fingerprints: fingerprints.slice(0, 10), // Sample fingerprints
+          anomalies,
+          maintenance
+        }
+      });
+    } catch (error) {
+      res.status(500).json({ message: "ML analysis failed", error: error.message });
+    }
+  });
+
+  app.post("/api/ml/train", async (req, res) => {
+    try {
+      const devices = await storage.getDevices();
+      await mlAnalytics.trainModels(devices);
+      res.json({ message: "Models trained successfully", deviceCount: devices.length });
+    } catch (error) {
+      res.status(500).json({ message: "Model training failed", error: error.message });
+    }
+  });
+
+  // Platform integration routes
+  app.get("/api/integrations", async (req, res) => {
+    try {
+      const integrations = await storage.getPlatformIntegrations();
+      res.json(integrations);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to get integrations", error: error.message });
+    }
+  });
+
+  app.post("/api/integrations", async (req, res) => {
+    try {
+      const integrationData = insertPlatformIntegrationSchema.parse(req.body);
+      const integration = await storage.createPlatformIntegration(integrationData);
+      res.status(201).json(integration);
+    } catch (error) {
+      res.status(400).json({ message: "Failed to create integration", error: error.message });
+    }
+  });
+
+  app.put("/api/integrations/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const updates = insertPlatformIntegrationSchema.partial().parse(req.body);
+      const integration = await storage.updatePlatformIntegration(id, updates);
+      if (!integration) {
+        return res.status(404).json({ message: "Integration not found" });
+      }
+      res.json(integration);
+    } catch (error) {
+      res.status(400).json({ message: "Failed to update integration", error: error.message });
+    }
+  });
+
+  // Predictive alerts routes
+  app.get("/api/alerts", async (req, res) => {
+    try {
+      const deviceId = req.query.deviceId ? parseInt(req.query.deviceId as string) : undefined;
+      const alerts = await storage.getPredictiveAlerts(deviceId);
+      res.json(alerts);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to get alerts", error: error.message });
+    }
+  });
+
+  app.post("/api/alerts", async (req, res) => {
+    try {
+      const alertData = insertPredictiveAlertSchema.parse(req.body);
+      const alert = await storage.createPredictiveAlert(alertData);
+      res.status(201).json(alert);
+    } catch (error) {
+      res.status(400).json({ message: "Failed to create alert", error: error.message });
+    }
+  });
+
+  app.put("/api/alerts/:id/resolve", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const success = await storage.resolvePredictiveAlert(id);
+      if (!success) {
+        return res.status(404).json({ message: "Alert not found" });
+      }
+      res.json({ message: "Alert resolved successfully" });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to resolve alert", error: error.message });
+    }
+  });
+
+  // Room auto-detection route
+  app.post("/api/rooms/auto-detect", async (req, res) => {
+    try {
+      const { floorplanId } = req.body;
+      const devices = await storage.getDevices();
+      
+      // Perform room detection using ML clustering
+      await mlAnalytics.initializeModels();
+      const fingerprints = await mlAnalytics.performLocationFingerprinting(devices);
+      
+      // Simple clustering algorithm for room detection
+      const roomClusters = await autoDetectRooms(fingerprints, devices);
+      const detectedRooms = [];
+      
+      for (const [index, cluster] of roomClusters.entries()) {
+        const room = await storage.createRoom({
+          floorplanId,
+          name: `Room ${index + 1}`,
+          boundaries: JSON.stringify(cluster.boundary),
+          roomType: detectRoomType(cluster),
+          detectedAutomatically: true
+        });
+        detectedRooms.push(room);
+      }
+      
+      res.json({
+        message: `Auto-detected ${detectedRooms.length} rooms`,
+        rooms: detectedRooms
+      });
+    } catch (error) {
+      res.status(500).json({ message: "Room auto-detection failed", error: error.message });
+    }
+  });
+
   return httpServer;
+}
+
+// Helper functions for room auto-detection
+async function autoDetectRooms(fingerprints: any[], devices: any[]): Promise<any[]> {
+  // Simple clustering algorithm to detect room boundaries
+  const clusters: any[] = [];
+  const processedPoints = new Set<string>();
+  
+  for (const fingerprint of fingerprints) {
+    const key = `${fingerprint.location.x},${fingerprint.location.y}`;
+    if (processedPoints.has(key)) continue;
+    
+    // Find nearby points with similar signal patterns
+    const cluster = {
+      center: fingerprint.location,
+      boundary: [
+        { x: fingerprint.location.x - 50, y: fingerprint.location.y - 50 },
+        { x: fingerprint.location.x + 50, y: fingerprint.location.y - 50 },
+        { x: fingerprint.location.x + 50, y: fingerprint.location.y + 50 },
+        { x: fingerprint.location.x - 50, y: fingerprint.location.y + 50 }
+      ],
+      signalPattern: fingerprint.signalPattern,
+      deviceCount: 0
+    };
+    
+    // Count devices in this potential room
+    for (const device of devices) {
+      const distance = Math.sqrt(
+        Math.pow((device.x || 0) - fingerprint.location.x, 2) + 
+        Math.pow((device.y || 0) - fingerprint.location.y, 2)
+      );
+      if (distance < 100) {
+        cluster.deviceCount++;
+      }
+    }
+    
+    if (cluster.deviceCount > 0) {
+      clusters.push(cluster);
+      processedPoints.add(key);
+    }
+  }
+  
+  return clusters.slice(0, 5); // Limit to 5 rooms
+}
+
+function detectRoomType(cluster: any): string {
+  // Simple heuristics for room type detection
+  if (cluster.deviceCount >= 3) return 'living_room';
+  if (cluster.deviceCount === 2) return 'bedroom';
+  if (cluster.deviceCount === 1) return 'bathroom';
+  return 'utility_room';
 }

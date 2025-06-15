@@ -8,8 +8,11 @@ import { Separator } from "@/components/ui/separator";
 import { Device } from "@shared/schema";
 import DeviceDiscovery from "./device-discovery";
 import CoverageAnalysis from "./coverage-analysis";
+import MLAnalyticsPanel from "./ml-analytics-panel";
+import RoomManagementPanel from "./room-management-panel";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
+import { Brain, Home, Zap, TrendingUp, Activity, AlertTriangle } from "lucide-react";
 
 interface SidebarProps {
   activeTab: "mapping" | "analytics";
