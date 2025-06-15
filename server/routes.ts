@@ -11,7 +11,8 @@ import {
   insertDeviceTelemetrySchema,
   insertMlModelSchema,
   insertPlatformIntegrationSchema,
-  insertPredictiveAlertSchema
+  insertPredictiveAlertSchema,
+  insertFusionResultSchema
 } from "@shared/schema";
 import { z } from "zod";
 import { exec } from 'child_process';
@@ -686,6 +687,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch environment data" });
+    }
+  });
+
+  // Fusion result endpoint for signal processing input
+  app.post("/api/fusion-result", async (req, res) => {
+    try {
+      const validatedData = insertFusionResultSchema.parse(req.body);
+      const fusionResult = await storage.createFusionResult(validatedData);
+      
+      // Broadcast fusion result to WebSocket clients for real-time heatmap updates
+      wss.clients.forEach((client) => {
+        if (client.readyState === WebSocket.OPEN) {
+          client.send(JSON.stringify({
+            type: 'fusion_update',
+            data: fusionResult
+          }));
+        }
+      });
+      
+      res.status(201).json(fusionResult);
+    } catch (error) {
+      res.status(400).json({ message: "Invalid fusion result data" });
+    }
+  });
+
+  app.get("/api/fusion-results", async (req, res) => {
+    try {
+      const results = await storage.getFusionResults();
+      res.json(results);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch fusion results" });
     }
   });
 

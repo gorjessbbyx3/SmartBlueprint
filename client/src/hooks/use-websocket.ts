@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 
 interface UseWebSocketOptions {
   onMessage?: (event: MessageEvent) => void;
@@ -10,6 +10,8 @@ interface UseWebSocketOptions {
 export function useWebSocket(url: string, options: UseWebSocketOptions = {}) {
   const ws = useRef<WebSocket | null>(null);
   const reconnectTimeoutRef = useRef<NodeJS.Timeout>();
+  const [lastMessage, setLastMessage] = useState<any>(null);
+  const [isConnected, setIsConnected] = useState(false);
 
   useEffect(() => {
     const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
@@ -21,15 +23,23 @@ export function useWebSocket(url: string, options: UseWebSocketOptions = {}) {
         
         ws.current.onopen = (event) => {
           console.log("WebSocket connected");
+          setIsConnected(true);
           options.onOpen?.(event);
         };
         
         ws.current.onmessage = (event) => {
+          try {
+            const data = JSON.parse(event.data);
+            setLastMessage(data);
+          } catch (error) {
+            setLastMessage({ type: 'raw', data: event.data });
+          }
           options.onMessage?.(event);
         };
         
         ws.current.onclose = (event) => {
           console.log("WebSocket disconnected");
+          setIsConnected(false);
           options.onClose?.(event);
           
           // Attempt to reconnect after 5 seconds
@@ -74,6 +84,7 @@ export function useWebSocket(url: string, options: UseWebSocketOptions = {}) {
 
   return {
     sendMessage,
-    isConnected: ws.current?.readyState === WebSocket.OPEN,
+    isConnected,
+    lastMessage,
   };
 }
