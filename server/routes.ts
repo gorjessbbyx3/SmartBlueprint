@@ -182,6 +182,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Room routes
+  app.get("/api/rooms", async (req, res) => {
+    try {
+      const rooms = await storage.getRooms();
+      res.json(rooms);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch rooms" });
+    }
+  });
+
+  app.post("/api/rooms", async (req, res) => {
+    try {
+      const roomData = insertRoomSchema.parse(req.body);
+      const room = await storage.createRoom(roomData);
+      res.json(room);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid room data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to create room" });
+    }
+  });
+
   // Recommendation routes
   app.get("/api/recommendations", async (req, res) => {
     try {

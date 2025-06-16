@@ -265,6 +265,25 @@ export default function EnhancedFloorplanSketch({ onSave, onLoad, initialElement
     const newElements = [...elements, newElement];
     setElements(newElements);
     
+    // If this is a room, also create a room record in the database
+    if (tool === 'room' && selectedRoomType && currentPath.length >= 2) {
+      const roomData = {
+        floorplanId: 1, // Default floorplan
+        name: selectedRoomType,
+        boundaries: JSON.stringify(currentPath),
+        roomType: selectedRoomType.toLowerCase().replace(' ', '_'),
+        detectedAutomatically: false
+      };
+      
+      fetch('/api/rooms', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(roomData)
+      }).catch(error => {
+        console.error('Failed to save room to database:', error);
+      });
+    }
+    
     // Add to history
     const newHistory = history.slice(0, historyIndex + 1);
     newHistory.push(newElements);
@@ -273,7 +292,7 @@ export default function EnhancedFloorplanSketch({ onSave, onLoad, initialElement
     
     setIsDrawing(false);
     setCurrentPath([]);
-  }, [isDrawing, currentPath, elements, tool, history, historyIndex]);
+  }, [isDrawing, currentPath, elements, tool, history, historyIndex, selectedRoomType, roomTypeStyles]);
 
   // Canvas rendering
   useEffect(() => {

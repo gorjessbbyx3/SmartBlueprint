@@ -28,15 +28,7 @@ interface HeatmapData {
   timestamp: Date;
 }
 
-const ROOM_LAYOUT = [
-  { name: 'Living Room', x: 0, y: 0, width: 2, height: 2 },
-  { name: 'Kitchen', x: 2, y: 0, width: 1, height: 1 },
-  { name: 'Hallway', x: 2, y: 1, width: 1, height: 1 },
-  { name: 'Bedroom 1', x: 0, y: 2, width: 1, height: 1 },
-  { name: 'Bedroom 2', x: 1, y: 2, width: 1, height: 1 },
-  { name: 'Bathroom', x: 2, y: 2, width: 1, height: 1 },
-  { name: 'Garage', x: 3, y: 0, width: 1, height: 2 },
-];
+// Room layout will be dynamically generated from database rooms
 
 function getHeatmapColor(confidenceScore: number): { color: string; interpretation: string } {
   if (confidenceScore >= 0.8) {
@@ -76,6 +68,12 @@ export function RoomHeatmap({
     refetchInterval: 30000, // Refresh every 30 seconds
   });
 
+  // Fetch actual rooms from database
+  const { data: rooms = [] } = useQuery({
+    queryKey: ['/api/rooms'],
+    refetchInterval: 5000, // Refresh every 5 seconds to catch new rooms
+  });
+
   // WebSocket for real-time updates
   const { lastMessage } = useWebSocket('/ws');
 
@@ -113,7 +111,7 @@ export function RoomHeatmap({
         const roomMap = new Map<string, RoomConfidence>();
         
         // Initialize all rooms with zero confidence
-        ROOM_LAYOUT.forEach(room => {
+        rooms.forEach((room: any) => {
           const { color, interpretation } = getHeatmapColor(0);
           roomMap.set(room.name, {
             room: room.name,
