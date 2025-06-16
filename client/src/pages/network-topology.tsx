@@ -106,13 +106,7 @@ export default function NetworkTopologyPage() {
   // Set device trust level mutation
   const setTrustMutation = useMutation({
     mutationFn: ({ deviceId, trustLevel }: { deviceId: string; trustLevel: string }) =>
-      apiRequest(`/api/ml/device-trust?device_id=${deviceId}&trust_level=${trustLevel}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({})
-      }),
+      apiRequest(`/api/ml/device-trust?device_id=${deviceId}&trust_level=${trustLevel}`, 'POST', {}),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/ml/network-topology'] });
     }

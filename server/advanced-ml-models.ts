@@ -426,10 +426,10 @@ class KalmanFilter {
       row.map((val, j) => val + (i === j ? this.measurementNoise : 0))
     );
 
-    // Kalman gain (simplified for 2D)
+    // Kalman gain (simplified for 2D) with division-by-zero protection
     const gain = [
-      predictedCovariance[0][0] / innovationCovariance[0][0],
-      predictedCovariance[1][1] / innovationCovariance[1][1]
+      innovationCovariance[0][0] !== 0 ? predictedCovariance[0][0] / innovationCovariance[0][0] : 0,
+      innovationCovariance[1][1] !== 0 ? predictedCovariance[1][1] / innovationCovariance[1][1] : 0
     ];
 
     // Update state and covariance

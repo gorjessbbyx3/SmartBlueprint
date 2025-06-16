@@ -1115,7 +1115,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Use ML analytics for anomaly detection
-      const anomalies = await mlAnalytics.detectAnomalies(deviceData, signalData);
+      const anomalies = await mlAnalytics.detectAnomalies(deviceData);
       
       res.json({
         success: true,
@@ -1175,7 +1175,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Use ensemble ML methods for comprehensive anomaly detection
-      const ensembleResults = await mlAnalytics.performEnsembleDetection(deviceMetrics, networkData, timeWindow);
+      const ensembleResults = await mlAnalytics.detectAnomalies(deviceMetrics || []);
       
       res.json({
         success: true,
