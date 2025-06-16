@@ -1,48 +1,198 @@
-// Desktop Agent: Active Ping/Latency Probing System
-// Provides meter-level distance measurement using RTT (Round Trip Time)
-// Works with any AP, no special hardware required
+#!/usr/bin/env node
 
-const ping = require('ping');
-const WebSocket = require('ws');
+/**
+ * SmartBlueprint Pro - Hardened Ping Agent
+ * Active ping/latency probing with comprehensive error handling
+ */
 
-// Configuration
-const WS_URL = process.env.WS_URL || 'ws://localhost:5000/ws';
-const PING_TARGETS = [
-  '192.168.1.1',     // Common gateway/router IP
-  '192.168.1.254',   // Alternative gateway IP
-  '192.168.0.1',     // Another common gateway
-  '10.0.0.1'         // Alternative private network gateway
-];
-const INTERVAL_MS = 5000; // 5 seconds between measurements
-const TIMEOUT_MS = 2000;   // 2 second timeout per ping
+const fs = require('fs');
+const path = require('path');
+const os = require('os');
 
-class PingAgent {
+// System validation
+function validateEnvironment() {
+  console.log('[Ping Agent] Validating environment...');
+  
+  if (typeof process === 'undefined' || !process.versions?.node) {
+    console.error('[Ping Agent] FATAL: Node.js runtime required');
+    process.exit(1);
+  }
+
+  const platform = os.platform();
+  if (!['win32', 'darwin', 'linux'].includes(platform)) {
+    console.error(`[Ping Agent] FATAL: Unsupported platform: ${platform}`);
+    process.exit(1);
+  }
+
+  // Check required modules
+  const required = ['ping', 'ws'];
+  const missing = [];
+  
+  for (const module of required) {
+    try {
+      require(module);
+    } catch (error) {
+      missing.push(module);
+    }
+  }
+
+  if (missing.length > 0) {
+    console.error(`[Ping Agent] FATAL: Missing dependencies: ${missing.join(', ')}`);
+    console.error('[Ping Agent] Install with: npm install ws ping');
+    process.exit(1);
+  }
+
+  console.log(`[Ping Agent] Environment validated: Node.js ${process.versions.node} on ${platform}`);
+}
+
+// Configuration loader
+function loadConfiguration() {
+  const configFile = path.join(process.cwd(), 'config.json');
+  let config = {
+    serverUrl: 'ws://localhost:5000/ws',
+    agentId: 'ping-agent-' + Math.random().toString(36).substring(7),
+    pingTargets: ['192.168.1.1', '192.168.1.254', '192.168.0.1', '10.0.0.1'],
+    pingInterval: 5000,
+    pingTimeout: 2000,
+    maxReconnectAttempts: 10,
+    reconnectDelay: 5000
+  };
+
+  try {
+    if (fs.existsSync(configFile)) {
+      const fileConfig = JSON.parse(fs.readFileSync(configFile, 'utf8'));
+      config = { ...config, ...fileConfig };
+      console.log('[Ping Agent] Configuration loaded from file');
+    }
+  } catch (error) {
+    console.log(`[Ping Agent] Using default configuration: ${error.message}`);
+  }
+
+  // Environment overrides
+  if (process.env.WS_URL) config.serverUrl = process.env.WS_URL;
+  if (process.env.SMARTBLUEPRINT_HOST) {
+    const protocol = process.env.SMARTBLUEPRINT_HOST.includes('https') ? 'wss' : 'ws';
+    config.serverUrl = `${protocol}://${process.env.SMARTBLUEPRINT_HOST.replace(/^https?:\/\//, '')}/ws`;
+  }
+
+  // Command line overrides
+  const args = process.argv.slice(2);
+  for (let i = 0; i < args.length; i++) {
+    if (args[i] === '--server' && args[i + 1]) {
+      config.serverUrl = args[i + 1];
+      i++;
+    }
+  }
+
+  return config;
+}
+
+class HardenedPingAgent {
   constructor() {
+    validateEnvironment();
+    
+    this.config = loadConfiguration();
     this.ws = null;
     this.isRunning = false;
     this.pingInterval = null;
-    this.healthMonitoringInterval = null;
     this.reconnectAttempts = 0;
-    this.maxReconnectAttempts = 10;
-    
-    // Device health monitoring
-    this.deviceMetrics = new Map();
-    this.performanceHistory = [];
-    this.errorCounts = new Map();
     this.connectionDrops = 0;
     this.startTime = Date.now();
-    this.lastHealthReport = Date.now();
+    this.performanceHistory = [];
+    this.errorCounts = new Map();
+    this.lastPingResults = new Map();
     
-    // System monitoring
-    this.cpuUsage = 0;
-    this.memoryUsage = 0;
-    this.networkLatency = 0;
-    this.packetLossRate = 0;
+    console.log('[Ping Agent] Initialized with comprehensive monitoring');
+    console.log(`[Ping Agent] Agent ID: ${this.config.agentId}`);
+    console.log(`[Ping Agent] Server: ${this.config.serverUrl}`);
+    console.log(`[Ping Agent] Targets: ${this.config.pingTargets.join(', ')}`);
+  }
+
+  async start() {
+    try {
+      console.log('[Ping Agent] Starting ping monitoring system...');
+      await this.connect();
+      this.registerAgent();
+      this.startPingLoop();
+      this.isRunning = true;
+      console.log('[Ping Agent] All systems operational');
+    } catch (error) {
+      console.error(`[Ping Agent] Startup failed: ${error.message}`);
+      process.exit(1);
+    }
+  }
+
+  connect() {
+    return new Promise((resolve, reject) => {
+      try {
+        console.log(`[Ping Agent] Connecting to: ${this.config.serverUrl}`);
+        
+        const WebSocket = require('ws');
+        this.ws = new WebSocket(this.config.serverUrl, {
+          handshakeTimeout: 10000
+        });
+
+        this.ws.on('open', () => {
+          console.log('[Ping Agent] Connected successfully');
+          this.reconnectAttempts = 0;
+          resolve();
+        });
+
+        this.ws.on('message', (data) => {
+          try {
+            const message = JSON.parse(data);
+            this.handleServerMessage(message);
+          } catch (error) {
+            console.error('[Ping Agent] Invalid message:', error.message);
+          }
+        });
+
+        this.ws.on('close', () => {
+          console.log('[Ping Agent] Connection closed');
+          this.connectionDrops++;
+          this.scheduleReconnect();
+        });
+
+        this.ws.on('error', (error) => {
+          console.error(`[Ping Agent] Connection error: ${error.message}`);
+          if (this.reconnectAttempts === 0) {
+            reject(error);
+          }
+        });
+
+      } catch (error) {
+        reject(error);
+      }
+    });
+  }
+
+  registerAgent() {
+    const registration = {
+      type: 'agent_register',
+      timestamp: new Date().toISOString(),
+      agentId: this.config.agentId,
+      capabilities: ['ping_measurement', 'rtt_analysis', 'distance_calculation'],
+      systemInfo: {
+        platform: os.platform(),
+        arch: os.arch(),
+        hostname: os.hostname(),
+        nodeVersion: process.version
+      },
+      version: '2.0.0-hardened'
+    };
+
+    this.sendMessage(registration);
+    console.log('[Ping Agent] Registration sent');
+  }
+
+  startPingLoop() {
+    this.pingInterval = setInterval(() => {
+      this.measurePing();
+    }, this.config.pingInterval);
     
-    console.log('[Enhanced Ping Agent] Initializing predictive maintenance system...');
-    console.log(`[Enhanced Ping Agent] Ping targets: ${PING_TARGETS.join(', ')}`);
-    console.log(`[Enhanced Ping Agent] Measurement interval: ${INTERVAL_MS}ms`);
-    console.log(`[Enhanced Ping Agent] Health monitoring: Enabled`);
+    // Initial measurement
+    setTimeout(() => this.measurePing(), 1000);
+    console.log(`[Ping Agent] Ping monitoring started (${this.config.pingInterval}ms intervals)`);
   }
 
   /**
@@ -324,11 +474,108 @@ process.on('SIGTERM', () => {
   process.exit(0);
 });
 
-// Start the ping agent
-if (require.main === module) {
-  const agent = new PingAgent();
-  global.pingAgent = agent;
-  agent.start();
+  sendMessage(message) {
+    if (this.ws && this.ws.readyState === require('ws').OPEN) {
+      try {
+        this.ws.send(JSON.stringify(message));
+        return true;
+      } catch (error) {
+        console.error('[Ping Agent] Send failed:', error.message);
+        return false;
+      }
+    }
+    return false;
+  }
+
+  handleServerMessage(message) {
+    switch (message.type) {
+      case 'ping_command':
+        this.measurePing();
+        break;
+      case 'config_update':
+        console.log('[Ping Agent] Configuration updated');
+        break;
+      default:
+        console.log(`[Ping Agent] Unknown message: ${message.type}`);
+    }
+  }
+
+  scheduleReconnect() {
+    if (this.reconnectAttempts >= this.config.maxReconnectAttempts) {
+      console.error('[Ping Agent] Max reconnection attempts reached');
+      return;
+    }
+
+    const delay = Math.min(30000, this.config.reconnectDelay * Math.pow(2, this.reconnectAttempts));
+    this.reconnectAttempts++;
+
+    console.log(`[Ping Agent] Reconnecting in ${delay}ms (attempt ${this.reconnectAttempts})`);
+
+    setTimeout(() => {
+      this.connect().catch(error => {
+        console.error(`[Ping Agent] Reconnection failed: ${error.message}`);
+      });
+    }, delay);
+  }
+
+  stop() {
+    console.log('[Ping Agent] Shutting down...');
+    this.isRunning = false;
+    
+    if (this.pingInterval) {
+      clearInterval(this.pingInterval);
+    }
+    
+    if (this.ws) {
+      this.ws.close();
+    }
+  }
 }
 
-module.exports = PingAgent;
+// Graceful shutdown handling
+process.on('SIGINT', () => {
+  console.log('\n[Ping Agent] Received shutdown signal...');
+  if (global.pingAgent) {
+    global.pingAgent.stop();
+  }
+  process.exit(0);
+});
+
+process.on('SIGTERM', () => {
+  console.log('\n[Ping Agent] Received termination signal...');
+  if (global.pingAgent) {
+    global.pingAgent.stop();
+  }
+  process.exit(0);
+});
+
+process.on('uncaughtException', (error) => {
+  console.error('[Ping Agent] Uncaught exception:', error.message);
+  if (global.pingAgent) {
+    global.pingAgent.stop();
+  }
+  process.exit(1);
+});
+
+// Bootstrap and start the agent
+async function main() {
+  try {
+    console.log('🏠 SmartBlueprint Pro - Hardened Ping Agent v2.0.0');
+    console.log('===================================================');
+    
+    global.pingAgent = new HardenedPingAgent();
+    await global.pingAgent.start();
+    
+    console.log('[Ping Agent] System ready - monitoring network latency');
+  } catch (error) {
+    console.error(`[Ping Agent] Fatal error: ${error.message}`);
+    process.exit(1);
+  }
+}
+
+// Start the agent if run directly
+if (require.main === module) {
+  main();
+}
+
+module.exports = HardenedPingAgent;
