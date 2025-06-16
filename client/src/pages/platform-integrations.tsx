@@ -72,9 +72,14 @@ export default function PlatformIntegrations() {
   // Platform authentication mutation
   const authenticateMutation = useMutation({
     mutationFn: async ({ platform, credentials }: { platform: string; credentials: any }) => {
-      return await apiRequest(`/api/platforms/${platform}/authenticate`, credentials);
+      const response = await fetch(`/api/platforms/${platform}/authenticate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(credentials)
+      });
+      return await response.json();
     },
-    onSuccess: (data) => {
+    onSuccess: (data: any) => {
       if (data.success) {
         toast({
           title: "Platform Connected",
@@ -107,7 +112,7 @@ export default function PlatformIntegrations() {
       const response = await fetch(`/api/platforms/${platform}/devices`);
       return await response.json();
     },
-    onSuccess: (data) => {
+    onSuccess: (data: any) => {
       if (data.success) {
         toast({
           title: "Devices Discovered",
