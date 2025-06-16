@@ -71,10 +71,7 @@ export default function PlatformIntegrations() {
   // Platform authentication mutation
   const authenticateMutation = useMutation({
     mutationFn: async ({ platform, credentials }: { platform: string; credentials: any }) => {
-      return await apiRequest(`/api/platforms/${platform}/authenticate`, {
-        method: 'POST',
-        body: JSON.stringify(credentials)
-      });
+      return await apiRequest(`/api/platforms/${platform}/authenticate`, credentials);
     },
     onSuccess: (data) => {
       if (data.success) {
