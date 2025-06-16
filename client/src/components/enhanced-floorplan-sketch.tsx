@@ -4,12 +4,13 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { useToast } from "@/hooks/use-toast";
 import { 
   Pen, Square, Circle, Move, Eraser, Undo, Redo, 
   ZoomIn, ZoomOut, RotateCcw, Grid3X3, Ruler, 
   Save, Download, Upload, Settings, HelpCircle,
   MousePointer, RectangleHorizontal, Home, DoorOpen,
-  Wifi, MapPin, Router
+  Wifi, MapPin, Router, Check
 } from "lucide-react";
 
 interface Point {
@@ -41,6 +42,7 @@ export default function EnhancedFloorplanSketch({ onSave, onLoad, initialElement
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const backgroundImageDimensions = useRef<{ width: number; height: number } | null>(null);
+  const { toast } = useToast();
   
   // Drawing state
   const [tool, setTool] = useState<'select' | 'pen' | 'wall' | 'room' | 'door' | 'window' | 'rectangle' | 'circle' | 'eraser' | 'router' | 'location'>('select');
@@ -74,33 +76,49 @@ export default function EnhancedFloorplanSketch({ onSave, onLoad, initialElement
   // History for undo/redo
   const [history, setHistory] = useState<DrawingElement[][]>([[]]);
   const [historyIndex, setHistoryIndex] = useState(0);
+  
+  // Save state tracking
+  const [isSaving, setIsSaving] = useState(false);
+  const [lastSaved, setLastSaved] = useState<Date | null>(null);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
   // Save function
-  const handleSaveSketch = useCallback(() => {
-    console.log("Saving floor plan elements:", elements);
-    onSave(elements);
-    
-    // Show visual feedback that save was successful
-    const canvas = canvasRef.current;
-    if (canvas) {
-      const ctx = canvas.getContext('2d');
-      if (ctx) {
-        // Flash a green border briefly to indicate save
-        const originalStrokeStyle = ctx.strokeStyle;
-        const originalLineWidth = ctx.lineWidth;
-        
-        ctx.strokeStyle = '#10b981';
-        ctx.lineWidth = 4;
-        ctx.strokeRect(2, 2, canvas.width - 4, canvas.height - 4);
-        
-        setTimeout(() => {
-          // Clear the green border and redraw canvas
-          ctx.clearRect(0, 0, canvas.width, canvas.height);
-          // The canvas will be redrawn by the normal drawing cycle
-        }, 300);
-      }
+  const handleSaveSketch = useCallback(async () => {
+    setIsSaving(true);
+    try {
+      console.log("Saving floor plan elements:", elements);
+      await onSave(elements);
+      
+      // Update save state
+      setLastSaved(new Date());
+      setHasUnsavedChanges(false);
+      
+      // Show success toast
+      toast({
+        title: "Floor Plan Saved",
+        description: `Successfully saved ${elements.length} elements including rooms and reference points.`,
+        duration: 3000,
+      });
+      
+    } catch (error) {
+      console.error("Save failed:", error);
+      toast({
+        title: "Save Failed",
+        description: "Failed to save floor plan. Please try again.",
+        variant: "destructive",
+        duration: 4000,
+      });
+    } finally {
+      setIsSaving(false);
     }
-  }, [elements, onSave]);
+  }, [elements, onSave, toast]);
+
+  // Track changes to mark unsaved state
+  useEffect(() => {
+    if (elements.length > 0 && !isSaving) {
+      setHasUnsavedChanges(true);
+    }
+  }, [elements, isSaving]);
 
   // Drawing colors and styles
   const toolStyles = {
@@ -837,17 +855,42 @@ export default function EnhancedFloorplanSketch({ onSave, onLoad, initialElement
           <div className="flex items-center gap-1">
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button variant="outline" size="sm" onClick={handleSaveSketch}>
-                  <Save className="h-4 w-4" />
+                <Button 
+                  variant={hasUnsavedChanges ? "default" : "outline"} 
+                  size="sm" 
+                  onClick={handleSaveSketch}
+                  disabled={isSaving}
+                  className={hasUnsavedChanges ? "bg-blue-600 hover:bg-blue-700" : ""}
+                >
+                  {isSaving ? (
+                    <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                  ) : lastSaved ? (
+                    <Check className="h-4 w-4" />
+                  ) : (
+                    <Save className="h-4 w-4" />
+                  )}
                 </Button>
               </TooltipTrigger>
               <TooltipContent>
                 <div className="text-center">
-                  <div className="font-semibold">Save Sketch</div>
-                  <div className="text-xs text-gray-500 mt-1">Save your current floor plan design so you can use it for device mapping</div>
+                  <div className="font-semibold">
+                    {isSaving ? "Saving..." : hasUnsavedChanges ? "Save Changes" : lastSaved ? "Saved" : "Save Sketch"}
+                  </div>
+                  <div className="text-xs text-gray-500 mt-1">
+                    {lastSaved 
+                      ? `Last saved at ${lastSaved.toLocaleTimeString()}`
+                      : "Save your current floor plan design so you can use it for device mapping"
+                    }
+                  </div>
                 </div>
               </TooltipContent>
             </Tooltip>
+            
+            {hasUnsavedChanges && (
+              <Badge variant="secondary" className="text-xs px-1 py-0.5">
+                Unsaved
+              </Badge>
+            )}
           </div>
 
           {/* Help */}
