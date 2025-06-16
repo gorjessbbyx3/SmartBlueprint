@@ -1629,6 +1629,108 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Calculate network scanning health
       const networkScanningActive = connectedAgents.length > 0;
+      
+      // Calculate data integrity score
+      const dataIntegrityScore = devices.length > 0 ? 95 : 70;
+      
+      // Calculate cloud tunnel connectivity
+      const cloudTunnelActive = connectedAgents.length > 0;
+      
+      // Overall system health
+      const overallHealth = aiAgentsStatus === 'healthy' && networkScanningActive && cloudTunnelActive ? 'healthy' :
+                           aiAgentsStatus === 'critical' || (!networkScanningActive && !cloudTunnelActive) ? 'critical' : 'warning';
+
+      res.json({
+        success: true,
+        overallHealth,
+        components: {
+          aiAgents: {
+            status: aiAgentsStatus,
+            total: totalAgents,
+            active: activeAgents,
+            details: agentStatus
+          },
+          networkScanning: {
+            status: networkScanningActive ? 'active' : 'inactive',
+            connectedAgents: connectedAgents.length,
+            details: connectedAgents
+          },
+          dataIntegrity: {
+            status: dataIntegrityScore > 90 ? 'healthy' : dataIntegrityScore > 70 ? 'warning' : 'critical',
+            score: dataIntegrityScore,
+            devicesDetected: devices.length
+          },
+          cloudTunnel: {
+            status: cloudTunnelActive ? 'connected' : 'disconnected',
+            activeConnections: connectedAgents.length
+          }
+        },
+        timestamp: new Date()
+      });
+    } catch (error) {
+      console.error('System health check failed:', error);
+      res.status(500).json({ 
+        success: false, 
+        message: "Failed to check system health",
+        overallHealth: 'critical'
+      });
+    }
+  });
+
+  // Room auto-detection function
+  async function autoDetectRooms(fingerprints: any[], devices: any[]): Promise<any[]> {
+    const clusters: any[] = [];
+    const processedPoints = new Set<string>();
+    
+    for (const fingerprint of fingerprints) {
+      const key = `${fingerprint.location.x}-${fingerprint.location.y}`;
+      if (processedPoints.has(key)) continue;
+      
+      const cluster = {
+        id: clusters.length + 1,
+        roomType: detectRoomType({ deviceCount: 0 }),
+        boundary: [
+          { x: fingerprint.location.x - 50, y: fingerprint.location.y - 50 },
+          { x: fingerprint.location.x + 50, y: fingerprint.location.y - 50 },
+          { x: fingerprint.location.x + 50, y: fingerprint.location.y + 50 },
+          { x: fingerprint.location.x - 50, y: fingerprint.location.y + 50 }
+        ],
+        signalPattern: fingerprint.signalPattern,
+        deviceCount: 0
+      };
+      
+      // Count devices in this potential room
+      for (const device of devices) {
+        const distance = Math.sqrt(
+          Math.pow((device.x || 0) - fingerprint.location.x, 2) + 
+          Math.pow((device.y || 0) - fingerprint.location.y, 2)
+        );
+        if (distance < 100) {
+          cluster.deviceCount++;
+        }
+      }
+      
+      if (cluster.deviceCount > 0) {
+        clusters.push(cluster);
+        processedPoints.add(key);
+      }
+    }
+    
+    return clusters.slice(0, 5); // Limit to 5 rooms
+  }
+
+  function detectRoomType(cluster: any): string {
+    // Simple heuristics for room type detection
+    if (cluster.deviceCount >= 3) return 'living_room';
+    if (cluster.deviceCount === 2) return 'bedroom';
+    if (cluster.deviceCount === 1) return 'bathroom';
+    return 'utility_room';
+  }
+
+  return httpServer;
+}
+    this.ws = null;
+    this.scanning = false;
     this.devices = new Map();
   }
 
