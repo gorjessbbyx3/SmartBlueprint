@@ -80,9 +80,17 @@ export interface IStorage {
 
   // Platform integration operations
   getPlatformIntegrations(): Promise<PlatformIntegration[]>;
+  getAllPlatformIntegrations(): Promise<PlatformIntegration[]>;
   getPlatformIntegration(platform: string): Promise<PlatformIntegration | undefined>;
   createPlatformIntegration(integration: InsertPlatformIntegration): Promise<PlatformIntegration>;
+  addPlatformIntegration(integration: InsertPlatformIntegration): Promise<PlatformIntegration>;
   updatePlatformIntegration(id: number, updates: Partial<InsertPlatformIntegration>): Promise<PlatformIntegration | undefined>;
+  removePlatformIntegration(platform: string): Promise<boolean>;
+
+  // Platform device operations
+  getPlatformDevices(integrationId?: number): Promise<PlatformDevice[]>;
+  addPlatformDevice(device: InsertPlatformDevice): Promise<PlatformDevice>;
+  updatePlatformDevice(id: number, updates: Partial<InsertPlatformDevice>): Promise<PlatformDevice | undefined>;
 
   // Predictive alert operations
   getPredictiveAlerts(deviceId?: number): Promise<PredictiveAlert[]>;
@@ -103,6 +111,7 @@ export class MemStorage implements IStorage {
   private deviceTelemetry: Map<number, DeviceTelemetry> = new Map();
   private mlModels: Map<number, MlModel> = new Map();
   private platformIntegrations: Map<number, PlatformIntegration> = new Map();
+  private platformDevices: Map<number, PlatformDevice> = new Map();
   private predictiveAlerts: Map<number, PredictiveAlert> = new Map();
   private fusionResults: Map<number, FusionResult> = new Map();
   private currentDeviceId = 1;
@@ -113,6 +122,7 @@ export class MemStorage implements IStorage {
   private currentTelemetryId = 1;
   private currentMlModelId = 1;
   private currentIntegrationId = 1;
+  private currentPlatformDeviceId = 1;
   private currentAlertId = 1;
   private currentFusionId = 1;
 
@@ -421,19 +431,72 @@ export class MemStorage implements IStorage {
     const integration: PlatformIntegration = {
       id: this.currentIntegrationId++,
       ...insertIntegration,
-      createdAt: new Date(),
-      lastSyncAt: new Date()
+      lastSync: new Date()
     };
     this.platformIntegrations.set(integration.id, integration);
     return integration;
+  }
+
+  async addPlatformIntegration(insertIntegration: InsertPlatformIntegration): Promise<PlatformIntegration> {
+    return this.createPlatformIntegration(insertIntegration);
+  }
+
+  async getAllPlatformIntegrations(): Promise<PlatformIntegration[]> {
+    return this.getPlatformIntegrations();
   }
 
   async updatePlatformIntegration(id: number, updates: Partial<InsertPlatformIntegration>): Promise<PlatformIntegration | undefined> {
     const integration = this.platformIntegrations.get(id);
     if (integration) {
       Object.assign(integration, updates);
-      integration.lastSyncAt = new Date();
+      integration.lastSync = new Date();
       return integration;
+    }
+    return undefined;
+  }
+
+  async removePlatformIntegration(platform: string): Promise<boolean> {
+    const integration = Array.from(this.platformIntegrations.values())
+      .find(integration => integration.platform === platform);
+    
+    if (integration) {
+      this.platformIntegrations.delete(integration.id);
+      // Also remove associated platform devices
+      this.platformDevices.forEach((device, id) => {
+        if (device.integrationId === integration.id) {
+          this.platformDevices.delete(id);
+        }
+      });
+      return true;
+    }
+    return false;
+  }
+
+  // Platform device operations
+  async getPlatformDevices(integrationId?: number): Promise<PlatformDevice[]> {
+    const allDevices = Array.from(this.platformDevices.values());
+    if (integrationId) {
+      return allDevices.filter(device => device.integrationId === integrationId);
+    }
+    return allDevices;
+  }
+
+  async addPlatformDevice(insertDevice: InsertPlatformDevice): Promise<PlatformDevice> {
+    const device: PlatformDevice = {
+      id: this.currentPlatformDeviceId++,
+      ...insertDevice,
+      lastUpdated: new Date()
+    };
+    this.platformDevices.set(device.id, device);
+    return device;
+  }
+
+  async updatePlatformDevice(id: number, updates: Partial<InsertPlatformDevice>): Promise<PlatformDevice | undefined> {
+    const device = this.platformDevices.get(id);
+    if (device) {
+      Object.assign(device, updates);
+      device.lastUpdated = new Date();
+      return device;
     }
     return undefined;
   }
