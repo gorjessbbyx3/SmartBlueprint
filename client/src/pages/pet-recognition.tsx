@@ -85,8 +85,8 @@ export default function PetRecognition() {
     }
   });
 
-  const pets: PetDetection[] = petsData?.pets || [];
-  const petDevices: PetDevice[] = devicesData?.devices || [];
+  const pets: PetDetection[] = (petsData as any)?.pets || [];
+  const petDevices: PetDevice[] = (devicesData as any)?.devices || [];
 
   const getPetIcon = (petType: string) => {
     switch (petType) {
@@ -321,11 +321,11 @@ export default function PetRecognition() {
                   {/* Health Score */}
                   <div className="text-center">
                     <h3 className="text-lg font-medium text-gray-900 mb-2">Health Score</h3>
-                    <div className={`text-4xl font-bold ${getHealthScoreColor(behaviorData.healthScore)}`}>
-                      {Math.round(behaviorData.healthScore * 100)}%
+                    <div className={`text-4xl font-bold ${getHealthScoreColor((behaviorData as any).healthScore)}`}>
+                      {Math.round((behaviorData as any).healthScore * 100)}%
                     </div>
                     <Progress 
-                      value={behaviorData.healthScore * 100} 
+                      value={(behaviorData as any).healthScore * 100} 
                       className="mt-2"
                     />
                   </div>
@@ -334,7 +334,7 @@ export default function PetRecognition() {
                   <div>
                     <h3 className="text-lg font-medium text-gray-900 mb-3">Insights</h3>
                     <div className="space-y-2">
-                      {behaviorData.insights.length > 0 ? behaviorData.insights.map((insight, index) => (
+                      {(behaviorData as any).insights?.length > 0 ? (behaviorData as any).insights.map((insight: string, index: number) => (
                         <div key={index} className="flex items-start space-x-2">
                           <i className="fas fa-lightbulb text-yellow-500 mt-1"></i>
                           <span className="text-sm text-gray-700">{insight}</span>
@@ -349,7 +349,7 @@ export default function PetRecognition() {
                   <div>
                     <h3 className="text-lg font-medium text-gray-900 mb-3">Recommendations</h3>
                     <div className="space-y-2">
-                      {behaviorData.recommendations.length > 0 ? behaviorData.recommendations.map((rec, index) => (
+                      {(behaviorData as any).recommendations?.length > 0 ? (behaviorData as any).recommendations.map((rec: string, index: number) => (
                         <div key={index} className="flex items-start space-x-2">
                           <i className="fas fa-arrow-right text-blue-500 mt-1"></i>
                           <span className="text-sm text-gray-700">{rec}</span>
