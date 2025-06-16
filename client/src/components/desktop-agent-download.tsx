@@ -12,15 +12,15 @@ export function DesktopAgentDownload() {
     setDownloadStep('downloading');
     
     try {
-      // Download from server endpoint
-      const response = await fetch('/api/download/desktop-agent');
+      // Download enhanced desktop agent from direct route
+      const response = await fetch('/download/desktop-agent-enhanced.js');
       
       if (response.ok) {
         const blob = await response.blob();
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = 'smartblueprint-agent-installer.js';
+        a.download = 'smartblueprint-agent-enhanced.js';
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
@@ -30,7 +30,25 @@ export function DesktopAgentDownload() {
           setDownloadStep('instructions');
         }, 1500);
       } else {
-        // Fallback: generate installer content client-side
+        // Try alternative API endpoint
+        const apiResponse = await fetch('/api/download/desktop-agent');
+        if (apiResponse.ok) {
+          const blob = await apiResponse.blob();
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = 'smartblueprint-agent-enhanced.js';
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+          
+          setTimeout(() => {
+            setDownloadStep('instructions');
+          }, 1500);
+        } else {
+          throw new Error('Download endpoints not available');
+        }
         const agentContent = `#!/usr/bin/env node
 
 /**

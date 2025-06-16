@@ -1,10 +1,44 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
+import path from "path";
+import fs from "fs";
 
 const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
+
+// Serve enhanced desktop agent directly - place before other middleware
+app.get('/download/desktop-agent-enhanced.js', (req: Request, res: Response) => {
+  console.log('[Download] Desktop agent download requested');
+  
+  try {
+    const agentPath = path.join(process.cwd(), 'desktop-agent-enhanced.js');
+    console.log('[Download] Looking for agent at:', agentPath);
+    
+    if (fs.existsSync(agentPath)) {
+      console.log('[Download] Enhanced agent file found');
+      
+      // Use res.download() for proper file serving
+      res.download(agentPath, 'smartblueprint-agent-enhanced.js', (err) => {
+        if (err) {
+          console.error('[Download] Download failed:', err);
+          if (!res.headersSent) {
+            res.status(500).send('Download failed');
+          }
+        } else {
+          console.log('[Download] Enhanced desktop agent downloaded successfully');
+        }
+      });
+    } else {
+      console.log('[Download] Enhanced agent file not found at:', agentPath);
+      res.status(404).send('Enhanced desktop agent not found');
+    }
+  } catch (error) {
+    console.error('[Download] Failed to serve enhanced desktop agent:', error);
+    res.status(500).send('Download failed');
+  }
+});
 
 app.use((req, res, next) => {
   const start = Date.now();
