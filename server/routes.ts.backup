@@ -1593,7 +1593,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Desktop Agent Download
+  // Desktop Agent Download - Simple working version
   app.get('/api/download/desktop-agent', (req, res) => {
     const fs = require('fs');
     const path = require('path');
@@ -1601,17 +1601,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
     console.log('[Desktop Agent Download] Serving installer file...');
     
     const installerPath = path.join(process.cwd(), 'desktop-agent-installer.js');
-    
-    if (fs.existsSync(installerPath)) {
-      console.log('[Desktop Agent Download] Found installer file on disk');
-      res.setHeader('Content-Type', 'text/plain; charset=utf-8');
-      res.setHeader('Content-Disposition', 'attachment; filename="smartblueprint-agent-installer.js"');
-      res.sendFile(installerPath);
-    } else {
-      console.log('[Desktop Agent Download] File not found, returning 404');
-      res.status(404).json({ message: "Desktop agent installer not found" });
-    }
-  });
+      
+      if (fs.existsSync(installerPath)) {
+        console.log('[Desktop Agent Download] Found installer file on disk');
+        const installerContent = fs.readFileSync(installerPath, 'utf8');
+        
+        res.setHeader('Content-Type', 'application/javascript; charset=utf-8');
+        res.setHeader('Content-Disposition', 'attachment; filename="smartblueprint-agent-installer.js"');
+        res.setHeader('Cache-Control', 'no-cache');
+        res.send(installerContent);
+        return;
+      }
+      
+      // Generate installer content directly
+      const installerContent = `#!/usr/bin/env node
+
+/**
+ * SmartBlueprint Pro Desktop Agent Installer
+ * Downloads and installs the desktop agent for local network scanning
+ */
+
+const fs = require('fs');
+const path = require('path');
+const os = require('os');
+const { execSync } = require('child_process');
+
+const AGENT_VERSION = '1.0.0';
+const INSTALL_DIR = path.join(os.homedir(), '.smartblueprint-agent');
 const CONFIG_FILE = path.join(INSTALL_DIR, 'config.json');
 
 console.log('🔧 SmartBlueprint Pro Desktop Agent Installer');
