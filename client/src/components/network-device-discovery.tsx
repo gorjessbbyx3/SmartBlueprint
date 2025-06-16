@@ -279,38 +279,7 @@ export function NetworkDeviceDiscovery({ onDevicesDiscovered }: NetworkDeviceDis
     });
   };
 
-  const handleTestScan = async () => {
-    if (!userConsent) {
-      toast({
-        title: "Consent Required",
-        description: "Please agree to the privacy terms before starting the test scan",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    setIsScanning(true);
-    setScanProgress(0);
-    setScanResult(null);
-    setIsTestMode(false);
-
-    // Simulate progress for better UX
-    const progressInterval = setInterval(() => {
-      setScanProgress(prev => {
-        if (prev >= 90) {
-          clearInterval(progressInterval);
-          return prev;
-        }
-        return prev + 10;
-      });
-    }, 200);
-
-    realScanMutation.mutate({
-      userConsent,
-      scanIntensive,
-      includeVendorLookup
-    });
-  };
+  // Test mode removed for complete data integrity enforcement
 
   const handleAssignToRoom = (device: NetworkDevice) => {
     toast({
@@ -528,30 +497,13 @@ export function NetworkDeviceDiscovery({ onDevicesDiscovered }: NetworkDeviceDis
             <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
               Close
             </Button>
-            <Button 
-              onClick={handleTestScan}
-              disabled={!userConsent || isScanning}
-              variant="secondary"
-              className="text-purple-600 border-purple-200 hover:bg-purple-50"
-            >
-              {isScanning && isTestMode ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Testing...
-                </>
-              ) : (
-                <>
-                  <FlaskConical className="h-4 w-4 mr-2" />
-                  Test Discovery
-                </>
-              )}
-            </Button>
+            {/* Test mode removed for data integrity */}
             <Button 
               onClick={handleStartScan} 
               disabled={!userConsent || isScanning}
               className="bg-blue-600 hover:bg-blue-700"
             >
-              {isScanning && !isTestMode ? (
+              {isScanning ? (
                 <>
                   <Search className="h-4 w-4 mr-2 animate-spin" />
                   Scanning...
@@ -559,7 +511,7 @@ export function NetworkDeviceDiscovery({ onDevicesDiscovered }: NetworkDeviceDis
               ) : (
                 <>
                   <Search className="h-4 w-4 mr-2" />
-                  Real Scan
+                  Start Scan
                 </>
               )}
             </Button>
