@@ -48,6 +48,33 @@ export const recommendations = pgTable("recommendations", {
   improvementScore: real("improvement_score"), // Expected coverage improvement percentage
 });
 
+export const platformIntegrations = pgTable("platform_integrations", {
+  id: serial("id").primaryKey(),
+  platform: text("platform").notNull(), // "philips_hue", "nest", "alexa"
+  userId: text("user_id").notNull(),
+  accessToken: text("access_token").notNull(),
+  refreshToken: text("refresh_token"),
+  tokenExpiry: timestamp("token_expiry"),
+  bridgeIp: text("bridge_ip"), // For Philips Hue local bridge
+  platformUserId: text("platform_user_id"), // Platform-specific user ID
+  isActive: boolean("is_active").default(true),
+  lastSync: timestamp("last_sync").defaultNow(),
+  config: jsonb("config"), // Platform-specific configuration
+});
+
+export const platformDevices = pgTable("platform_devices", {
+  id: serial("id").primaryKey(),
+  integrationId: integer("integration_id").references(() => platformIntegrations.id),
+  deviceId: integer("device_id").references(() => devices.id),
+  platformDeviceId: text("platform_device_id").notNull(),
+  deviceName: text("device_name").notNull(),
+  deviceType: text("device_type").notNull(), // "light", "thermostat", "speaker", "sensor"
+  capabilities: jsonb("capabilities"), // Device-specific capabilities
+  state: jsonb("state"), // Current device state
+  lastUpdated: timestamp("last_updated").defaultNow(),
+  isControllable: boolean("is_controllable").default(true),
+});
+
 export const rooms = pgTable("rooms", {
   id: serial("id").primaryKey(),
   floorplanId: integer("floorplan_id").references(() => floorplans.id),
@@ -81,15 +108,7 @@ export const mlModels = pgTable("ml_models", {
   lastTrainedAt: timestamp("last_trained_at")
 });
 
-export const platformIntegrations = pgTable("platform_integrations", {
-  id: serial("id").primaryKey(),
-  platform: text("platform").notNull(), // hue, nest, alexa, google_home
-  accessToken: text("access_token").notNull(),
-  refreshToken: text("refresh_token"),
-  isConnected: boolean("is_connected").default(true),
-  lastSyncAt: timestamp("last_sync_at"),
-  createdAt: timestamp("created_at").defaultNow()
-});
+// Removed duplicate - using the one above with more complete schema
 
 export const predictiveAlerts = pgTable("predictive_alerts", {
   id: serial("id").primaryKey(),
@@ -111,6 +130,8 @@ export const fusionResults = pgTable("fusion_results", {
   timestamp: timestamp("timestamp").defaultNow(),
   metadata: jsonb("metadata") // Additional fusion data
 });
+
+// Platform integration schemas moved to end to avoid conflicts
 
 export const insertDeviceSchema = createInsertSchema(devices).omit({
   id: true,
@@ -178,6 +199,8 @@ export type MlModel = typeof mlModels.$inferSelect;
 export type InsertMlModel = z.infer<typeof insertMlModelSchema>;
 export type PlatformIntegration = typeof platformIntegrations.$inferSelect;
 export type InsertPlatformIntegration = z.infer<typeof insertPlatformIntegrationSchema>;
+export type PlatformDevice = typeof platformDevices.$inferSelect;
+export type InsertPlatformDevice = z.infer<typeof insertPlatformDeviceSchema>;
 export type PredictiveAlert = typeof predictiveAlerts.$inferSelect;
 export type InsertPredictiveAlert = z.infer<typeof insertPredictiveAlertSchema>;
 export type FusionResult = typeof fusionResults.$inferSelect;
