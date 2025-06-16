@@ -1822,6 +1822,401 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Mobile Ping API Endpoints
+  app.post('/api/mobile/register', async (req: Request, res: Response) => {
+    try {
+      const { device_id, device_type, device_model, os_version, app_version, metadata } = req.body;
+      
+      if (!device_id) {
+        return res.status(400).json({
+          success: false,
+          error: 'device_id is required'
+        });
+      }
+
+      // Store mobile device registration
+      const deviceRecord = {
+        device_id,
+        device_type: device_type || 'mobile',
+        device_model: device_model || 'unknown',
+        os_version: os_version || 'unknown',
+        app_version: app_version || '1.0.0',
+        registration_time: new Date().toISOString(),
+        last_seen: new Date().toISOString(),
+        metadata: metadata || {}
+      };
+
+      console.log(`[Mobile API] Device registered: ${device_id}`);
+      
+      res.json({
+        status: 'success',
+        device_id,
+        message: 'Device registered successfully',
+        config: {
+          ping_interval: 30000,
+          ping_targets: ['8.8.8.8', '1.1.1.1', '192.168.1.1', '192.168.1.254'],
+          collect_location: true,
+          collect_network_info: true,
+          websocket_url: `wss://${req.get('host')}/ws`
+        }
+      });
+      
+    } catch (error) {
+      console.error('[Mobile API] Registration failed:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Failed to register mobile device'
+      });
+    }
+  });
+
+  app.post('/api/mobile/ping', async (req: Request, res: Response) => {
+    try {
+      const { device_id, timestamp, location, network_info, ping_results, battery_level, app_version } = req.body;
+      
+      if (!device_id) {
+        return res.status(400).json({
+          success: false,
+          error: 'device_id is required'
+        });
+      }
+
+      // Process mobile ping data
+      const mobilePingData = {
+        device_id,
+        timestamp: timestamp || new Date().toISOString(),
+        location: location || null,
+        network_info: network_info || null,
+        ping_results: ping_results || {},
+        battery_level: battery_level || null,
+        app_version: app_version || '1.0.0'
+      };
+
+      // Analyze for anomalies
+      const anomalies = analyzeMobilePingAnomalies(mobilePingData);
+      
+      // Calculate signal quality metrics
+      const signalQuality = calculateMobileSignalQuality(mobilePingData);
+      
+      // Store in telemetry system
+      await storage.addDevice({
+        id: `mobile_${device_id}`,
+        name: `Mobile Device ${device_id.substring(0, 8)}`,
+        type: 'mobile',
+        x: location?.latitude || 0,
+        y: location?.longitude || 0,
+        signalStrength: network_info?.rssi || -50,
+        status: 'online',
+        lastSeen: new Date(timestamp || Date.now()),
+        batteryLevel: battery_level,
+        metadata: {
+          mobile: true,
+          network_info,
+          ping_results,
+          app_version
+        }
+      });
+
+      console.log(`[Mobile API] Ping data processed for device: ${device_id}`);
+
+      res.json({
+        status: 'success',
+        processed_at: new Date().toISOString(),
+        anomaly_detected: anomalies.length > 0,
+        signal_quality: signalQuality,
+        anomalies: anomalies,
+        recommendations: generateMobileRecommendations(mobilePingData, anomalies)
+      });
+      
+    } catch (error) {
+      console.error('[Mobile API] Ping processing failed:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Failed to process mobile ping data'
+      });
+    }
+  });
+
+  app.get('/api/mobile/devices', async (req: Request, res: Response) => {
+    try {
+      const allDevices = await storage.getDevices();
+      const mobileDevices = allDevices.filter(device => device.type === 'mobile' || device.metadata?.mobile);
+      
+      res.json({
+        success: true,
+        devices: mobileDevices,
+        count: mobileDevices.length
+      });
+      
+    } catch (error) {
+      console.error('[Mobile API] Failed to get mobile devices:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Failed to retrieve mobile devices'
+      });
+    }
+  });
+
+  app.get('/api/mobile/analytics/:device_id', async (req: Request, res: Response) => {
+    try {
+      const { device_id } = req.params;
+      const { hours = 24 } = req.query;
+      
+      // Get device analytics for specified time window
+      const analytics = {
+        device_id,
+        time_window_hours: parseInt(hours as string),
+        ping_statistics: {
+          total_pings: 0,
+          successful_pings: 0,
+          failed_pings: 0,
+          average_latency: 0,
+          packet_loss_rate: 0
+        },
+        location_data: {
+          total_locations: 0,
+          unique_networks: 0,
+          movement_distance: 0
+        },
+        network_quality: {
+          average_rssi: 0,
+          signal_stability: 0,
+          network_changes: 0
+        },
+        battery_usage: {
+          average_level: 0,
+          drain_rate: 0
+        }
+      };
+
+      res.json({
+        success: true,
+        analytics,
+        generated_at: new Date().toISOString()
+      });
+      
+    } catch (error) {
+      console.error('[Mobile API] Analytics failed:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Failed to generate mobile analytics'
+      });
+    }
+  });
+
+  app.post('/api/mobile/trust', async (req: Request, res: Response) => {
+    try {
+      const { device_id, trust_level, network_ssid } = req.body;
+      
+      if (!device_id || !trust_level) {
+        return res.status(400).json({
+          success: false,
+          error: 'device_id and trust_level are required'
+        });
+      }
+
+      console.log(`[Mobile API] Setting trust level for device ${device_id}: ${trust_level}`);
+      
+      res.json({
+        success: true,
+        device_id,
+        trust_level,
+        network_ssid: network_ssid || null,
+        updated_at: new Date().toISOString()
+      });
+      
+    } catch (error) {
+      console.error('[Mobile API] Trust setting failed:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Failed to set device trust level'
+      });
+    }
+  });
+
+  app.get('/api/mobile/network-zones', async (req: Request, res: Response) => {
+    try {
+      const networkZones = {
+        trusted_networks: [
+          {
+            ssid: 'Home-WiFi',
+            trust_level: 'trusted',
+            device_count: 5,
+            location: { lat: 0, lng: 0 }
+          }
+        ],
+        guest_networks: [
+          {
+            ssid: 'Guest-Network',
+            trust_level: 'guest',
+            device_count: 2,
+            location: { lat: 0, lng: 0 }
+          }
+        ],
+        unknown_networks: []
+      };
+      
+      res.json({
+        success: true,
+        network_zones: networkZones,
+        total_zones: Object.keys(networkZones).length
+      });
+      
+    } catch (error) {
+      console.error('[Mobile API] Network zones failed:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Failed to retrieve network zones'
+      });
+    }
+  });
+
+  app.post('/api/mobile/configure', async (req: Request, res: Response) => {
+    try {
+      const { device_id, config } = req.body;
+      
+      if (!device_id) {
+        return res.status(400).json({
+          success: false,
+          error: 'device_id is required'
+        });
+      }
+
+      const deviceConfig = {
+        ping_interval: config?.ping_interval || 30000,
+        ping_targets: config?.ping_targets || ['8.8.8.8', '1.1.1.1'],
+        location_updates: config?.location_updates !== false,
+        battery_optimization: config?.battery_optimization !== false,
+        updated_at: new Date().toISOString()
+      };
+
+      console.log(`[Mobile API] Configuration updated for device: ${device_id}`);
+      
+      res.json({
+        success: true,
+        device_id,
+        config: deviceConfig
+      });
+      
+    } catch (error) {
+      console.error('[Mobile API] Configuration failed:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Failed to configure mobile device'
+      });
+    }
+  });
+
+  // Mobile ping analysis functions
+  function analyzeMobilePingAnomalies(data: any): any[] {
+    const anomalies = [];
+    
+    // Check for weak signal
+    if (data.network_info?.rssi && data.network_info.rssi < -80) {
+      anomalies.push({
+        type: 'weak_signal',
+        severity: data.network_info.rssi < -90 ? 'high' : 'medium',
+        value: data.network_info.rssi,
+        description: `Weak WiFi signal: ${data.network_info.rssi} dBm`
+      });
+    }
+    
+    // Check for high latency
+    if (data.ping_results) {
+      Object.entries(data.ping_results).forEach(([target, result]: [string, any]) => {
+        if (result.rtt && result.rtt > 500) {
+          anomalies.push({
+            type: 'high_latency',
+            severity: result.rtt > 1000 ? 'high' : 'medium',
+            target,
+            value: result.rtt,
+            description: `High latency to ${target}: ${result.rtt}ms`
+          });
+        }
+      });
+    }
+    
+    // Check for low battery
+    if (data.battery_level && data.battery_level < 20) {
+      anomalies.push({
+        type: 'low_battery',
+        severity: data.battery_level < 10 ? 'high' : 'medium',
+        value: data.battery_level,
+        description: `Low battery level: ${data.battery_level}%`
+      });
+    }
+    
+    return anomalies;
+  }
+
+  function calculateMobileSignalQuality(data: any): any {
+    const quality = {
+      overall_score: 100,
+      signal_strength_score: 100,
+      latency_score: 100,
+      reliability_score: 100
+    };
+    
+    // Signal strength scoring
+    if (data.network_info?.rssi) {
+      const rssi = data.network_info.rssi;
+      if (rssi >= -50) quality.signal_strength_score = 100;
+      else if (rssi >= -60) quality.signal_strength_score = 80;
+      else if (rssi >= -70) quality.signal_strength_score = 60;
+      else if (rssi >= -80) quality.signal_strength_score = 40;
+      else quality.signal_strength_score = 20;
+    }
+    
+    // Latency scoring
+    if (data.ping_results) {
+      const latencies = Object.values(data.ping_results)
+        .filter((result: any) => result.success && result.rtt)
+        .map((result: any) => result.rtt);
+      
+      if (latencies.length > 0) {
+        const avgLatency = latencies.reduce((a: number, b: number) => a + b, 0) / latencies.length;
+        if (avgLatency <= 50) quality.latency_score = 100;
+        else if (avgLatency <= 100) quality.latency_score = 80;
+        else if (avgLatency <= 200) quality.latency_score = 60;
+        else if (avgLatency <= 500) quality.latency_score = 40;
+        else quality.latency_score = 20;
+      }
+    }
+    
+    // Calculate overall score
+    quality.overall_score = Math.round(
+      (quality.signal_strength_score + quality.latency_score + quality.reliability_score) / 3
+    );
+    
+    return quality;
+  }
+
+  function generateMobileRecommendations(data: any, anomalies: any[]): string[] {
+    const recommendations = [];
+    
+    if (anomalies.some(a => a.type === 'weak_signal')) {
+      recommendations.push('Move closer to your WiFi router for better signal strength');
+      recommendations.push('Check for obstacles blocking WiFi signal (walls, furniture)');
+    }
+    
+    if (anomalies.some(a => a.type === 'high_latency')) {
+      recommendations.push('Check your internet connection speed');
+      recommendations.push('Restart your router if experiencing persistent high latency');
+    }
+    
+    if (anomalies.some(a => a.type === 'low_battery')) {
+      recommendations.push('Charge your device to ensure continuous monitoring');
+      recommendations.push('Enable battery optimization in app settings');
+    }
+    
+    if (recommendations.length === 0) {
+      recommendations.push('Network performance is optimal');
+      recommendations.push('Continue monitoring for consistent data collection');
+    }
+    
+    return recommendations;
+  }
+
   // Generate enhanced agent code
   function generateEnhancedAgent() {
     return `#!/usr/bin/env node

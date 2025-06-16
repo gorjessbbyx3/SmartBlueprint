@@ -15,6 +15,7 @@ import PetRecognition from "@/pages/pet-recognition";
 import PredictiveMaintenance from "@/pages/predictive-maintenance";
 import AdvancedAnalytics from "@/pages/advanced-analytics";
 import NetworkTopology from "@/pages/network-topology";
+import MobilePingDashboard from "@/pages/mobile-ping-dashboard";
 import TermsOfService from "@/pages/terms-of-service";
 import PrivacyPolicy from "@/pages/privacy-policy";
 import NotFound from "@/pages/not-found";
@@ -91,6 +92,7 @@ function Router() {
       <Route path="/predictive-maintenance" component={PredictiveMaintenance} />
       <Route path="/advanced-analytics" component={AdvancedAnalytics} />
       <Route path="/network-topology" component={NetworkTopology} />
+      <Route path="/mobile-ping" component={MobilePingDashboard} />
       <Route path="/terms" component={TermsOfService} />
       <Route path="/privacy" component={PrivacyPolicy} />
       <Route component={NotFound} />
