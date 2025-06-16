@@ -48,6 +48,60 @@ export class ComprehensiveDeviceDiscovery {
 
   // Known vendor MAC prefixes for device identification
   private vendorDatabase = new Map([
+    // Gaming Systems
+    ['00:0D:3A', 'Microsoft Xbox'],
+    ['A4:C3:61', 'Sony PlayStation'],
+    ['98:B6:E9', 'Nintendo Switch'],
+    ['00:17:AB', 'Nintendo Wii'],
+    ['00:19:1D', 'Sony PlayStation'],
+    ['00:24:E4', 'Valve Steam Deck'],
+    
+    // Printers & Office Equipment
+    ['00:A0:D1', 'Canon Printer'],
+    ['00:60:B0', 'Hewlett Packard'],
+    ['00:C0:EE', 'HP LaserJet'],
+    ['08:00:20', 'Epson Printer'],
+    ['00:80:77', 'Brother Printer'],
+    ['00:04:76', 'Kyocera Printer'],
+    ['00:1B:A9', 'Xerox Printer'],
+    ['00:E0:81', 'Lexmark Printer'],
+    
+    // Smart TVs & Streaming
+    ['D8:31:34', 'Samsung Smart TV'],
+    ['CC:32:E5', 'LG Smart TV'],
+    ['3C:28:6D', 'Sony Bravia TV'],
+    ['B8:27:EB', 'Raspberry Pi'],
+    ['DC:A6:32', 'Roku Device'],
+    ['18:B4:30', 'Amazon Fire TV'],
+    ['F4:F5:D8', 'Google Chromecast'],
+    ['AC:63:BE', 'Apple TV'],
+    
+    // Network Infrastructure
+    ['00:1D:D9', 'Ubiquiti Networks'],
+    ['24:A4:3C', 'Netgear Router'],
+    ['00:50:F2', 'Linksys Router'],
+    ['BC:14:01', 'ASUS Router'],
+    ['E8:DE:27', 'TP-Link Router'],
+    ['00:26:62', 'D-Link Router'],
+    
+    // Smart Home Devices
+    ['EC:FA:BC', 'Philips Hue Bridge'],
+    ['00:17:88', 'Nest Thermostat'],
+    ['FC:65:DE', 'Amazon Echo'],
+    ['B4:75:0E', 'Google Nest'],
+    ['18:B7:9E', 'Ring Doorbell'],
+    
+    // Computers & Mobile
+    ['00:1B:63', 'Apple MacBook'],
+    ['AC:DE:48', 'Apple iMac'],
+    ['00:50:56', 'VMware Virtual'],
+    ['08:00:27', 'VirtualBox'],
+    ['00:15:5D', 'Microsoft Hyper-V'],
+    
+    // IoT & Sensors
+    ['5C:CF:7F', 'Espressif ESP32'],
+    ['98:F4:AB', 'Arduino WiFi'],
+    ['B8:27:EB', 'Raspberry Pi Foundation'],
     ['00:50:43', 'Amazon'],
     ['FC:65:DE', 'Amazon Echo'],
     ['68:37:E9', 'Amazon Fire TV'],
@@ -84,16 +138,31 @@ export class ComprehensiveDeviceDiscovery {
 
   // Device type classification based on various indicators
   private deviceTypeClassifier = {
-    'smart_tv': ['samsung', 'lg', 'sony', 'tcl', 'roku', 'apple tv', 'chromecast', 'fire tv'],
-    'smart_speaker': ['echo', 'alexa', 'google home', 'homepod', 'sonos', 'nest audio'],
-    'smart_light': ['hue', 'lifx', 'kasa', 'wyze bulb', 'sengled'],
+    'smart_tv': ['samsung', 'lg', 'sony', 'tcl', 'roku', 'apple tv', 'chromecast', 'fire tv', 'bravia', 'smart tv'],
+    'smart_speaker': ['echo', 'alexa', 'google home', 'homepod', 'sonos', 'nest audio', 'speaker'],
+    'smart_light': ['hue', 'lifx', 'kasa', 'wyze bulb', 'sengled', 'smart bulb', 'light'],
     'thermostat': ['nest', 'ecobee', 'honeywell', 'thermostat'],
-    'security_camera': ['ring', 'arlo', 'wyze cam', 'nest cam', 'camera'],
-    'smart_plug': ['kasa plug', 'wyze plug', 'amazon plug', 'smart plug'],
-    'router': ['router', 'gateway', 'access point', 'ubiquiti', 'netgear', 'linksys'],
-    'game_console': ['xbox', 'playstation', 'nintendo', 'steam deck'],
+    'security_camera': ['ring', 'arlo', 'wyze cam', 'nest cam', 'camera', 'doorbell'],
+    'smart_plug': ['kasa plug', 'wyze plug', 'amazon plug', 'smart plug', 'outlet'],
+    'router': ['router', 'gateway', 'access point', 'ubiquiti', 'netgear', 'linksys', 'asus', 'd-link', 'tp-link'],
+    'game_console': ['xbox', 'playstation', 'nintendo', 'steam deck', 'switch', 'wii'],
     'streaming_device': ['roku', 'chromecast', 'fire tv', 'apple tv', 'nvidia shield'],
-    'smart_hub': ['smartthings', 'hubitat', 'wink', 'vera', 'home assistant']
+    'smart_hub': ['smartthings', 'hubitat', 'wink', 'vera', 'home assistant', 'hub'],
+    'printer': ['canon', 'hp', 'epson', 'brother', 'xerox', 'lexmark', 'kyocera', 'printer', 'laserjet'],
+    'computer': ['macbook', 'imac', 'laptop', 'desktop', 'pc', 'workstation', 'server'],
+    'mobile_device': ['iphone', 'ipad', 'android', 'tablet', 'phone'],
+    'iot_sensor': ['esp32', 'arduino', 'raspberry pi', 'sensor', 'monitor'],
+    'nas_storage': ['synology', 'qnap', 'drobo', 'nas', 'storage'],
+    'media_server': ['plex', 'jellyfin', 'kodi', 'media server'],
+    'smart_switch': ['switch', 'dimmer', 'outlet', 'wall switch'],
+    'smart_lock': ['august', 'yale', 'schlage', 'kwikset', 'lock'],
+    'garage_door': ['myq', 'chamberlain', 'liftmaster', 'garage'],
+    'vacuum': ['roomba', 'shark', 'eufy', 'roborock', 'vacuum'],
+    'air_quality': ['awair', 'purple air', 'air quality', 'purifier'],
+    'smart_blinds': ['lutron', 'somfy', 'blinds', 'shades'],
+    'doorbell': ['ring', 'nest hello', 'arlo', 'doorbell'],
+    'security_system': ['simplisafe', 'adt', 'vivint', 'security'],
+    'weather_station': ['ambient', 'davis', 'weather', 'station']
   };
 
   constructor() {

@@ -216,11 +216,44 @@ class OfflineDetectionAgent extends AIAgent {
     this.lastProcessed = new Date();
     
     const currentTime = new Date();
-    const offlineThreshold = 5 * 60 * 1000; // 5 minutes
+    
+    // Device type specific offline thresholds
+    const deviceTypeThresholds = new Map([
+      ['smart_tv', 3600000], // 1 hour
+      ['smart_speaker', 300000], // 5 minutes
+      ['smart_light', 600000], // 10 minutes
+      ['thermostat', 900000], // 15 minutes
+      ['security_camera', 120000], // 2 minutes
+      ['smart_plug', 1800000], // 30 minutes
+      ['router', 60000], // 1 minute
+      ['game_console', 7200000], // 2 hours
+      ['streaming_device', 1800000], // 30 minutes
+      ['smart_hub', 300000], // 5 minutes
+      ['printer', 14400000], // 4 hours (printers sleep)
+      ['computer', 28800000], // 8 hours (sleep/hibernate)
+      ['mobile_device', 43200000], // 12 hours (phones/tablets)
+      ['iot_sensor', 600000], // 10 minutes
+      ['nas_storage', 300000], // 5 minutes (critical)
+      ['media_server', 1800000], // 30 minutes
+      ['smart_switch', 600000], // 10 minutes
+      ['smart_lock', 300000], // 5 minutes (security critical)
+      ['garage_door', 900000], // 15 minutes
+      ['vacuum', 3600000], // 1 hour (cleaning cycles)
+      ['air_quality', 600000], // 10 minutes
+      ['smart_blinds', 1800000], // 30 minutes
+      ['doorbell', 120000], // 2 minutes (security critical)
+      ['security_system', 60000], // 1 minute (critical)
+      ['weather_station', 900000] // 15 minutes
+    ]);
+    
+    const defaultOfflineThreshold = 5 * 60 * 1000; // 5 minutes default
     
     for (const device of context.devices) {
       const deviceLastSeen = device.lastSeen || new Date(0);
       const timeSinceLastSeen = currentTime.getTime() - deviceLastSeen.getTime();
+      
+      // Get device-specific threshold
+      const offlineThreshold = deviceTypeThresholds.get(device.deviceType) || defaultOfflineThreshold;
       
       // Update tracking
       this.lastSeen.set(device.id, deviceLastSeen);
