@@ -11,6 +11,7 @@ import DeviceControl from "@/pages/device-control";
 import DeviceDiscovery from "@/pages/device-discovery";
 import PingMonitoring from "@/pages/ping-monitoring";
 import UserOnboarding from "@/pages/user-onboarding";
+import PetRecognition from "@/pages/pet-recognition";
 import TermsOfService from "@/pages/terms-of-service";
 import PrivacyPolicy from "@/pages/privacy-policy";
 import NotFound from "@/pages/not-found";

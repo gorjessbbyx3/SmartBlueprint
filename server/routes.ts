@@ -15,6 +15,8 @@ import { AdvancedLocationEngine, LSTMAnomalyDetector, IsolationForestDetector } 
 import { mlAnalytics } from "./ml-analytics.js";
 import { activePingProbing } from "./active-ping-probing.js";
 import type { PingMeasurement, ProbeData, CalibrationPoint } from "./active-ping-probing.js";
+import { petRecognitionAI } from "./pet-recognition-ai.js";
+import type { PetDetection, PetDevice, PetBehaviorPattern } from "./pet-recognition-ai.js";
 
 const insertDeviceSchema = createInsertSchema(devices);
 const insertFloorplanSchema = createInsertSchema(floorplans);
@@ -1103,6 +1105,122 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({
         success: false,
         error: 'Failed to fuse location estimates'
+      });
+    }
+  });
+
+  // Pet Recognition API Endpoints
+  app.get('/api/pets/detected', async (req: Request, res: Response) => {
+    try {
+      const detectedPets = petRecognitionAI.getDetectedPets();
+      
+      res.json({
+        success: true,
+        pets: detectedPets,
+        count: detectedPets.length
+      });
+    } catch (error) {
+      console.error('[Pet Recognition] Failed to get detected pets:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Failed to retrieve detected pets'
+      });
+    }
+  });
+
+  app.get('/api/pets/devices', async (req: Request, res: Response) => {
+    try {
+      const petDevices = petRecognitionAI.getPetDevices();
+      
+      res.json({
+        success: true,
+        devices: petDevices,
+        count: petDevices.length
+      });
+    } catch (error) {
+      console.error('[Pet Recognition] Failed to get pet devices:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Failed to retrieve pet devices'
+      });
+    }
+  });
+
+  app.post('/api/pets/analyze', async (req: Request, res: Response) => {
+    try {
+      const { devices: deviceList } = req.body;
+      
+      if (!Array.isArray(deviceList)) {
+        return res.status(400).json({
+          success: false,
+          error: 'Valid device list is required'
+        });
+      }
+
+      const petDetections = await petRecognitionAI.identifyPetsFromDevices(deviceList);
+      
+      res.json({
+        success: true,
+        detections: petDetections,
+        count: petDetections.length,
+        timestamp: new Date()
+      });
+    } catch (error) {
+      console.error('[Pet Recognition] Analysis failed:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Failed to analyze pets from devices',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  app.get('/api/pets/:petId/behavior', async (req: Request, res: Response) => {
+    try {
+      const { petId } = req.params;
+      const behaviorAnalysis = await petRecognitionAI.analyzePetBehavior(petId);
+      
+      res.json({
+        success: true,
+        petId,
+        ...behaviorAnalysis,
+        timestamp: new Date()
+      });
+    } catch (error) {
+      console.error('[Pet Recognition] Behavior analysis failed:', error);
+      if (error instanceof Error && error.message === 'Pet not found') {
+        res.status(404).json({
+          success: false,
+          error: 'Pet not found'
+        });
+      } else {
+        res.status(500).json({
+          success: false,
+          error: 'Failed to analyze pet behavior',
+          details: error instanceof Error ? error.message : 'Unknown error'
+        });
+      }
+    }
+  });
+
+  app.patch('/api/pets/:petId', async (req: Request, res: Response) => {
+    try {
+      const { petId } = req.params;
+      const updates = req.body;
+      
+      petRecognitionAI.updatePetDetection(petId, updates);
+      
+      res.json({
+        success: true,
+        message: 'Pet detection updated',
+        petId,
+        timestamp: new Date()
+      });
+    } catch (error) {
+      console.error('[Pet Recognition] Update failed:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Failed to update pet detection'
       });
     }
   });
