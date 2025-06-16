@@ -307,6 +307,7 @@ Changelog:
 - June 16, 2025. ADDED System Health Monitoring: Implemented comprehensive system health monitoring with real-time status tracking for AI agents, network scanning, data integrity, and cloud tunnel connectivity. Added tabbed AI insights interface with dedicated System Health tab for complete system validation and diagnostics.
 - June 16, 2025. COMPLETED Smart Home Platform Integration: Added comprehensive platform integration system for Philips Hue, Nest, and Alexa with authentication APIs, device discovery, platform management interface, and navigation between dashboard and platform pages.
 - June 16, 2025. ENHANCED Platform Integration System: Implemented real-time device control, state synchronization, improved error handling, and bridge IP management for Philips Hue. Fixed TypeScript errors across authentication, device discovery, and disconnect workflows. All API endpoints tested and operational.
+- June 16, 2025. COMPLETED Direct WiFi Device Discovery: Enhanced desktop agent and telemetry system to discover and monitor all network devices including printers (HP, Canon, Epson), game consoles (Xbox, PlayStation, Nintendo), smart TVs, routers, computers, and NAS storage. Implemented comprehensive mDNS/SSDP/UPnP scanning with device classification, vendor identification, and protocol-specific telemetry collection. Added 6 new API endpoints for device discovery and classification beyond traditional smart home platforms.
 ```
 
 ## User Preferences
