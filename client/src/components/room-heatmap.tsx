@@ -142,13 +142,13 @@ export function RoomHeatmap({
         };
       })
       .sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
-  }, [fusionResults]);
+  }, [fusionResults, rooms]);
 
   // Current heatmap data
   const currentData = useMemo(() => {
     if (!timelineData.length) {
-      // Generate default room layout with no activity
-      const defaultRooms = ROOM_LAYOUT.map(room => {
+      // Generate default room layout with no activity using actual rooms
+      const defaultRooms = rooms.map((room: any) => {
         const { color, interpretation } = getHeatmapColor(0);
         return {
           room: room.name,
@@ -163,7 +163,7 @@ export function RoomHeatmap({
     }
     
     return timelineData[currentTimeIndex] || timelineData[timelineData.length - 1];
-  }, [timelineData, currentTimeIndex]);
+  }, [timelineData, currentTimeIndex, rooms]);
 
   // Playback controls
   useEffect(() => {
@@ -208,42 +208,42 @@ export function RoomHeatmap({
       <CardContent className="space-y-6">
         {/* Heatmap Grid */}
         <div className="relative">
-          <div className="grid grid-cols-4 gap-2 aspect-square max-w-md mx-auto">
-            {ROOM_LAYOUT.map((room) => {
-              const roomData = currentData.rooms.find(r => r.room === room.name);
-              const confidenceScore = roomData?.confidenceScore || 0;
-              const { color, interpretation } = getHeatmapColor(confidenceScore);
-              
-              return (
-                <div
-                  key={room.name}
-                  className={`
-                    ${color} border border-gray-300 rounded-lg p-2 flex flex-col justify-between
-                    transition-all duration-300 hover:scale-105 cursor-pointer
-                    ${room.width === 2 ? 'col-span-2' : ''}
-                    ${room.height === 2 ? 'row-span-2' : ''}
-                  `}
-                  style={{
-                    gridColumn: room.width === 2 ? 'span 2' : 'auto',
-                    gridRow: room.height === 2 ? 'span 2' : 'auto'
-                  }}
-                  title={`${room.name}: ${interpretation} (${(confidenceScore * 100).toFixed(1)}%)`}
-                >
-                  <div className="text-xs font-medium text-gray-800 text-center">
-                    {room.name}
-                  </div>
-                  <div className="text-center">
-                    <div className="text-lg font-bold text-gray-900">
-                      {(confidenceScore * 100).toFixed(0)}%
+          {rooms.length === 0 ? (
+            <div className="text-center py-8 text-gray-500">
+              No rooms created yet. Draw rooms on the floor plan to see them here.
+            </div>
+          ) : (
+            <div className="grid grid-cols-3 gap-2 max-w-md mx-auto">
+              {rooms.map((room: any) => {
+                const roomData = currentData.rooms.find(r => r.room === room.name);
+                const confidenceScore = roomData?.confidenceScore || 0;
+                const { color, interpretation } = getHeatmapColor(confidenceScore);
+                
+                return (
+                  <div
+                    key={room.id}
+                    className={`
+                      ${color} border border-gray-300 rounded-lg p-3 flex flex-col justify-between
+                      transition-all duration-300 hover:scale-105 cursor-pointer min-h-[80px]
+                    `}
+                    title={`${room.name}: ${interpretation} (${(confidenceScore * 100).toFixed(1)}%)`}
+                  >
+                    <div className="text-xs font-medium text-gray-800 text-center">
+                      {room.name}
                     </div>
-                    <div className="text-xs text-gray-700">
-                      {interpretation}
+                    <div className="text-center">
+                      <div className="text-lg font-bold text-gray-900">
+                        {(confidenceScore * 100).toFixed(0)}%
+                      </div>
+                      <div className="text-xs text-gray-700">
+                        {interpretation}
+                      </div>
                     </div>
                   </div>
-                </div>
-              );
-            })}
-          </div>
+                );
+              })}
+            </div>
+          )}
         </div>
 
         {/* Legend */}
