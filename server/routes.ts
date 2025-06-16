@@ -55,6 +55,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
               }
             });
             break;
+            
+          case 'agent_register':
+            console.log(`[Enhanced Agent] Registered agent: ${data.agentId} with capabilities: ${data.capabilities?.join(', ')}`);
+            // Store agent information and broadcast to clients
+            wss.clients.forEach((client) => {
+              if (client !== ws && client.readyState === WebSocket.OPEN) {
+                client.send(JSON.stringify({
+                  type: 'agent_connected',
+                  agentId: data.agentId,
+                  capabilities: data.capabilities,
+                  systemInfo: data.systemInfo,
+                  timestamp: new Date().toISOString()
+                }));
+              }
+            });
+            break;
+            
+          case 'health_analysis':
+            // Process health analysis for predictive maintenance
+            console.log(`[Predictive Maintenance] Received health data from agent: ${data.agentId}`);
+            if (data.telemetryData && data.deviceId) {
+              try {
+                await predictiveMaintenanceAI.analyzeDeviceHealth(data.deviceId, data.telemetryData);
+                console.log(`[Predictive Maintenance] Analyzed health for device: ${data.deviceId}`);
+              } catch (error) {
+                console.error(`[Predictive Maintenance] Analysis failed for ${data.deviceId}:`, error);
+              }
+            }
+            break;
           
           case 'scan_request':
             // Trigger device scanning

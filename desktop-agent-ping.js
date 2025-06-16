@@ -21,12 +21,28 @@ class PingAgent {
     this.ws = null;
     this.isRunning = false;
     this.pingInterval = null;
+    this.healthMonitoringInterval = null;
     this.reconnectAttempts = 0;
     this.maxReconnectAttempts = 10;
     
-    console.log('[Ping Agent] Initializing active ping/latency probing system...');
-    console.log(`[Ping Agent] Targets: ${PING_TARGETS.join(', ')}`);
-    console.log(`[Ping Agent] Interval: ${INTERVAL_MS}ms`);
+    // Device health monitoring
+    this.deviceMetrics = new Map();
+    this.performanceHistory = [];
+    this.errorCounts = new Map();
+    this.connectionDrops = 0;
+    this.startTime = Date.now();
+    this.lastHealthReport = Date.now();
+    
+    // System monitoring
+    this.cpuUsage = 0;
+    this.memoryUsage = 0;
+    this.networkLatency = 0;
+    this.packetLossRate = 0;
+    
+    console.log('[Enhanced Ping Agent] Initializing predictive maintenance system...');
+    console.log(`[Enhanced Ping Agent] Ping targets: ${PING_TARGETS.join(', ')}`);
+    console.log(`[Enhanced Ping Agent] Measurement interval: ${INTERVAL_MS}ms`);
+    console.log(`[Enhanced Ping Agent] Health monitoring: Enabled`);
   }
 
   /**
