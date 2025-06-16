@@ -6,6 +6,7 @@ import DeviceDetailsModal from "@/components/device-details-modal";
 import RecommendationPanel from "@/components/recommendation-panel";
 import { RoomHeatmap } from "@/components/room-heatmap";
 import { LiveAlertsFeed } from "@/components/live-alerts-feed";
+import { MetaAIFixQueue } from "@/components/meta-ai-fix-queue";
 import SignalHeatmap from "@/components/signal-heatmap";
 import WiFiConnectionCheck from "@/components/wifi-connection-check";
 import { ErrorBoundary, NetworkErrorFallback } from "@/components/error-boundary";
@@ -246,13 +247,17 @@ export default function Dashboard() {
                     />
                   </div>
                   
-                  {/* Live Alerts Feed - Takes 1 column */}
-                  <div className="xl:col-span-1">
+                  {/* Right Panel - 2 components stacked */}
+                  <div className="xl:col-span-1 space-y-6">
+                    {/* Meta-AI Fix Queue */}
+                    <MetaAIFixQueue className="h-[300px]" />
+                    
+                    {/* Live Alerts Feed */}
                     <LiveAlertsFeed 
-                      maxAlerts={20}
+                      maxAlerts={15}
                       showToastNotifications={true}
                       autoRefresh={true}
-                      className="h-full"
+                      className="h-[400px]"
                     />
                   </div>
                 </div>

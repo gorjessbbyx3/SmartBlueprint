@@ -22,6 +22,7 @@ import { monitoringService } from './monitoring-service';
 import { networkDiscoveryService } from './network-discovery';
 import { testDeviceDiscovery } from './test-device-discovery';
 import { metaAIMonitor } from './meta-ai-monitor';
+import { dataIntegrityMonitor } from './data-integrity-monitor';
 
 const execAsync = promisify(exec);
 
@@ -1408,6 +1409,56 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     } catch (error) {
       res.status(400).json({ message: "Invalid error report format" });
+    }
+  });
+
+  // Data Integrity Monitoring Endpoints
+  app.post("/api/data-integrity/scan", async (req, res) => {
+    try {
+      console.log('[Data Integrity] Starting comprehensive application scan...');
+      const scanResult = await dataIntegrityMonitor.scanApplication();
+      
+      res.json({
+        success: true,
+        message: `Data integrity scan completed. Found ${scanResult.totalViolations} violations.`,
+        ...scanResult
+      });
+    } catch (error) {
+      res.status(500).json({ message: "Data integrity scan failed" });
+    }
+  });
+
+  app.post("/api/data-integrity/scan-devices", async (req, res) => {
+    try {
+      const devices = await storage.getDevices();
+      const violations = dataIntegrityMonitor.scanDevices(devices);
+      
+      res.json({
+        success: true,
+        message: `Scanned ${devices.length} devices. Found ${violations.length} violations.`,
+        violations,
+        deviceCount: devices.length,
+        timestamp: new Date()
+      });
+    } catch (error) {
+      res.status(500).json({ message: "Device scan failed" });
+    }
+  });
+
+  app.post("/api/data-integrity/scan-rooms", async (req, res) => {
+    try {
+      const rooms = await storage.getRooms();
+      const violations = dataIntegrityMonitor.scanRooms(rooms);
+      
+      res.json({
+        success: true,
+        message: `Scanned ${rooms.length} rooms. Found ${violations.length} violations.`,
+        violations,
+        roomCount: rooms.length,
+        timestamp: new Date()
+      });
+    } catch (error) {
+      res.status(500).json({ message: "Room scan failed" });
     }
   });
 
