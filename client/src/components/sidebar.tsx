@@ -197,12 +197,39 @@ export default function Sidebar({
             {/* Device Discovery */}
             <DeviceDiscovery />
 
+            {/* User Onboarding & Setup */}
+            <Card>
+              <CardContent className="p-4">
+                <h3 className="text-sm font-semibold text-gray-900 mb-3 flex items-center">
+                  <i className="fas fa-rocket mr-2 text-primary"></i>
+                  System Setup
+                </h3>
+                <div className="space-y-2">
+                  <Button 
+                    variant="outline" 
+                    className="w-full text-xs"
+                    onClick={() => window.open('/onboarding', '_blank')}
+                  >
+                    <i className="fas fa-cog mr-2"></i>
+                    Setup Guide
+                  </Button>
+                  <div className="text-xs text-gray-500 bg-gray-50 p-2 rounded">
+                    <div className="mb-1 font-medium">Complete Setup:</div>
+                    <div>• Desktop agent installation</div>
+                    <div>• Authentic device discovery</div>
+                    <div>• Platform integrations</div>
+                    <div>• Ping calibration system</div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
             {/* Enhanced Device Discovery Navigation */}
             <Card>
               <CardContent className="p-4">
                 <h3 className="text-sm font-semibold text-gray-900 mb-3 flex items-center">
                   <i className="fas fa-wifi mr-2 text-primary"></i>
-                  Direct WiFi Discovery
+                  Authentic Network Discovery
                 </h3>
                 <div className="space-y-2">
                   <Button 
@@ -211,10 +238,10 @@ export default function Sidebar({
                     onClick={() => window.open('/device-discovery', '_blank')}
                   >
                     <i className="fas fa-search mr-2"></i>
-                    Discover All Devices
+                    Discover Devices
                   </Button>
                   <div className="text-xs text-gray-500 bg-gray-50 p-2 rounded">
-                    <div className="mb-1 font-medium">Finds:</div>
+                    <div className="mb-1 font-medium">Requires Desktop Agent:</div>
                     <div>• Printers (HP, Canon, Epson)</div>
                     <div>• Game consoles (Xbox, PlayStation)</div>
                     <div>• Smart TVs & media devices</div>

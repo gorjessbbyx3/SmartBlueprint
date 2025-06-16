@@ -10,6 +10,7 @@ import PlatformIntegrations from "@/pages/platform-integrations";
 import DeviceControl from "@/pages/device-control";
 import DeviceDiscovery from "@/pages/device-discovery";
 import PingMonitoring from "@/pages/ping-monitoring";
+import UserOnboarding from "@/pages/user-onboarding";
 import TermsOfService from "@/pages/terms-of-service";
 import PrivacyPolicy from "@/pages/privacy-policy";
 import NotFound from "@/pages/not-found";
@@ -81,6 +82,7 @@ function Router() {
       <Route path="/device-control" component={DeviceControl} />
       <Route path="/device-discovery" component={DeviceDiscovery} />
       <Route path="/ping-monitoring" component={PingMonitoring} />
+      <Route path="/onboarding" component={UserOnboarding} />
       <Route path="/terms" component={TermsOfService} />
       <Route path="/privacy" component={PrivacyPolicy} />
       <Route component={NotFound} />
