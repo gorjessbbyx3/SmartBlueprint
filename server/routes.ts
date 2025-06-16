@@ -1470,5 +1470,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Desktop agent download endpoint
+  app.get("/api/download/desktop-agent", (req: Request, res: Response) => {
+    try {
+      const fs = require('fs');
+      const path = require('path');
+      
+      // Use the enhanced desktop agent
+      const agentPath = path.join(process.cwd(), 'desktop-agent-enhanced.js');
+      
+      if (fs.existsSync(agentPath)) {
+        const agentContent = fs.readFileSync(agentPath, 'utf8');
+        
+        // Set proper headers for file download
+        res.setHeader('Content-Disposition', 'attachment; filename="smartblueprint-agent-enhanced.js"');
+        res.setHeader('Content-Type', 'application/javascript');
+        res.setHeader('Content-Length', Buffer.byteLength(agentContent, 'utf8'));
+        
+        // Send the file content
+        res.status(200).send(agentContent);
+        
+        console.log('[Download] Enhanced desktop agent downloaded successfully');
+      } else {
+        console.log('[Download] Enhanced desktop agent file not found at:', agentPath);
+        res.status(404).json({ 
+          success: false, 
+          message: "Desktop agent file not found" 
+        });
+      }
+    } catch (error) {
+      console.error('[Download] Failed to serve desktop agent:', error);
+      res.status(500).json({ 
+        success: false, 
+        message: "Failed to download desktop agent" 
+      });
+    }
+  });
+
   return httpServer;
 }
