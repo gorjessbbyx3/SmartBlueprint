@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Progress } from '@/components/ui/progress';
+import { DesktopAgentDownload } from '@/components/desktop-agent-download';
 
 interface OnboardingStep {
   id: string;
@@ -125,10 +126,7 @@ export default function UserOnboarding() {
     setSystemStatus(status);
   };
 
-  const startDesktopAgent = () => {
-    // This would trigger download or provide instructions
-    window.open('/desktop-agent-ping.js', '_blank');
-  };
+
 
   const startNetworkDiscovery = async () => {
     try {
@@ -304,11 +302,6 @@ export default function UserOnboarding() {
                       </div>
                     </div>
                     <div className="flex-shrink-0">
-                      {step.id === 'desktop-agent' && status !== 'completed' && (
-                        <Button onClick={startDesktopAgent} size="sm">
-                          Download Agent
-                        </Button>
-                      )}
                       {step.id === 'network-discovery' && status === 'pending' && (
                         <Button onClick={startNetworkDiscovery} size="sm">
                           Start Discovery
@@ -326,6 +319,13 @@ export default function UserOnboarding() {
                       )}
                     </div>
                   </div>
+                  
+                  {/* Desktop Agent Download Section */}
+                  {step.id === 'desktop-agent' && status !== 'completed' && (
+                    <div className="mt-6 pt-6 border-t">
+                      <DesktopAgentDownload />
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             );
