@@ -167,10 +167,14 @@ export const insertMlModelSchema = createInsertSchema(mlModels).omit({
   lastTrainedAt: true,
 });
 
-export const insertPlatformIntegrationSchema = createInsertSchema(platformIntegrations).omit({
+export const insertPlatformIntegrationSchemaNew = createInsertSchema(platformIntegrations).omit({
   id: true,
-  createdAt: true,
-  lastSyncAt: true,
+  lastSync: true,
+});
+
+export const insertPlatformDeviceSchemaNew = createInsertSchema(platformDevices).omit({
+  id: true,
+  lastUpdated: true,
 });
 
 export const insertPredictiveAlertSchema = createInsertSchema(predictiveAlerts).omit({
@@ -198,9 +202,9 @@ export type InsertDeviceTelemetry = z.infer<typeof insertDeviceTelemetrySchema>;
 export type MlModel = typeof mlModels.$inferSelect;
 export type InsertMlModel = z.infer<typeof insertMlModelSchema>;
 export type PlatformIntegration = typeof platformIntegrations.$inferSelect;
-export type InsertPlatformIntegration = z.infer<typeof insertPlatformIntegrationSchema>;
+export type InsertPlatformIntegration = z.infer<typeof insertPlatformIntegrationSchemaNew>;
 export type PlatformDevice = typeof platformDevices.$inferSelect;
-export type InsertPlatformDevice = z.infer<typeof insertPlatformDeviceSchema>;
+export type InsertPlatformDevice = z.infer<typeof insertPlatformDeviceSchemaNew>;
 export type PredictiveAlert = typeof predictiveAlerts.$inferSelect;
 export type InsertPredictiveAlert = z.infer<typeof insertPredictiveAlertSchema>;
 export type FusionResult = typeof fusionResults.$inferSelect;

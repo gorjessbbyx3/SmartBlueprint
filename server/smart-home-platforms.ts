@@ -79,7 +79,7 @@ export class PhilipsHueAdapter implements PlatformAdapter {
       }
 
       return { success: false, error: 'Failed to authenticate with Hue bridge' };
-    } catch (error) {
+    } catch (error: any) {
       return { success: false, error: `Bridge connection failed: ${error.message}` };
     }
   }
@@ -121,9 +121,14 @@ export class PhilipsHueAdapter implements PlatformAdapter {
 
   async checkHueBridge(ip: string): Promise<string | null> {
     try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 1000);
+      
       const response = await fetch(`http://${ip}/api/config`, { 
-        timeout: 1000 
+        signal: controller.signal 
       });
+      clearTimeout(timeoutId);
+      
       const config = await response.json();
       
       if (config.name && config.modelid) {
@@ -236,7 +241,7 @@ export class NestAdapter implements PlatformAdapter {
       }
 
       return { success: false, error: 'Failed to get Nest access token' };
-    } catch (error) {
+    } catch (error: any) {
       return { success: false, error: `Nest authentication failed: ${error.message}` };
     }
   }
@@ -361,7 +366,7 @@ export class AlexaAdapter implements PlatformAdapter {
       }
 
       return { success: false, error: 'Failed to get Alexa access token' };
-    } catch (error) {
+    } catch (error: any) {
       return { success: false, error: `Alexa authentication failed: ${error.message}` };
     }
   }

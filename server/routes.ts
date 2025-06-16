@@ -297,6 +297,130 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
   });
 
+  // Smart Home Platform Integration Routes
+  app.get('/api/platforms/supported', (req, res) => {
+    const { smartHomePlatformManager } = require('./smart-home-platforms');
+    res.json({
+      success: true,
+      platforms: smartHomePlatformManager.getSupportedPlatforms().map(platform => ({
+        id: platform,
+        name: platform.replace('_', ' ').replace(/\b\w/g, (l: string) => l.toUpperCase()),
+        icon: platform === 'philips_hue' ? 'lightbulb' : platform === 'nest' ? 'thermometer' : 'volume-2'
+      }))
+    });
+  });
+
+  app.post('/api/platforms/:platform/authenticate', async (req, res) => {
+    try {
+      const { platform } = req.params;
+      const credentials = req.body;
+      
+      const { smartHomePlatformManager } = require('./smart-home-platforms');
+      const result = await smartHomePlatformManager.authenticatePlatform(platform, credentials);
+      
+      if (result.success) {
+        // Store integration in database
+        const integration = await storage.addPlatformIntegration({
+          platform,
+          userId: 'user1', // In real app, get from session
+          accessToken: result.accessToken!,
+          refreshToken: result.refreshToken,
+          tokenExpiry: result.expiresIn ? new Date(Date.now() + result.expiresIn * 1000) : null,
+          bridgeIp: result.bridgeIp,
+          platformUserId: null,
+          isActive: true,
+          config: credentials
+        });
+        
+        res.json({ success: true, integrationId: integration.id, bridgeIp: result.bridgeIp });
+      } else {
+        res.status(400).json({ success: false, error: result.error });
+      }
+    } catch (error) {
+      console.error('Platform authentication failed:', error);
+      res.status(500).json({ success: false, error: 'Authentication failed' });
+    }
+  });
+
+  app.get('/api/platforms/:platform/devices', async (req, res) => {
+    try {
+      const { platform } = req.params;
+      const integration = await storage.getPlatformIntegration(platform);
+      
+      if (!integration) {
+        return res.status(404).json({ success: false, error: 'Platform not connected' });
+      }
+
+      const { smartHomePlatformManager } = require('./smart-home-platforms');
+      const devices = await smartHomePlatformManager.discoverDevices(platform, integration.accessToken);
+      
+      // Store platform devices
+      for (const device of devices) {
+        await storage.addPlatformDevice({
+          integrationId: integration.id,
+          deviceId: null, // Will be linked after device mapping
+          platformDeviceId: device.platformDeviceId,
+          deviceName: device.name,
+          deviceType: device.type,
+          capabilities: device.capabilities,
+          state: device.state,
+          isControllable: true
+        });
+      }
+      
+      res.json({ success: true, devices });
+    } catch (error) {
+      console.error('Device discovery failed:', error);
+      res.status(500).json({ success: false, error: 'Device discovery failed' });
+    }
+  });
+
+  app.post('/api/platforms/:platform/devices/:deviceId/control', async (req, res) => {
+    try {
+      const { platform, deviceId } = req.params;
+      const command = req.body;
+      
+      const integration = await storage.getPlatformIntegration(platform);
+      if (!integration) {
+        return res.status(404).json({ success: false, error: 'Platform not connected' });
+      }
+
+      const { smartHomePlatformManager } = require('./smart-home-platforms');
+      const success = await smartHomePlatformManager.controlDevice(
+        platform, 
+        deviceId, 
+        command, 
+        integration.accessToken
+      );
+      
+      res.json({ success });
+    } catch (error) {
+      console.error('Device control failed:', error);
+      res.status(500).json({ success: false, error: 'Device control failed' });
+    }
+  });
+
+  app.get('/api/platforms/integrations', async (req, res) => {
+    try {
+      const integrations = await storage.getAllPlatformIntegrations();
+      res.json({ success: true, integrations });
+    } catch (error) {
+      console.error('Failed to get integrations:', error);
+      res.status(500).json({ success: false, error: 'Failed to get integrations' });
+    }
+  });
+
+  app.delete('/api/platforms/:platform/disconnect', async (req, res) => {
+    try {
+      const { platform } = req.params;
+      await storage.removePlatformIntegration(platform);
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Platform disconnect failed:', error);
+      res.status(500).json({ success: false, error: 'Disconnect failed' });
+    }
+  });
+
   // System Health Monitoring
   app.get('/api/system/health', async (req, res) => {
     try {
