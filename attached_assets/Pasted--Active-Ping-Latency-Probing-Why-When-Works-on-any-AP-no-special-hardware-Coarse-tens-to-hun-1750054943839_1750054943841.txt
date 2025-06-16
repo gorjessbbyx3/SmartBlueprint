@@ -1,0 +1,117 @@
+ Active Ping / Latency Probing
+Why & When
+Works on any AP, no special hardware.
+
+Coarse (tens to hundreds of meters error), but useful as a fallback or drift-corrector.
+
+Conversion
+RTT (ms) → distance:
+𝑑
+≈
+RTT
+−
+𝑡
+p
+r
+o
+c
+2
+⋅
+𝑐
+d≈ 
+2
+RTT−t 
+proc
+​
+ 
+​
+ ⋅c
+where 
+𝑐
+≈
+3
+×
+10
+8
+c≈3×10 
+8
+  m/s and 
+𝑡
+p
+r
+o
+c
+t 
+proc
+​
+  is a small device/AP processing offset you calibrate.
+
+Python Example with ping3
+python
+Copy
+Edit
+from ping3 import ping
+import time, statistics
+
+def measure_distance(host, trials=5):
+    # returns average distance in meters
+    rtts = []
+    for _ in range(trials):
+        rtt = ping(host, unit='ms')
+        if rtt is not None:
+            rtts.append(rtt)
+        time.sleep(0.1)
+    if not rtts:
+        return None
+    avg = statistics.mean(rtts)
+    # subtract 5 ms processing offset, then /2 to one-way, convert ms→s
+    d = ((avg - 5) / 2) / 1000 * 3e8
+    return max(d, 0)
+
+# Usage
+dist = measure_distance("192.168.1.1")
+# Send to server as { "type":"ping", "host":"192.168.1.1", "distance_m": dist }
+Integration
+Mobile script periodically sends:
+
+json
+Copy
+Edit
+{
+  "type":"probe",
+  "rtt": { "aa:bb:cc:dd:ee:ff": 2.15, ...},
+  "ping": { "192.168.1.1": 17.2, ...}
+}
+Server ingests into your mapping engine’s feature vector:
+
+python
+Copy
+Edit
+features = [
+  *csi_features,
+  *rtt_values,       # ordered by MAC
+  *ping_distances    # ordered by host
+]
+coord = your_regressor.predict([features])
+Fusion
+
+Weight the more accurate RTT higher (e.g. 0.7), ping lower (0.3), then combine with CSI-based location for final (x,y).
+
+Putting It All Together
+Calibration Phase:
+
+Collect CSI/RSSI + RTT + ping at known (x,y) waypoints → train a single regression model (e.g., RandomForestRegressor) on the combined feature vector.
+
+Live Phase:
+
+Your mobile alternates between passive sniffing and active RTT/ping probes every 10–30 s.
+
+The server continuously refines its location estimate and corrects drift.
+
+Benefits:
+
+RTT gives you meter-level absolute distances.
+
+Ping provides a low-overhead fallback on any AP.
+
+Combined with your existing CSI mesh, you’ll get robust, self-correcting room-level mapping.

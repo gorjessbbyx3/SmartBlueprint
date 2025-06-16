@@ -13,6 +13,8 @@ import { advancedSignalProcessor } from "./advanced-signal-processing.js";
 import { enhancedDeviceTelemetry } from "./enhanced-device-telemetry.js";
 import { AdvancedLocationEngine, LSTMAnomalyDetector, IsolationForestDetector } from "./advanced-ml-models.js";
 import { mlAnalytics } from "./ml-analytics.js";
+import { activePingProbing } from "./active-ping-probing.js";
+import type { PingMeasurement, ProbeData, CalibrationPoint } from "./active-ping-probing.js";
 
 const insertDeviceSchema = createInsertSchema(devices);
 const insertFloorplanSchema = createInsertSchema(floorplans);
