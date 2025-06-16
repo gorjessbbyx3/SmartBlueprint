@@ -61,9 +61,14 @@ export default function EnhancedFloorplanSketch({ onSave, onLoad, initialElement
   const [hasRouterPlaced, setHasRouterPlaced] = useState(false);
   const [hasLocationPlaced, setHasLocationPlaced] = useState(false);
   
-  // Template placement state
-  const [templateToPlace, setTemplateToPlace] = useState<any>(null);
-  const [isPlacingTemplate, setIsPlacingTemplate] = useState(false);
+  // Room type selection state
+  const [selectedRoomType, setSelectedRoomType] = useState<string | null>(null);
+  const [roomTypeStyles, setRoomTypeStyles] = useState<Record<string, any>>({
+    'Living Room': { color: '#3b82f6', width: 2, fill: 'rgba(59, 130, 246, 0.1)' },
+    'Bedroom': { color: '#10b981', width: 2, fill: 'rgba(16, 185, 129, 0.1)' },
+    'Kitchen': { color: '#f59e0b', width: 2, fill: 'rgba(245, 158, 11, 0.1)' },
+    'Office': { color: '#8b5cf6', width: 2, fill: 'rgba(139, 92, 246, 0.1)' }
+  });
   
   // History for undo/redo
   const [history, setHistory] = useState<DrawingElement[][]>([[]]);
@@ -151,17 +156,16 @@ export default function EnhancedFloorplanSketch({ onSave, onLoad, initialElement
     }
   }, [backgroundImage]);
 
-  // Template placement event listener
+  // Room type selection event listener
   useEffect(() => {
-    const handleTemplatePlace = (event: CustomEvent) => {
-      setTemplateToPlace(event.detail);
-      setIsPlacingTemplate(true);
-      setTool('select'); // Switch to select tool for placement
+    const handleRoomTypeSelect = (event: CustomEvent) => {
+      setSelectedRoomType(event.detail.name);
+      setTool('room'); // Switch to room drawing tool
     };
 
-    window.addEventListener('placeTemplate', handleTemplatePlace as EventListener);
+    window.addEventListener('selectRoomType', handleRoomTypeSelect as EventListener);
     return () => {
-      window.removeEventListener('placeTemplate', handleTemplatePlace as EventListener);
+      window.removeEventListener('selectRoomType', handleRoomTypeSelect as EventListener);
     };
   }, []);
 
@@ -190,37 +194,9 @@ export default function EnhancedFloorplanSketch({ onSave, onLoad, initialElement
 
   // Drawing functions
   const startDrawing = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
-    const point = getMousePos(e);
-    
-    // Handle template placement
-    if (isPlacingTemplate && templateToPlace) {
-      const newElement: DrawingElement = {
-        id: Date.now().toString(),
-        type: templateToPlace.type,
-        points: [
-          point,
-          { x: point.x + templateToPlace.width, y: point.y + templateToPlace.height }
-        ],
-        style: templateToPlace.style,
-        label: templateToPlace.name
-      };
-
-      const newElements = [...elements, newElement];
-      setElements(newElements);
-      
-      // Add to history
-      const newHistory = history.slice(0, historyIndex + 1);
-      newHistory.push(newElements);
-      setHistory(newHistory);
-      setHistoryIndex(newHistory.length - 1);
-      
-      // Reset template placement state
-      setIsPlacingTemplate(false);
-      setTemplateToPlace(null);
-      return;
-    }
-    
     if (tool === 'select') return;
+    
+    const point = getMousePos(e);
     
     // Handle router and location placement as single clicks
     if (tool === 'router' || tool === 'location') {
@@ -270,11 +246,20 @@ export default function EnhancedFloorplanSketch({ onSave, onLoad, initialElement
   const stopDrawing = useCallback(() => {
     if (!isDrawing || currentPath.length === 0) return;
     
+    // Determine which style to use based on tool and selected room type
+    let elementStyle = toolStyles[tool as keyof typeof toolStyles] || toolStyles.line;
+    
+    // If drawing a room and a room type is selected, use the room type style
+    if (tool === 'room' && selectedRoomType && roomTypeStyles[selectedRoomType]) {
+      elementStyle = roomTypeStyles[selectedRoomType];
+    }
+    
     const newElement: DrawingElement = {
       id: Date.now().toString(),
       type: tool === 'pen' ? 'line' : tool as any,
       points: [...currentPath],
-      style: toolStyles[tool as keyof typeof toolStyles] || toolStyles.line
+      style: elementStyle,
+      label: tool === 'room' && selectedRoomType ? selectedRoomType : undefined
     };
 
     const newElements = [...elements, newElement];
@@ -877,55 +862,12 @@ export default function EnhancedFloorplanSketch({ onSave, onLoad, initialElement
         >
           <canvas
             ref={canvasRef}
-            className={`cursor-crosshair ${isPlacingTemplate ? 'cursor-pointer' : ''}`}
+            className="cursor-crosshair"
             onMouseDown={startDrawing}
             onMouseMove={draw}
             onMouseUp={stopDrawing}
             onMouseLeave={stopDrawing}
-            onDragOver={(e) => {
-              e.preventDefault();
-              e.dataTransfer.dropEffect = 'copy';
-            }}
-            onDrop={(e) => {
-              e.preventDefault();
-              const templateData = e.dataTransfer.getData('template');
-              if (templateData) {
-                try {
-                  const template = JSON.parse(templateData);
-                  const rect = canvasRef.current?.getBoundingClientRect();
-                  if (rect) {
-                    const dropPoint = {
-                      x: (e.clientX - rect.left - panOffset.x) / zoom,
-                      y: (e.clientY - rect.top - panOffset.y) / zoom
-                    };
-                    
-                    const snappedPoint = snapPoint(dropPoint);
-                    
-                    const newElement: DrawingElement = {
-                      id: Date.now().toString(),
-                      type: template.type,
-                      points: [
-                        snappedPoint,
-                        { x: snappedPoint.x + template.width, y: snappedPoint.y + template.height }
-                      ],
-                      style: template.style,
-                      label: template.name
-                    };
 
-                    const newElements = [...elements, newElement];
-                    setElements(newElements);
-                    
-                    // Add to history
-                    const newHistory = history.slice(0, historyIndex + 1);
-                    newHistory.push(newElements);
-                    setHistory(newHistory);
-                    setHistoryIndex(newHistory.length - 1);
-                  }
-                } catch (error) {
-                  console.error('Error parsing dropped template:', error);
-                }
-              }
-            }}
           />
           
           {/* Status Info */}

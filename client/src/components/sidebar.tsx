@@ -426,129 +426,64 @@ export default function Sidebar({
             {/* Drawing Templates */}
             <Card>
               <CardContent className="p-4">
-                <h3 className="text-sm font-semibold text-gray-900 mb-3">Quick Templates</h3>
+                <h3 className="text-sm font-semibold text-gray-900 mb-3">Room Types</h3>
                 <div className="grid grid-cols-2 gap-2">
                   <Button 
                     variant="outline" 
                     size="sm" 
-                    className="h-auto p-3 flex flex-col cursor-pointer hover:bg-blue-50 transition-colors"
-                    draggable="true"
-                    onDragStart={(e) => {
-                      e.dataTransfer.setData('template', JSON.stringify({
-                        type: 'room',
-                        name: 'Living Room',
-                        width: 200,
-                        height: 150,
-                        style: { color: '#3b82f6', width: 2, fill: 'rgba(59, 130, 246, 0.1)' }
-                      }));
-                    }}
+                    className="h-auto p-3 flex flex-col cursor-pointer hover:bg-blue-50 transition-colors border-blue-200"
                     onClick={() => {
-                      // Trigger template placement mode
-                      window.dispatchEvent(new CustomEvent('placeTemplate', {
-                        detail: {
-                          type: 'room',
-                          name: 'Living Room',
-                          width: 200,
-                          height: 150,
-                          style: { color: '#3b82f6', width: 2, fill: 'rgba(59, 130, 246, 0.1)' }
-                        }
+                      window.dispatchEvent(new CustomEvent('selectRoomType', {
+                        detail: { name: 'Living Room' }
                       }));
                     }}
                   >
-                    <Home className="w-6 h-6 mb-1" />
+                    <Home className="w-6 h-6 mb-1 text-blue-600" />
                     <span className="text-xs">Living Room</span>
                   </Button>
                   <Button 
                     variant="outline" 
                     size="sm" 
-                    className="h-auto p-3 flex flex-col cursor-pointer hover:bg-green-50 transition-colors"
-                    draggable="true"
-                    onDragStart={(e) => {
-                      e.dataTransfer.setData('template', JSON.stringify({
-                        type: 'room',
-                        name: 'Bedroom',
-                        width: 180,
-                        height: 120,
-                        style: { color: '#10b981', width: 2, fill: 'rgba(16, 185, 129, 0.1)' }
-                      }));
-                    }}
+                    className="h-auto p-3 flex flex-col cursor-pointer hover:bg-green-50 transition-colors border-green-200"
                     onClick={() => {
-                      window.dispatchEvent(new CustomEvent('placeTemplate', {
-                        detail: {
-                          type: 'room',
-                          name: 'Bedroom',
-                          width: 180,
-                          height: 120,
-                          style: { color: '#10b981', width: 2, fill: 'rgba(16, 185, 129, 0.1)' }
-                        }
+                      window.dispatchEvent(new CustomEvent('selectRoomType', {
+                        detail: { name: 'Bedroom' }
                       }));
                     }}
                   >
-                    <Home className="w-6 h-6 mb-1" />
+                    <Home className="w-6 h-6 mb-1 text-green-600" />
                     <span className="text-xs">Bedroom</span>
                   </Button>
                   <Button 
                     variant="outline" 
                     size="sm" 
-                    className="h-auto p-3 flex flex-col cursor-pointer hover:bg-orange-50 transition-colors"
-                    draggable="true"
-                    onDragStart={(e) => {
-                      e.dataTransfer.setData('template', JSON.stringify({
-                        type: 'room',
-                        name: 'Kitchen',
-                        width: 160,
-                        height: 140,
-                        style: { color: '#f59e0b', width: 2, fill: 'rgba(245, 158, 11, 0.1)' }
-                      }));
-                    }}
+                    className="h-auto p-3 flex flex-col cursor-pointer hover:bg-orange-50 transition-colors border-orange-200"
                     onClick={() => {
-                      window.dispatchEvent(new CustomEvent('placeTemplate', {
-                        detail: {
-                          type: 'room',
-                          name: 'Kitchen',
-                          width: 160,
-                          height: 140,
-                          style: { color: '#f59e0b', width: 2, fill: 'rgba(245, 158, 11, 0.1)' }
-                        }
+                      window.dispatchEvent(new CustomEvent('selectRoomType', {
+                        detail: { name: 'Kitchen' }
                       }));
                     }}
                   >
-                    <Home className="w-6 h-6 mb-1" />
+                    <Home className="w-6 h-6 mb-1 text-orange-600" />
                     <span className="text-xs">Kitchen</span>
                   </Button>
                   <Button 
                     variant="outline" 
                     size="sm" 
-                    className="h-auto p-3 flex flex-col cursor-pointer hover:bg-purple-50 transition-colors"
-                    draggable="true"
-                    onDragStart={(e) => {
-                      e.dataTransfer.setData('template', JSON.stringify({
-                        type: 'room',
-                        name: 'Office',
-                        width: 140,
-                        height: 120,
-                        style: { color: '#8b5cf6', width: 2, fill: 'rgba(139, 92, 246, 0.1)' }
-                      }));
-                    }}
+                    className="h-auto p-3 flex flex-col cursor-pointer hover:bg-purple-50 transition-colors border-purple-200"
                     onClick={() => {
-                      window.dispatchEvent(new CustomEvent('placeTemplate', {
-                        detail: {
-                          type: 'room',
-                          name: 'Office',
-                          width: 140,
-                          height: 120,
-                          style: { color: '#8b5cf6', width: 2, fill: 'rgba(139, 92, 246, 0.1)' }
-                        }
+                      window.dispatchEvent(new CustomEvent('selectRoomType', {
+                        detail: { name: 'Office' }
                       }));
                     }}
                   >
-                    <Home className="w-6 h-6 mb-1" />
+                    <Home className="w-6 h-6 mb-1 text-purple-600" />
                     <span className="text-xs">Office</span>
                   </Button>
                 </div>
                 <div className="mt-3 p-2 bg-gray-50 rounded-lg">
                   <p className="text-xs text-gray-600">
-                    Click to place or drag onto canvas
+                    Select a room type, then draw with the room tool
                   </p>
                 </div>
               </CardContent>
