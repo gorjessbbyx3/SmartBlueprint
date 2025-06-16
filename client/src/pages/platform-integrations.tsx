@@ -6,7 +6,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Lightbulb, Thermometer, Volume2, Wifi, CheckCircle, AlertCircle, Plus } from 'lucide-react';
+import { Lightbulb, Thermometer, Volume2, Wifi, CheckCircle, AlertCircle, Plus, ArrowLeft } from 'lucide-react';
+import { Link } from 'wouter';
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest, queryClient } from '@/lib/queryClient';
 
@@ -235,6 +236,14 @@ export default function PlatformIntegrations() {
     <div className="container mx-auto p-6 space-y-6">
       <div className="flex items-center justify-between">
         <div>
+          <div className="flex items-center space-x-4 mb-2">
+            <Link href="/">
+              <Button variant="ghost" size="sm" className="flex items-center space-x-2">
+                <ArrowLeft className="h-4 w-4" />
+                <span>Back to Dashboard</span>
+              </Button>
+            </Link>
+          </div>
           <h1 className="text-3xl font-bold">Smart Home Platform Integrations</h1>
           <p className="text-muted-foreground">
             Connect your smart home platforms for unified device management and optimization
