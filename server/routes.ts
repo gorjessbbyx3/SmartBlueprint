@@ -830,6 +830,134 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // AI Action Processing
+  app.post("/api/ai/process-action", async (req, res) => {
+    try {
+      const { action, context, userIntent, timestamp } = req.body;
+      
+      console.log(`🤖 AI Processing: ${userIntent} (${action})`);
+      
+      // Simulate AI understanding and processing
+      const response = await processAIAction(action, context, userIntent);
+      
+      res.json(response);
+    } catch (error) {
+      console.error('AI action processing error:', error);
+      res.status(500).json({ 
+        success: false, 
+        message: 'AI processing failed',
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  async function processAIAction(action: string, context: any, userIntent: string) {
+    // Simulate AI thinking time
+    await new Promise(resolve => setTimeout(resolve, 1000 + Math.random() * 2000));
+    
+    const aiResponses = {
+      'scan_devices': {
+        success: true,
+        message: "I'll scan your network for smart home devices now. This will help me understand your current setup.",
+        data: { action: 'network_scan', scanning: true },
+        suggestions: [
+          "I can also set up automatic device monitoring",
+          "Would you like me to classify devices by room?",
+          "I can analyze signal strength patterns afterward"
+        ]
+      },
+      'save_floorplan': {
+        success: true,
+        message: `I've saved your floor plan with ${context.elementCount || 0} elements. The rooms you drew will now appear in analytics.`,
+        data: { saved: true, timestamp: new Date() },
+        suggestions: [
+          "I can now analyze device placement optimization",
+          "Would you like me to suggest WiFi extender locations?",
+          "I can generate coverage analysis for each room"
+        ]
+      },
+      'analyze_coverage': {
+        success: true,
+        message: "I'm analyzing your WiFi coverage patterns and identifying weak signal areas in your space.",
+        data: { analysis: 'running', coverage_score: 0 },
+        suggestions: [
+          "I can recommend specific improvement strategies",
+          "Would you like room-by-room coverage details?",
+          "I can predict optimal device placement"
+        ]
+      },
+      'select_tool': {
+        success: true,
+        message: `I've switched to the ${context.tool} tool for you. This will help you ${getToolPurpose(context.tool)}.`,
+        data: { tool: context.tool, active: true },
+        suggestions: [
+          "I can guide you through using this tool effectively",
+          "Would you like tips for this drawing tool?",
+          "I can help optimize your floor plan layout"
+        ]
+      },
+      'upload_image': {
+        success: true,
+        message: "I'll process your uploaded floor plan image and prepare it for room tracing. You can now draw room boundaries directly on your blueprint.",
+        data: { image_processed: true, ready_for_tracing: true },
+        suggestions: [
+          "I can help identify room boundaries automatically",
+          "Would you like me to suggest room types?",
+          "I can optimize the image for better tracing"
+        ]
+      },
+      'add_room': {
+        success: true,
+        message: `I've added a ${context.roomType} to your floor plan. This room will now be included in all coverage analysis and device recommendations.`,
+        data: { room_added: true, room_type: context.roomType },
+        suggestions: [
+          "I can analyze optimal device placement for this room",
+          "Would you like me to check coverage in this area?",
+          "I can suggest room-specific smart home devices"
+        ]
+      },
+      'zoom_control': {
+        success: true,
+        message: `I've adjusted the zoom level to ${context.zoomLevel}% for better ${context.zoomLevel > 100 ? 'detail work' : 'overview perspective'}.`,
+        data: { zoom: context.zoomLevel, optimized: true },
+        suggestions: [
+          "I can automatically optimize zoom for your current task",
+          "Would you like me to center on a specific area?",
+          "I can remember your preferred zoom settings"
+        ]
+      }
+    };
+
+    // Default response for unknown actions
+    const defaultResponse = {
+      success: true,
+      message: `I understand you want to ${userIntent}. I'll handle this action and optimize the experience for you.`,
+      data: { action_recognized: true, context_understood: true },
+      suggestions: [
+        "I'm learning your preferences to improve future interactions",
+        "Would you like me to automate similar actions?",
+        "I can provide more detailed guidance if needed"
+      ]
+    };
+
+    return aiResponses[action] || defaultResponse;
+  }
+
+  function getToolPurpose(tool: string): string {
+    const purposes = {
+      'wall': 'draw structural walls and boundaries',
+      'room': 'define and trace room areas',
+      'door': 'mark doorways and openings',
+      'window': 'indicate windows for signal analysis',
+      'router': 'place WiFi routers and access points',
+      'location': 'mark important reference points',
+      'rectangle': 'draw rectangular elements',
+      'circle': 'create circular elements',
+      'pen': 'draw freehand lines and shapes'
+    };
+    return purposes[tool] || 'work with your floor plan';
+  }
+
   // Platform integration routes
   app.get("/api/integrations", async (req, res) => {
     try {

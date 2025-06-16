@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useToast } from "@/hooks/use-toast";
+import { useAIActions } from "@/hooks/use-ai-actions";
 import { 
   Pen, Square, Circle, Move, Eraser, Undo, Redo, 
   ZoomIn, ZoomOut, RotateCcw, Grid3X3, Ruler, 
@@ -43,6 +44,7 @@ export default function EnhancedFloorplanSketch({ onSave, onLoad, initialElement
   const containerRef = useRef<HTMLDivElement>(null);
   const backgroundImageDimensions = useRef<{ width: number; height: number } | null>(null);
   const { toast } = useToast();
+  const { createAIHandler, executeAIAction } = useAIActions();
   
   // Drawing state
   const [tool, setTool] = useState<'select' | 'pen' | 'wall' | 'room' | 'door' | 'window' | 'rectangle' | 'circle' | 'eraser' | 'router' | 'location'>('select');
