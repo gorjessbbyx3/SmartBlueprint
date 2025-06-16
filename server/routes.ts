@@ -23,6 +23,7 @@ import { networkDiscoveryService } from './network-discovery';
 import { testDeviceDiscovery } from './test-device-discovery';
 import { metaAIMonitor } from './meta-ai-monitor';
 import { dataIntegrityMonitor } from './data-integrity-monitor';
+import { cloudSyncTunnel } from './cloud-sync-tunnel';
 
 const execAsync = promisify(exec);
 
@@ -369,6 +370,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // WebSocket server for real-time updates
   const wss = new WebSocketServer({ server: httpServer, path: '/ws' });
+
+  // Initialize Cloud Sync Tunnel for desktop agents
+  cloudSyncTunnel.initializeAgentTunnel(httpServer);
   
   wss.on('connection', (ws: WebSocket) => {
     console.log('WebSocket client connected');
@@ -1459,6 +1463,77 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     } catch (error) {
       res.status(500).json({ message: "Room scan failed" });
+    }
+  });
+
+  // Cloud Sync Tunnel API Endpoints
+  app.get("/api/agents/status", async (req, res) => {
+    try {
+      const connectedAgents = cloudSyncTunnel.getConnectedAgents();
+      
+      res.json({
+        success: true,
+        message: `${connectedAgents.length} agents connected`,
+        agents: connectedAgents,
+        timestamp: new Date()
+      });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to get agent status" });
+    }
+  });
+
+  app.post("/api/agents/request-scan", async (req, res) => {
+    try {
+      cloudSyncTunnel.requestScanFromAllAgents();
+      
+      res.json({
+        success: true,
+        message: "Scan request sent to all connected agents",
+        timestamp: new Date()
+      });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to request scan" });
+    }
+  });
+
+  app.post("/api/agents/:agentId/command", async (req, res) => {
+    try {
+      const { agentId } = req.params;
+      const { command, parameters } = req.body;
+      
+      const success = cloudSyncTunnel.sendCommandToAgent(agentId, command, parameters);
+      
+      if (success) {
+        res.json({
+          success: true,
+          message: `Command sent to agent ${agentId}`,
+          command,
+          timestamp: new Date()
+        });
+      } else {
+        res.status(404).json({
+          success: false,
+          message: `Agent ${agentId} not connected`
+        });
+      }
+    } catch (error) {
+      res.status(500).json({ message: "Failed to send command" });
+    }
+  });
+
+  app.get("/api/agents/device-updates", async (req, res) => {
+    try {
+      const { agentId } = req.query;
+      const updates = cloudSyncTunnel.getRecentDeviceUpdates(agentId as string);
+      
+      res.json({
+        success: true,
+        message: `Retrieved ${updates.length} recent device updates`,
+        updates,
+        timestamp: new Date()
+      });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to get device updates" });
     }
   });
 
