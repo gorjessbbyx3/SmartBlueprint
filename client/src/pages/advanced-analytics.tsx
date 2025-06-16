@@ -100,7 +100,7 @@ export default function AdvancedAnalyticsPage() {
   // Fetch advanced analytics data
   const { data: analyticsData, isLoading } = useQuery({
     queryKey: ['/api/advanced-analytics', selectedTimeRange[0]],
-    queryFn: () => apiRequest(`/api/advanced-analytics?hours=${selectedTimeRange[0]}`, { method: 'GET' }),
+    queryFn: () => apiRequest(`/api/advanced-analytics?hours=${selectedTimeRange[0]}`),
     refetchInterval: 30000
   });
 
@@ -367,17 +367,11 @@ export default function AdvancedAnalyticsPage() {
 
   const exportAnalytics = async () => {
     try {
-      const response = await apiRequest('/api/advanced-analytics/export', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          timeRange: selectedTimeRange[0],
-          includeHeatmap: true,
-          includeAnomalies: true,
-          includeTrajectories: true
-        })
+      const response = await apiRequest('/api/advanced-analytics/export', 'POST', {
+        timeRange: selectedTimeRange[0],
+        includeHeatmap: true,
+        includeAnomalies: true,
+        includeTrajectories: true
       });
       
       // Create download link
