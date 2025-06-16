@@ -24,6 +24,7 @@ import { testDeviceDiscovery } from './test-device-discovery';
 import { metaAIMonitor } from './meta-ai-monitor';
 import { dataIntegrityMonitor } from './data-integrity-monitor';
 import { cloudSyncTunnel } from './cloud-sync-tunnel';
+import { aiAgentBackend } from './ai-agent-backend';
 
 const execAsync = promisify(exec);
 
@@ -373,6 +374,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Initialize Cloud Sync Tunnel for desktop agents
   cloudSyncTunnel.initializeAgentTunnel(httpServer);
+  
+  // Start AI Agent Backend for intelligent monitoring
+  aiAgentBackend.start();
   
   wss.on('connection', (ws: WebSocket) => {
     console.log('WebSocket client connected');
@@ -1534,6 +1538,85 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     } catch (error) {
       res.status(500).json({ message: "Failed to get device updates" });
+    }
+  });
+
+  // AI Agent Backend API Endpoints
+  app.get("/api/ai-agents/status", async (req, res) => {
+    try {
+      const agentStatus = aiAgentBackend.getAgentStatus();
+      res.json({
+        success: true,
+        message: `Retrieved status for ${agentStatus.length} AI agents`,
+        agents: agentStatus,
+        timestamp: new Date()
+      });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to get AI agent status" });
+    }
+  });
+
+  app.get("/api/ai-agents/:agentName/insights", async (req, res) => {
+    try {
+      const { agentName } = req.params;
+      const agent = aiAgentBackend.getAgent(agentName);
+      
+      if (!agent) {
+        return res.status(404).json({ message: "AI agent not found" });
+      }
+      
+      const insights = agent.getInsights();
+      res.json({
+        success: true,
+        message: `Retrieved ${insights.length} insights from ${agentName}`,
+        insights,
+        agentType: agent.getType(),
+        timestamp: new Date()
+      });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to get agent insights" });
+    }
+  });
+
+  app.get("/api/ai-agents/insights/all", async (req, res) => {
+    try {
+      const agentStatus = aiAgentBackend.getAgentStatus();
+      const allInsights = agentStatus.flatMap(agent => 
+        agent.insights.map(insight => ({
+          ...insight,
+          agentName: agent.name,
+          agentType: agent.type
+        }))
+      );
+      
+      // Sort by timestamp, most recent first
+      allInsights.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+      
+      res.json({
+        success: true,
+        message: `Retrieved ${allInsights.length} total insights from all agents`,
+        insights: allInsights.slice(0, 50), // Limit to 50 most recent
+        totalAgents: agentStatus.length,
+        timestamp: new Date()
+      });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to get all insights" });
+    }
+  });
+
+  app.post("/api/ai-agents/restart", async (req, res) => {
+    try {
+      aiAgentBackend.stop();
+      await new Promise(resolve => setTimeout(resolve, 1000)); // Wait 1 second
+      aiAgentBackend.start();
+      
+      res.json({
+        success: true,
+        message: "AI Agent Backend restarted successfully",
+        timestamp: new Date()
+      });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to restart AI agents" });
     }
   });
 

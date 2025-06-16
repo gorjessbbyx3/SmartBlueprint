@@ -1,0 +1,122 @@
+🧠 What the AI Agent Will Do
+Feature	Description
+🔎 Device monitoring	Detect offline or flapping devices
+📈 Signal degradation	Monitor falling RSSI over time
+🚨 Anomaly detection	Alert on new MAC addresses, abnormal scan patterns
+🗺️ Heatmap analysis	Label rooms as dead zones, weak spots, etc.
+🧠 Self-learning (optional)	Train from telemetry to identify patterns in user networks
+
+🧱 System Architecture With AI Agent Added
+css
+Copy
+Edit
+[ Web Dashboard ] <---> [ FastAPI Backend ] <---> [ MQTT Broker ]
+         ↑                                        ↕
+     Token Auth                            Device Events
+         ↑                                        ↕
+  [ Local AI Agent ] <--- IPC/MQTT ---> [ Python Network Agent ]
+         ↕
+     WiFi scan, ARP, logs
+🧠 AI Agent v1: Python-Based, Rules + ML Hybrid
+🔧 Install Dependencies
+bash
+Copy
+Edit
+pip install pandas scikit-learn joblib
+📦 AI Agent Module: ai_agent.py
+python
+Copy
+Edit
+import time
+import pandas as pd
+import numpy as np
+from datetime import datetime
+from joblib import load
+import paho.mqtt.client as mqtt
+import json
+
+DEVICE_ID = "agent-123"
+TOPIC_SUB = f"agent/{DEVICE_ID}/telemetry"
+TOPIC_PUB = f"agent/{DEVICE_ID}/alerts"
+BROKER = "mqtt.yourapp.com"
+
+class SimpleAIAgent:
+    def __init__(self):
+        self.history = []
+
+    def process(self, data):
+        alerts = []
+
+        # Monitor for signal drop
+        for ap in data.get("wifi", []):
+            if ap["rssi"] < -80:
+                alerts.append({
+                    "type": "low_rssi",
+                    "message": f"Weak signal from {ap['ssid']} at {ap['rssi']} dBm"
+                })
+
+        # Watch for new MACs
+        seen_macs = {x['mac'] for x in data.get("lan", [])}
+        new_macs = seen_macs - getattr(self, 'known_macs', set())
+        if new_macs:
+            alerts.append({
+                "type": "new_device",
+                "message": f"New device(s) detected: {', '.join(new_macs)}"
+            })
+        self.known_macs = seen_macs
+
+        return alerts
+
+ai = SimpleAIAgent()
+mqttc = mqtt.Client()
+
+def on_message(client, userdata, msg):
+    payload = json.loads(msg.payload)
+    print("Telemetry received")
+    alerts = ai.process(payload)
+    for alert in alerts:
+        client.publish(TOPIC_PUB, json.dumps(alert))
+
+mqttc.on_message = on_message
+mqttc.connect(BROKER, 1883)
+mqttc.subscribe(TOPIC_SUB)
+mqttc.loop_forever()
+✅ What This AI Agent Can Do Today
+Feature	Implementation
+Detect low signal	RSSI threshold < -80 dBm
+Detect new devices	Compares current MACs to previous
+Alerting	Publishes back to MQTT agent/{id}/alerts topic
+Modularity	Easy to plug in anomaly detectors, e.g. IsolationForest, LSTM models, or pre-trained classifiers
+
+🌱 Optional: ML-Driven Anomaly Detection
+Replace the rules with a model:
+
+python
+Copy
+Edit
+from sklearn.ensemble import IsolationForest
+
+model = IsolationForest(contamination=0.1)
+model.fit(rssi_feature_df)
+
+prediction = model.predict(new_point)  # -1 = anomaly
+You can train this with:
+
+RSSI
+
+Time-of-day
+
+Packet loss
+
+Device activity frequency
+
+Store this in /models/anomaly_detector.joblib and load it in the agent.
+
+🧪 Next Step Options
+I can help you:
+
+Train a simple anomaly model on demo WiFi scan data
+
+Integrate AI agent with the FastAPI backend (e.g. save alerts in DB)
+
+Create React components to show AI-driven alerts in the UI

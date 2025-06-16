@@ -1,0 +1,173 @@
+📊 1. Build the ML Model (Anomaly Detection for RSSI & Devices)
+We'll train a simple IsolationForest model to detect RSSI anomalies (e.g., signal drops) and new/rare device patterns.
+
+🔧 Dataset Assumption
+Simulated scan data with:
+
+csv
+Copy
+Edit
+timestamp,device_id,ssid,rssi,mac
+2025-06-16T13:00:00Z,agent-123,HomeNet,-60,AA:BB:CC:DD:EE:FF
+2025-06-16T13:01:00Z,agent-123,HomeNet,-85,AA:BB:CC:DD:EE:FF
+...
+🧠 Training Script: train_anomaly_model.py
+python
+Copy
+Edit
+import pandas as pd
+from sklearn.ensemble import IsolationForest
+from sklearn.preprocessing import StandardScaler
+from joblib import dump
+
+# Load and preprocess
+df = pd.read_csv("wifi_scan_log.csv")
+df["hour"] = pd.to_datetime(df["timestamp"]).dt.hour
+
+features = df[["rssi", "hour"]]
+scaler = StandardScaler()
+X_scaled = scaler.fit_transform(features)
+
+# Train model
+model = IsolationForest(contamination=0.05)
+model.fit(X_scaled)
+
+# Save models
+dump(model, "models/rssi_anomaly_model.joblib")
+dump(scaler, "models/rssi_scaler.joblib")
+print("✅ Model trained and saved.")
+🧠 Update AI Agent to Use Model
+python
+Copy
+Edit
+from joblib import load
+from datetime import datetime
+
+model = load("models/rssi_anomaly_model.joblib")
+scaler = load("models/rssi_scaler.joblib")
+
+def predict_anomaly(rssi, timestamp):
+    hour = datetime.fromisoformat(timestamp).hour
+    X = scaler.transform([[rssi, hour]])
+    pred = model.predict(X)  # -1 = anomaly
+    return pred[0] == -1
+Use this inside the AI agent process() to flag RSSI anomalies.
+
+🔧 2. Hook Up MQTT to FastAPI
+You want to stream AI alerts into your backend to:
+
+Log events
+
+Display in UI
+
+Potentially trigger user notifications
+
+📦 Add MQTT Listener to FastAPI (separate thread)
+Install dependency:
+
+bash
+Copy
+Edit
+pip install paho-mqtt
+📁 mqtt_listener.py
+python
+Copy
+Edit
+import threading
+import paho.mqtt.client as mqtt
+import json
+from datetime import datetime
+from db import store_alert  # You define this
+
+def on_message(client, userdata, msg):
+    payload = json.loads(msg.payload)
+    print("🔔 AI Alert received:", payload)
+    store_alert({
+        "device_id": payload.get("device_id"),
+        "type": payload.get("type"),
+        "message": payload.get("message"),
+        "timestamp": datetime.utcnow().isoformat()
+    })
+
+def mqtt_loop():
+    client = mqtt.Client()
+    client.connect("mqtt.yourapp.com", 1883)
+    client.subscribe("agent/+/alerts")
+    client.on_message = on_message
+    client.loop_forever()
+
+def start_mqtt_thread():
+    thread = threading.Thread(target=mqtt_loop)
+    thread.daemon = True
+    thread.start()
+📁 main.py (FastAPI entry point)
+python
+Copy
+Edit
+from mqtt_listener import start_mqtt_thread
+
+app = FastAPI()
+
+start_mqtt_thread()
+👁️ 3. Create React UI for AI Insights
+We'll build a panel showing:
+
+Latest alerts
+
+Severity icons
+
+Filter by type (e.g., RSSI, new device)
+
+📦 Add in React Frontend
+Install Axios:
+
+bash
+Copy
+Edit
+npm install axios
+📁 src/components/AlertsPanel.js
+jsx
+Copy
+Edit
+import React, { useEffect, useState } from 'react';
+import axios from 'axios';
+
+const AlertIcon = ({ type }) => {
+  switch (type) {
+    case "low_rssi": return "📶";
+    case "new_device": return "🆕";
+    case "anomaly": return "⚠️";
+    default: return "🔔";
+  }
+};
+
+export default function AlertsPanel() {
+  const [alerts, setAlerts] = useState([]);
+
+  useEffect(() => {
+    axios.get("/api/alerts")  // FastAPI endpoint
+      .then(res => setAlerts(res.data))
+      .catch(console.error);
+  }, []);
+
+  return (
+    <div className="alerts-panel">
+      <h3>AI Insights</h3>
+      <ul>
+        {alerts.map((a, idx) => (
+          <li key={idx}>
+            <strong>{AlertIcon(a.type)}</strong> {a.message}
+            <span style={{ float: 'right' }}>{new Date(a.timestamp).toLocaleTimeString()}</span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+🧠 Example API Route in FastAPI
+python
+Copy
+Edit
+@app.get("/api/alerts")
+def get_alerts():
+    return db.get_last_alerts(limit=20)
