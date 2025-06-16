@@ -1,0 +1,318 @@
+// Desktop Agent: Active Ping/Latency Probing System
+// Provides meter-level distance measurement using RTT (Round Trip Time)
+// Works with any AP, no special hardware required
+
+const ping = require('ping');
+const WebSocket = require('ws');
+
+// Configuration
+const WS_URL = process.env.WS_URL || 'ws://localhost:5000/ws';
+const PING_TARGETS = [
+  '192.168.1.1',     // Common gateway/router IP
+  '192.168.1.254',   // Alternative gateway IP
+  '192.168.0.1',     // Another common gateway
+  '10.0.0.1'         // Alternative private network gateway
+];
+const INTERVAL_MS = 5000; // 5 seconds between measurements
+const TIMEOUT_MS = 2000;   // 2 second timeout per ping
+
+class PingAgent {
+  constructor() {
+    this.ws = null;
+    this.isRunning = false;
+    this.pingInterval = null;
+    this.reconnectAttempts = 0;
+    this.maxReconnectAttempts = 10;
+    
+    console.log('[Ping Agent] Initializing active ping/latency probing system...');
+    console.log(`[Ping Agent] Targets: ${PING_TARGETS.join(', ')}`);
+    console.log(`[Ping Agent] Interval: ${INTERVAL_MS}ms`);
+  }
+
+  /**
+   * Measure ping RTT to all configured targets
+   */
+  async measurePing() {
+    const results = {};
+    const promises = [];
+
+    for (const host of PING_TARGETS) {
+      promises.push(
+        ping.promise.probe(host, { 
+          timeout: TIMEOUT_MS / 1000, // ping library expects seconds
+          min_reply: 1,
+          extra: ['-c', '1'] // Send only 1 packet
+        }).then(res => ({
+          host,
+          alive: res.alive,
+          time: res.alive ? res.time : null,
+          packetLoss: res.alive ? 0 : 100
+        })).catch(error => ({
+          host,
+          alive: false,
+          time: null,
+          packetLoss: 100,
+          error: error.message
+        }))
+      );
+    }
+
+    try {
+      const responses = await Promise.all(promises);
+      
+      for (const response of responses) {
+        results[response.host] = {
+          rtt: response.time, // RTT in milliseconds
+          alive: response.alive,
+          packetLoss: response.packetLoss
+        };
+        
+        if (response.error) {
+          console.warn(`[Ping Agent] ${response.host}: ${response.error}`);
+        }
+      }
+
+      // Log successful measurements
+      const successfulPings = Object.entries(results)
+        .filter(([_, data]) => data.alive)
+        .map(([host, data]) => `${host}: ${data.rtt}ms`)
+        .join(', ');
+      
+      if (successfulPings) {
+        console.log(`[Ping Agent] Measurements: ${successfulPings}`);
+      }
+
+      return results;
+    } catch (error) {
+      console.error('[Ping Agent] Measurement error:', error);
+      return {};
+    }
+  }
+
+  /**
+   * Convert RTT to estimated distance in meters
+   * Formula: d ≈ ((RTT - t_proc) / 2) * c
+   */
+  convertRTTToDistance(rttMs, processingOffsetMs = 5) {
+    if (!rttMs || rttMs <= 0) return null;
+    
+    const speedOfLight = 3e8; // m/s
+    const oneWayTimeMs = (rttMs - processingOffsetMs) / 2;
+    const oneWayTimeS = oneWayTimeMs / 1000;
+    const distanceM = Math.max(oneWayTimeS * speedOfLight, 0);
+    
+    return Math.round(distanceM * 10) / 10; // Round to 1 decimal place
+  }
+
+  /**
+   * Send ping data to the server via WebSocket
+   */
+  sendPingData(pingResults) {
+    if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
+      console.warn('[Ping Agent] WebSocket not connected, skipping send');
+      return;
+    }
+
+    // Convert RTT to distances for additional context
+    const pingWithDistances = {};
+    for (const [host, data] of Object.entries(pingResults)) {
+      pingWithDistances[host] = {
+        ...data,
+        distance: this.convertRTTToDistance(data.rtt)
+      };
+    }
+
+    const message = {
+      type: 'ping',
+      timestamp: Date.now(),
+      ping: pingResults,
+      pingWithDistances: pingWithDistances,
+      source: 'desktop-agent',
+      version: '1.0.0'
+    };
+
+    try {
+      this.ws.send(JSON.stringify(message));
+      console.log(`[Ping Agent] Sent ping data for ${Object.keys(pingResults).length} targets`);
+    } catch (error) {
+      console.error('[Ping Agent] Failed to send ping data:', error);
+    }
+  }
+
+  /**
+   * Connect to WebSocket server
+   */
+  connect() {
+    console.log(`[Ping Agent] Connecting to ${WS_URL}...`);
+    
+    this.ws = new WebSocket(WS_URL);
+
+    this.ws.on('open', () => {
+      console.log('[Ping Agent] WebSocket connected successfully');
+      this.reconnectAttempts = 0;
+      this.startPingLoop();
+    });
+
+    this.ws.on('message', (data) => {
+      try {
+        const message = JSON.parse(data.toString());
+        this.handleServerMessage(message);
+      } catch (error) {
+        console.error('[Ping Agent] Failed to parse server message:', error);
+      }
+    });
+
+    this.ws.on('close', (code, reason) => {
+      console.log(`[Ping Agent] WebSocket closed (${code}): ${reason}`);
+      this.stopPingLoop();
+      this.scheduleReconnect();
+    });
+
+    this.ws.on('error', (error) => {
+      console.error('[Ping Agent] WebSocket error:', error);
+    });
+  }
+
+  /**
+   * Handle messages from the server
+   */
+  handleServerMessage(message) {
+    switch (message.type) {
+      case 'ping_config':
+        if (message.targets) {
+          PING_TARGETS.length = 0;
+          PING_TARGETS.push(...message.targets);
+          console.log(`[Ping Agent] Updated targets: ${PING_TARGETS.join(', ')}`);
+        }
+        break;
+        
+      case 'ping_start':
+        if (!this.isRunning) {
+          this.startPingLoop();
+        }
+        break;
+        
+      case 'ping_stop':
+        this.stopPingLoop();
+        break;
+        
+      default:
+        console.log(`[Ping Agent] Received message: ${message.type}`);
+    }
+  }
+
+  /**
+   * Start the periodic ping measurement loop
+   */
+  startPingLoop() {
+    if (this.isRunning) {
+      console.log('[Ping Agent] Ping loop already running');
+      return;
+    }
+
+    this.isRunning = true;
+    console.log('[Ping Agent] Starting ping measurement loop...');
+
+    // Immediate first measurement
+    this.performPingCycle();
+
+    // Set up interval for subsequent measurements
+    this.pingInterval = setInterval(() => {
+      this.performPingCycle();
+    }, INTERVAL_MS);
+  }
+
+  /**
+   * Stop the ping measurement loop
+   */
+  stopPingLoop() {
+    if (!this.isRunning) return;
+
+    this.isRunning = false;
+    
+    if (this.pingInterval) {
+      clearInterval(this.pingInterval);
+      this.pingInterval = null;
+    }
+    
+    console.log('[Ping Agent] Stopped ping measurement loop');
+  }
+
+  /**
+   * Perform a single ping measurement cycle
+   */
+  async performPingCycle() {
+    try {
+      const pingResults = await this.measurePing();
+      this.sendPingData(pingResults);
+    } catch (error) {
+      console.error('[Ping Agent] Ping cycle error:', error);
+    }
+  }
+
+  /**
+   * Schedule reconnection with exponential backoff
+   */
+  scheduleReconnect() {
+    if (this.reconnectAttempts >= this.maxReconnectAttempts) {
+      console.error('[Ping Agent] Max reconnection attempts reached, giving up');
+      return;
+    }
+
+    const delay = Math.min(1000 * Math.pow(2, this.reconnectAttempts), 30000); // Max 30 seconds
+    this.reconnectAttempts++;
+    
+    console.log(`[Ping Agent] Reconnecting in ${delay}ms (attempt ${this.reconnectAttempts}/${this.maxReconnectAttempts})`);
+    
+    setTimeout(() => {
+      this.connect();
+    }, delay);
+  }
+
+  /**
+   * Start the ping agent
+   */
+  start() {
+    console.log('[Ping Agent] Starting desktop agent ping system...');
+    this.connect();
+  }
+
+  /**
+   * Stop the ping agent
+   */
+  stop() {
+    console.log('[Ping Agent] Stopping desktop agent ping system...');
+    this.stopPingLoop();
+    
+    if (this.ws) {
+      this.ws.close();
+      this.ws = null;
+    }
+  }
+}
+
+// Handle graceful shutdown
+process.on('SIGINT', () => {
+  console.log('\n[Ping Agent] Received SIGINT, shutting down gracefully...');
+  if (global.pingAgent) {
+    global.pingAgent.stop();
+  }
+  process.exit(0);
+});
+
+process.on('SIGTERM', () => {
+  console.log('\n[Ping Agent] Received SIGTERM, shutting down gracefully...');
+  if (global.pingAgent) {
+    global.pingAgent.stop();
+  }
+  process.exit(0);
+});
+
+// Start the ping agent
+if (require.main === module) {
+  const agent = new PingAgent();
+  global.pingAgent = agent;
+  agent.start();
+}
+
+module.exports = PingAgent;

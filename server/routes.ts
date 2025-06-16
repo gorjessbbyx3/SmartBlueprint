@@ -67,6 +67,49 @@ export async function registerRoutes(app: Express): Promise<Server> {
               }));
             }
             break;
+
+          case 'ping':
+            // Handle ping measurements from desktop agent
+            try {
+              const { ping, timestamp } = data;
+              console.log('[Active Ping] Received ping data:', ping);
+              
+              // Process ping data and broadcast to clients
+              wss.clients.forEach((client) => {
+                if (client.readyState === WebSocket.OPEN) {
+                  client.send(JSON.stringify({
+                    type: 'ping_update',
+                    ping: ping,
+                    timestamp: timestamp
+                  }));
+                }
+              });
+            } catch (error) {
+              console.error('[Active Ping] Error processing ping data:', error);
+            }
+            break;
+
+          case 'probe':
+            // Handle RTT/ping probe data for positioning
+            try {
+              const probeData: ProbeData = data;
+              const processed = activePingProbing.processProbeData(probeData);
+              
+              // Broadcast processed measurements to clients
+              wss.clients.forEach((client) => {
+                if (client.readyState === WebSocket.OPEN) {
+                  client.send(JSON.stringify({
+                    type: 'probe_results',
+                    rttMeasurements: processed.rttMeasurements,
+                    pingMeasurements: processed.pingMeasurements,
+                    timestamp: probeData.timestamp
+                  }));
+                }
+              });
+            } catch (error) {
+              console.error('[Active Ping] Error processing probe data:', error);
+            }
+            break;
         }
       } catch (error) {
         console.error('WebSocket message error:', error);
@@ -817,6 +860,242 @@ export async function registerRoutes(app: Express): Promise<Server> {
         success: false,
         error: 'Failed to discover direct WiFi devices',
         details: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  // Active Ping/Latency Probing API Endpoints
+  
+  // Measure ping distance to specific hosts
+  app.post('/api/ping/measure', async (req: Request, res: Response) => {
+    try {
+      const { hosts, trials = 5 } = req.body;
+      
+      if (!hosts || !Array.isArray(hosts)) {
+        return res.status(400).json({
+          success: false,
+          error: 'Hosts array is required'
+        });
+      }
+
+      const measurements = await activePingProbing.measureMultipleHosts(hosts);
+      
+      res.json({
+        success: true,
+        measurements,
+        timestamp: new Date()
+      });
+    } catch (error) {
+      console.error('[Active Ping] Measurement error:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Failed to measure ping distances',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  // Start calibration phase
+  app.post('/api/ping/calibration/start', async (req: Request, res: Response) => {
+    try {
+      activePingProbing.startCalibration();
+      
+      res.json({
+        success: true,
+        message: 'Calibration phase started',
+        timestamp: new Date()
+      });
+    } catch (error) {
+      console.error('[Active Ping] Calibration start error:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Failed to start calibration'
+      });
+    }
+  });
+
+  // Add calibration point
+  app.post('/api/ping/calibration/point', async (req: Request, res: Response) => {
+    try {
+      const { x, y, csiFeatures, rttValues, pingDistances } = req.body;
+      
+      if (typeof x !== 'number' || typeof y !== 'number') {
+        return res.status(400).json({
+          success: false,
+          error: 'Valid x and y coordinates are required'
+        });
+      }
+
+      activePingProbing.addCalibrationPoint(
+        x, y, 
+        csiFeatures || [], 
+        rttValues || [], 
+        pingDistances || []
+      );
+      
+      res.json({
+        success: true,
+        message: 'Calibration point added',
+        position: { x, y },
+        timestamp: new Date()
+      });
+    } catch (error) {
+      console.error('[Active Ping] Calibration point error:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Failed to add calibration point'
+      });
+    }
+  });
+
+  // Complete calibration
+  app.post('/api/ping/calibration/complete', async (req: Request, res: Response) => {
+    try {
+      const calibrationData = activePingProbing.completeCalibration();
+      const stats = activePingProbing.getCalibrationStats();
+      
+      res.json({
+        success: true,
+        message: 'Calibration completed',
+        calibrationData,
+        stats,
+        timestamp: new Date()
+      });
+    } catch (error) {
+      console.error('[Active Ping] Calibration complete error:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Failed to complete calibration'
+      });
+    }
+  });
+
+  // Start live probing
+  app.post('/api/ping/probing/start', async (req: Request, res: Response) => {
+    try {
+      const { hosts, intervalMs = 30000 } = req.body;
+      
+      if (!hosts || !Array.isArray(hosts)) {
+        return res.status(400).json({
+          success: false,
+          error: 'Hosts array is required'
+        });
+      }
+
+      activePingProbing.startLiveProbing(hosts, intervalMs);
+      
+      res.json({
+        success: true,
+        message: 'Live probing started',
+        hosts,
+        intervalMs,
+        timestamp: new Date()
+      });
+    } catch (error) {
+      console.error('[Active Ping] Live probing start error:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Failed to start live probing'
+      });
+    }
+  });
+
+  // Stop live probing
+  app.post('/api/ping/probing/stop', async (req: Request, res: Response) => {
+    try {
+      activePingProbing.stopLiveProbing();
+      
+      res.json({
+        success: true,
+        message: 'Live probing stopped',
+        timestamp: new Date()
+      });
+    } catch (error) {
+      console.error('[Active Ping] Live probing stop error:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Failed to stop live probing'
+      });
+    }
+  });
+
+  // Get ping configuration and status
+  app.get('/api/ping/status', async (req: Request, res: Response) => {
+    try {
+      const configuration = activePingProbing.getConfiguration();
+      const stats = activePingProbing.getCalibrationStats();
+      
+      res.json({
+        success: true,
+        configuration,
+        calibrationStats: stats,
+        timestamp: new Date()
+      });
+    } catch (error) {
+      console.error('[Active Ping] Status error:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Failed to get ping status'
+      });
+    }
+  });
+
+  // Process probe data from mobile devices
+  app.post('/api/ping/probe', async (req: Request, res: Response) => {
+    try {
+      const probeData: ProbeData = {
+        type: 'probe',
+        rtt: req.body.rtt || {},
+        ping: req.body.ping || {},
+        timestamp: new Date(req.body.timestamp || Date.now()),
+        location: req.body.location
+      };
+
+      const processed = activePingProbing.processProbeData(probeData);
+      
+      res.json({
+        success: true,
+        processed,
+        timestamp: new Date()
+      });
+    } catch (error) {
+      console.error('[Active Ping] Probe data error:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Failed to process probe data'
+      });
+    }
+  });
+
+  // Fuse location estimates
+  app.post('/api/ping/location/fuse', async (req: Request, res: Response) => {
+    try {
+      const { csiLocation, rttLocation, pingLocation, weights } = req.body;
+      
+      if (!csiLocation || !rttLocation || !pingLocation) {
+        return res.status(400).json({
+          success: false,
+          error: 'All location estimates (csi, rtt, ping) are required'
+        });
+      }
+
+      const fusedLocation = activePingProbing.fuseLocationEstimates(
+        csiLocation,
+        rttLocation, 
+        pingLocation,
+        weights
+      );
+      
+      res.json({
+        success: true,
+        fusedLocation,
+        timestamp: new Date()
+      });
+    } catch (error) {
+      console.error('[Active Ping] Location fusion error:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Failed to fuse location estimates'
       });
     }
   });
