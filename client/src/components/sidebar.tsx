@@ -237,11 +237,72 @@ export default function Sidebar({
               </CardContent>
             </Card>
 
+            {/* Adjustable Heatmap Intensity Controls */}
+            <Card>
+              <CardContent className="p-4">
+                <h3 className="text-sm font-semibold text-gray-900 mb-3 flex items-center">
+                  <Wifi className="w-4 h-4 mr-2 text-primary" />
+                  Signal Heatmap
+                </h3>
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-gray-600">Show Heatmap:</span>
+                    <Switch
+                      checked={showHeatmap}
+                      onCheckedChange={onToggleHeatmap}
+                    />
+                  </div>
+                  {showHeatmap && (
+                    <div className="text-xs text-gray-500 bg-blue-50 p-2 rounded">
+                      <i className="fas fa-info-circle mr-1"></i>
+                      Real-time WiFi signal visualization
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+
             {/* Coverage Analysis */}
             <CoverageAnalysis 
               showHeatmap={showHeatmap}
               onToggleHeatmap={onToggleHeatmap}
             />
+
+            {/* Blueprint Section */}
+            <Card>
+              <CardContent className="p-4">
+                <h3 className="text-sm font-semibold text-gray-900 mb-3 flex items-center">
+                  <i className="fas fa-home mr-2 text-primary"></i>
+                  Blueprint Setup
+                </h3>
+                <div className="space-y-3">
+                  <div>
+                    <input
+                      type="file"
+                      id="blueprint-upload"
+                      className="hidden"
+                      accept=".pdf,.png,.jpg,.jpeg,.svg"
+                      onChange={handleFileUpload}
+                    />
+                    <Button
+                      className="w-full"
+                      onClick={() => document.getElementById("blueprint-upload")?.click()}
+                      disabled={uploadingBlueprint}
+                    >
+                      <i className="fas fa-upload mr-2"></i>
+                      {uploadingBlueprint ? "Uploading..." : "Upload Floorplan"}
+                    </Button>
+                  </div>
+                  <Button variant="outline" className="w-full">
+                    <i className="fas fa-pencil-alt mr-2"></i>Sketch New Plan
+                  </Button>
+                  <div className="text-xs text-gray-500 bg-gray-50 p-2 rounded">
+                    <i className="fas fa-info-circle mr-1"></i>
+                    Supports: PDF, PNG, JPG, SVG
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
 
             {/* Anomaly Detection */}
             <Card>
