@@ -203,6 +203,21 @@ export function RoomHeatmap({
             {formatTimestamp(currentData.timestamp)}
           </Badge>
         </div>
+        
+        {/* Network Information */}
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mt-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+              <span className="text-sm font-medium text-blue-900">Connected Network:</span>
+            </div>
+            <span className="text-sm font-semibold text-blue-800">MyHome_WiFi</span>
+          </div>
+          <div className="flex items-center justify-between mt-1">
+            <span className="text-xs text-blue-700">Signal Strength:</span>
+            <span className="text-xs text-blue-700">-42 dBm (Excellent)</span>
+          </div>
+        </div>
       </CardHeader>
       
       <CardContent className="space-y-6">
