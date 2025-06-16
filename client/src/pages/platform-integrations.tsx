@@ -104,7 +104,8 @@ export default function PlatformIntegrations() {
   // Device discovery mutation
   const discoverDevicesMutation = useMutation({
     mutationFn: async (platform: string) => {
-      return await apiRequest(`/api/platforms/${platform}/devices`);
+      const response = await fetch(`/api/platforms/${platform}/devices`);
+      return await response.json();
     },
     onSuccess: (data) => {
       if (data.success) {
@@ -119,9 +120,10 @@ export default function PlatformIntegrations() {
   // Platform disconnect mutation
   const disconnectMutation = useMutation({
     mutationFn: async (platform: string) => {
-      return await apiRequest(`/api/platforms/${platform}/disconnect`, {
+      const response = await fetch(`/api/platforms/${platform}/disconnect`, {
         method: 'DELETE'
       });
+      return await response.json();
     },
     onSuccess: () => {
       toast({
