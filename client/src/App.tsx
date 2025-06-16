@@ -86,6 +86,7 @@ function Router() {
       <Route path="/ping-monitoring" component={PingMonitoring} />
       <Route path="/onboarding" component={UserOnboarding} />
       <Route path="/pet-recognition" component={PetRecognition} />
+      <Route path="/predictive-maintenance" component={PredictiveMaintenance} />
       <Route path="/terms" component={TermsOfService} />
       <Route path="/privacy" component={PrivacyPolicy} />
       <Route component={NotFound} />
