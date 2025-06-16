@@ -38,6 +38,10 @@ export class PhilipsHueAdapter implements PlatformAdapter {
   platform = 'philips_hue';
   private bridgeIp?: string;
 
+  setBridgeIp(ip: string): void {
+    this.bridgeIp = ip;
+  }
+
   async authenticate(credentials: { bridgeIp?: string }): Promise<AuthResult> {
     try {
       // Discover bridge if IP not provided
@@ -476,10 +480,15 @@ export class SmartHomePlatformManager {
     return await adapter.discoverDevices(accessToken);
   }
 
-  async controlDevice(platform: string, deviceId: string, command: any, accessToken: string): Promise<boolean> {
+  async controlDevice(platform: string, deviceId: string, command: any, accessToken: string, bridgeIp?: string): Promise<boolean> {
     const adapter = this.getAdapter(platform);
     if (!adapter) {
       return false;
+    }
+
+    // Set bridge IP for Philips Hue if provided
+    if (platform === 'philips_hue' && bridgeIp && adapter instanceof PhilipsHueAdapter) {
+      adapter.setBridgeIp(bridgeIp);
     }
 
     return await adapter.controlDevice(deviceId, command, accessToken);
