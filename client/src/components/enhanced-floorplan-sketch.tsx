@@ -72,7 +72,9 @@ export default function EnhancedFloorplanSketch({ onSave, onLoad, initialElement
     'Living Room': { color: '#3b82f6', width: 2, fill: 'rgba(59, 130, 246, 0.1)' },
     'Bedroom': { color: '#10b981', width: 2, fill: 'rgba(16, 185, 129, 0.1)' },
     'Kitchen': { color: '#f59e0b', width: 2, fill: 'rgba(245, 158, 11, 0.1)' },
-    'Office': { color: '#8b5cf6', width: 2, fill: 'rgba(139, 92, 246, 0.1)' }
+    'Office': { color: '#8b5cf6', width: 2, fill: 'rgba(139, 92, 246, 0.1)' },
+    'Bathroom': { color: '#06b6d4', width: 2, fill: 'rgba(6, 182, 212, 0.1)' },
+    'Hallway': { color: '#64748b', width: 2, fill: 'rgba(100, 116, 139, 0.1)' }
   });
   
   // History for undo/redo
@@ -278,8 +280,8 @@ export default function EnhancedFloorplanSketch({ onSave, onLoad, initialElement
     // Determine which style to use based on tool and selected room type
     let elementStyle = toolStyles[tool as keyof typeof toolStyles] || toolStyles.line;
     
-    // If drawing a room and a room type is selected, use the room type style
-    if (tool === 'room' && selectedRoomType && roomTypeStyles[selectedRoomType]) {
+    // If a room type is selected, use the room type style for any drawing tool
+    if (selectedRoomType && roomTypeStyles[selectedRoomType]) {
       elementStyle = roomTypeStyles[selectedRoomType];
     }
     

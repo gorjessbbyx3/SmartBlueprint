@@ -195,16 +195,17 @@ export default function Dashboard() {
                         // Create new room records from sketch elements
                         for (let i = 0; i < roomElements.length; i++) {
                           const roomElement = roomElements[i];
+                          const roomType = roomElement.label || 'Living Room'; // Use the room type from label
                           await fetch('/api/rooms', {
                             method: 'POST',
                             headers: {
                               'Content-Type': 'application/json',
                             },
                             body: JSON.stringify({
-                              name: `Room ${i + 1}`,
+                              name: roomElement.label ? roomElement.label : `Room ${i + 1}`,
                               floorplanId: floorplan?.id || 1,
                               boundaries: JSON.stringify(roomElement.points),
-                              roomType: 'Living Room', // Default room type
+                              roomType: roomType,
                               detectedAutomatically: false
                             })
                           });

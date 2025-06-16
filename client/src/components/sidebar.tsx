@@ -482,6 +482,32 @@ export default function Sidebar({
                     <Home className="w-6 h-6 mb-1 text-purple-600" />
                     <span className="text-xs">Office</span>
                   </Button>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="h-auto p-3 flex flex-col cursor-pointer hover:bg-cyan-50 transition-colors border-cyan-200"
+                    onClick={() => {
+                      window.dispatchEvent(new CustomEvent('selectRoomType', {
+                        detail: { name: 'Bathroom' }
+                      }));
+                    }}
+                  >
+                    <Home className="w-6 h-6 mb-1 text-cyan-600" />
+                    <span className="text-xs">Bathroom</span>
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="h-auto p-3 flex flex-col cursor-pointer hover:bg-slate-50 transition-colors border-slate-200"
+                    onClick={() => {
+                      window.dispatchEvent(new CustomEvent('selectRoomType', {
+                        detail: { name: 'Hallway' }
+                      }));
+                    }}
+                  >
+                    <Home className="w-6 h-6 mb-1 text-slate-600" />
+                    <span className="text-xs">Hallway</span>
+                  </Button>
                 </div>
                 <div className="mt-3 p-2 bg-gray-50 rounded-lg">
                   <p className="text-xs text-gray-600">
