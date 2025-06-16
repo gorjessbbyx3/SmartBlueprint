@@ -501,6 +501,19 @@ export class MemStorage implements IStorage {
     return undefined;
   }
 
+  async updatePlatformDeviceState(platformDeviceId: string, newState: any): Promise<PlatformDevice | undefined> {
+    const device = Array.from(this.platformDevices.values())
+      .find(device => device.platformDeviceId === platformDeviceId);
+    
+    if (device) {
+      const currentState = device.state || {};
+      device.state = { ...currentState, ...newState };
+      device.lastUpdated = new Date();
+      return device;
+    }
+    return undefined;
+  }
+
   // Predictive alert operations
   async getPredictiveAlerts(deviceId?: number): Promise<PredictiveAlert[]> {
     const allAlerts = Array.from(this.predictiveAlerts.values())

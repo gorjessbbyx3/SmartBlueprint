@@ -433,7 +433,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
         integration.accessToken
       );
       
-      res.json({ success });
+      if (success) {
+        // Update device state in storage
+        await storage.updatePlatformDeviceState(deviceId, command);
+        
+        res.json({ 
+          success: true, 
+          message: `Device ${deviceId} controlled successfully`,
+          command
+        });
+      } else {
+        res.status(400).json({ 
+          success: false, 
+          error: 'Device control failed - check device status and command format' 
+        });
+      }
     } catch (error) {
       console.error('Device control failed:', error);
       res.status(500).json({ success: false, error: 'Device control failed' });
@@ -454,10 +468,50 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { platform } = req.params;
       await storage.removePlatformIntegration(platform);
-      res.json({ success: true });
+      res.json({ success: true, message: `${platform} disconnected successfully` });
     } catch (error) {
       console.error('Platform disconnect failed:', error);
       res.status(500).json({ success: false, error: 'Disconnect failed' });
+    }
+  });
+
+  // Real-time device synchronization
+  app.post('/api/platforms/:platform/sync', async (req, res) => {
+    try {
+      const { platform } = req.params;
+      const integration = await storage.getPlatformIntegration(platform);
+      
+      if (!integration) {
+        return res.status(404).json({ success: false, error: 'Platform not connected' });
+      }
+
+      const { smartHomePlatformManager } = await import('./smart-home-platforms');
+      const syncResult = await smartHomePlatformManager.syncDevices(
+        platform, 
+        integration.accessToken
+      );
+      
+      if (syncResult.success) {
+        // Update last sync time
+        await storage.updatePlatformIntegration(integration.id, {
+          lastSync: new Date()
+        });
+        
+        res.json({ 
+          success: true, 
+          message: `${platform} devices synchronized`,
+          deviceCount: syncResult.deviceCount,
+          lastSync: new Date().toISOString()
+        });
+      } else {
+        res.status(400).json({ 
+          success: false, 
+          error: syncResult.error || 'Synchronization failed' 
+        });
+      }
+    } catch (error) {
+      console.error('Platform sync failed:', error);
+      res.status(500).json({ success: false, error: 'Synchronization failed' });
     }
   });
 
