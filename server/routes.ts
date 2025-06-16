@@ -10,6 +10,7 @@ import { cloudSyncTunnel } from "./cloud-sync-tunnel.js";
 import { networkScanner } from "./device-scanner.js";
 import { monitoringService } from "./monitoring-service.js";
 import { advancedSignalProcessor } from "./advanced-signal-processing.js";
+import { enhancedDeviceTelemetry } from "./enhanced-device-telemetry.js";
 import { AdvancedLocationEngine, LSTMAnomalyDetector, IsolationForestDetector } from "./advanced-ml-models.js";
 import { mlAnalytics } from "./ml-analytics.js";
 
@@ -537,6 +538,221 @@ export async function registerRoutes(app: Express): Promise<Server> {
         success: false, 
         message: "Failed to check system health",
         overallHealth: 'critical'
+      });
+    }
+  });
+
+  // Enhanced Device Telemetry Routes
+  app.get('/api/telemetry/mdns-discovery', async (req: Request, res: Response) => {
+    try {
+      console.log('🔍 Starting mDNS device discovery...');
+      const services = await enhancedDeviceTelemetry.discoverMDNSServices();
+      
+      res.json({
+        success: true,
+        services: services.map(service => ({
+          name: service.name,
+          type: service.type,
+          port: service.port,
+          host: service.host,
+          addresses: service.addresses,
+          txt: service.txt
+        }))
+      });
+    } catch (error) {
+      console.error('mDNS discovery failed:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Failed to discover mDNS services',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  app.get('/api/telemetry/ssdp-discovery', async (req: Request, res: Response) => {
+    try {
+      console.log('🔍 Starting SSDP device discovery...');
+      const devices = await enhancedDeviceTelemetry.performEnhancedSSDPDiscovery();
+      
+      res.json({
+        success: true,
+        devices: devices.map(device => ({
+          location: device.location,
+          usn: device.usn,
+          st: device.st,
+          server: device.server,
+          cacheControl: device.cacheControl,
+          bootId: device.bootId,
+          configId: device.configId
+        }))
+      });
+    } catch (error) {
+      console.error('SSDP discovery failed:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Failed to discover SSDP devices',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  app.get('/api/telemetry/upnp-description/:location', async (req: Request, res: Response) => {
+    try {
+      const { location } = req.params;
+      const decodedLocation = decodeURIComponent(location);
+      
+      console.log(`🔍 Fetching UPnP description from: ${decodedLocation}`);
+      const description = await enhancedDeviceTelemetry.fetchUPnPDescription(decodedLocation);
+      
+      if (!description) {
+        return res.status(404).json({
+          success: false,
+          error: 'UPnP description not found or inaccessible'
+        });
+      }
+      
+      res.json({
+        success: true,
+        description
+      });
+    } catch (error) {
+      console.error('UPnP description fetch failed:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Failed to fetch UPnP description',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  app.get('/api/telemetry/device/:deviceId/latest', async (req: Request, res: Response) => {
+    try {
+      const { deviceId } = req.params;
+      const telemetry = enhancedDeviceTelemetry.getLatestTelemetry(deviceId);
+      
+      if (!telemetry) {
+        return res.status(404).json({
+          success: false,
+          error: 'No telemetry data found for device'
+        });
+      }
+      
+      res.json({
+        success: true,
+        telemetry
+      });
+    } catch (error) {
+      console.error('Failed to get latest telemetry:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Failed to retrieve telemetry data',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  app.get('/api/telemetry/device/:deviceId/history', async (req: Request, res: Response) => {
+    try {
+      const { deviceId } = req.params;
+      const limit = parseInt(req.query.limit as string) || 50;
+      const history = enhancedDeviceTelemetry.getTelemetryHistory(deviceId, limit);
+      
+      res.json({
+        success: true,
+        history,
+        count: history.length
+      });
+    } catch (error) {
+      console.error('Failed to get telemetry history:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Failed to retrieve telemetry history',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  // Device Type Classification and Analysis
+  app.post('/api/devices/classify', async (req: Request, res: Response) => {
+    try {
+      const { devices: deviceList } = req.body;
+      
+      if (!Array.isArray(deviceList)) {
+        return res.status(400).json({
+          success: false,
+          error: 'Invalid device list provided'
+        });
+      }
+      
+      const classifiedDevices = deviceList.map(device => {
+        const deviceName = device.name?.toLowerCase() || '';
+        const vendor = device.vendor?.toLowerCase() || '';
+        const hostname = device.hostname?.toLowerCase() || '';
+        
+        // Enhanced device type classification
+        let deviceType = 'unknown';
+        let confidence = 0.5;
+        
+        // Classification logic for direct WiFi devices
+        const classificationRules = [
+          { keywords: ['printer', 'hp', 'canon', 'epson', 'brother', 'xerox', 'lexmark'], type: 'printer', confidence: 0.9 },
+          { keywords: ['xbox', 'playstation', 'nintendo', 'steam', 'switch', 'wii'], type: 'game_console', confidence: 0.95 },
+          { keywords: ['samsung', 'lg', 'sony', 'tv', 'smart tv', 'bravia'], type: 'smart_tv', confidence: 0.9 },
+          { keywords: ['router', 'gateway', 'access point', 'ubiquiti', 'netgear', 'linksys'], type: 'router', confidence: 0.95 },
+          { keywords: ['macbook', 'imac', 'laptop', 'desktop', 'pc', 'workstation'], type: 'computer', confidence: 0.85 },
+          { keywords: ['iphone', 'ipad', 'android', 'tablet', 'phone'], type: 'mobile_device', confidence: 0.8 },
+          { keywords: ['synology', 'qnap', 'nas', 'storage'], type: 'nas_storage', confidence: 0.9 },
+          { keywords: ['echo', 'alexa', 'google home', 'homepod', 'speaker'], type: 'smart_speaker', confidence: 0.9 },
+          { keywords: ['ring', 'nest', 'camera', 'doorbell'], type: 'security_camera', confidence: 0.9 },
+          { keywords: ['thermostat', 'nest', 'ecobee', 'honeywell'], type: 'thermostat', confidence: 0.95 }
+        ];
+        
+        for (const rule of classificationRules) {
+          const matchScore = rule.keywords.reduce((score, keyword) => {
+            if (deviceName.includes(keyword) || vendor.includes(keyword) || hostname.includes(keyword)) {
+              return score + 1;
+            }
+            return score;
+          }, 0);
+          
+          if (matchScore > 0) {
+            deviceType = rule.type;
+            confidence = Math.min(rule.confidence * (matchScore / rule.keywords.length), 1.0);
+            break;
+          }
+        }
+        
+        return {
+          ...device,
+          deviceType,
+          confidence,
+          classification: {
+            original: device.deviceType || 'unknown',
+            enhanced: deviceType,
+            confidence,
+            matchedKeywords: classificationRules.find(r => r.type === deviceType)?.keywords || []
+          }
+        };
+      });
+      
+      res.json({
+        success: true,
+        devices: classifiedDevices,
+        summary: {
+          total: classifiedDevices.length,
+          classified: classifiedDevices.filter(d => d.deviceType !== 'unknown').length,
+          byType: classifiedDevices.reduce((acc, device) => {
+            acc[device.deviceType] = (acc[device.deviceType] || 0) + 1;
+            return acc;
+          }, {} as Record<string, number>)
+        }
+      });
+    } catch (error) {
+      console.error('Device classification failed:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Failed to classify devices',
+        details: error instanceof Error ? error.message : 'Unknown error'
       });
     }
   });

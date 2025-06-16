@@ -1,6 +1,7 @@
 import { WebSocket } from 'ws';
 import { networkDiscoveryService } from './network-discovery';
 import { comprehensiveDeviceDiscovery } from './comprehensive-device-discovery';
+import { enhancedDeviceTelemetry } from './enhanced-device-telemetry';
 import { dataIntegrityMonitor } from './data-integrity-monitor';
 import { metaAIMonitor } from './meta-ai-monitor';
 
@@ -74,10 +75,24 @@ export class DesktopAgent {
       // Use comprehensive device discovery
       const discoveredDevices = await comprehensiveDeviceDiscovery.startDeviceDiscovery();
       
+      // Perform enhanced device discovery for direct WiFi devices
+      const mdnsServices = await this.discoverMDNSDevices();
+      const ssdpDevices = await this.discoverSSDPDevices();
+      
+      // Merge and classify all discovered devices
+      const allDevices = [
+        ...discoveredDevices,
+        ...this.processMDNSServices(mdnsServices),
+        ...this.processSSSDPDevices(ssdpDevices)
+      ];
+      
+      // Apply enhanced device classification
+      const classifiedDevices = await this.classifyDiscoveredDevices(allDevices);
+      
       // Check for new or updated devices
       const updates: any[] = [];
       
-      for (const device of discoveredDevices) {
+      for (const device of classifiedDevices) {
         const existingDevice = this.localDevices.get(device.mac);
         
         if (!existingDevice || this.hasDeviceChanged(existingDevice, device)) {
@@ -91,7 +106,7 @@ export class DesktopAgent {
       
       // Remove devices that are no longer found
       for (const [mac, device] of this.localDevices) {
-        if (!discoveredDevices.find(d => d.mac === mac)) {
+        if (!classifiedDevices.find(d => d.mac === mac)) {
           this.localDevices.delete(mac);
           updates.push({
             action: 'removed',
