@@ -100,7 +100,7 @@ export default function AdvancedAnalyticsPage() {
   // Fetch advanced analytics data
   const { data: analyticsData, isLoading } = useQuery({
     queryKey: ['/api/advanced-analytics', selectedTimeRange[0]],
-    queryFn: () => apiRequest(`/api/advanced-analytics?hours=${selectedTimeRange[0]}`),
+    queryFn: () => apiRequest(`/api/advanced-analytics?hours=${selectedTimeRange[0]}`, { method: 'GET' }),
     refetchInterval: 30000
   });
 
@@ -165,8 +165,8 @@ export default function AdvancedAnalyticsPage() {
 
   // Load historical data when time range changes
   useEffect(() => {
-    if (analyticsData?.historical_frames) {
-      setHistoricalData(analyticsData.historical_frames);
+    if (analyticsData && 'historical_frames' in analyticsData) {
+      setHistoricalData(analyticsData.historical_frames as any[]);
       setCurrentFrame(0);
     }
   }, [analyticsData]);
@@ -369,6 +369,9 @@ export default function AdvancedAnalyticsPage() {
     try {
       const response = await apiRequest('/api/advanced-analytics/export', {
         method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
         body: JSON.stringify({
           timeRange: selectedTimeRange[0],
           includeHeatmap: true,

@@ -107,7 +107,11 @@ export default function NetworkTopologyPage() {
   const setTrustMutation = useMutation({
     mutationFn: ({ deviceId, trustLevel }: { deviceId: string; trustLevel: string }) =>
       apiRequest(`/api/ml/device-trust?device_id=${deviceId}&trust_level=${trustLevel}`, {
-        method: 'POST'
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({})
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/ml/network-topology'] });
@@ -245,7 +249,7 @@ export default function NetworkTopologyPage() {
   };
 
   // Get unique device types and trust levels for filters
-  const deviceTypes = [...new Set(topology?.devices.map(d => d.device_type) || [])];
+  const deviceTypes = Array.from(new Set(topology?.devices.map(d => d.device_type) || []));
   const trustLevels = ['trusted', 'guest', 'suspicious', 'unknown'];
 
   if (isLoading) {
