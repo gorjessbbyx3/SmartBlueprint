@@ -38,7 +38,23 @@ export const getQueryFn: <T>(options: {
     }
 
     await throwIfResNotOk(res);
-    return await res.json();
+    const data = await res.json();
+    
+    // Extract data from wrapper objects for specific endpoints
+    if (queryKey[0] === "/api/devices" && data.devices) {
+      return data.devices;
+    }
+    if (queryKey[0] === "/api/recommendations" && data.recommendations) {
+      return data.recommendations;
+    }
+    if (queryKey[0] === "/api/anomalies" && data.anomalies) {
+      return data.anomalies;
+    }
+    if (queryKey[0] === "/api/floorplans" && data.floorplans) {
+      return data.floorplans;
+    }
+    
+    return data;
   };
 
 export const queryClient = new QueryClient({

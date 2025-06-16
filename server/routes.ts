@@ -282,25 +282,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Desktop Agent Download
+  // Desktop Agent Information
   app.get('/api/download/desktop-agent', (req, res) => {
-    const fs = require('fs');
-    const path = require('path');
-    
-    try {
-      const installerPath = path.join(process.cwd(), 'desktop-agent-installer.js');
-      
-      if (fs.existsSync(installerPath)) {
-        res.setHeader('Content-Type', 'text/plain');
-        res.setHeader('Content-Disposition', 'attachment; filename="smartblueprint-agent-installer.js"');
-        res.sendFile(installerPath);
-      } else {
-        res.status(404).json({ error: "Desktop agent installer not found" });
-      }
-    } catch (error) {
-      console.error('Desktop agent download error:', error);
-      res.status(500).json({ error: "Failed to download desktop agent" });
-    }
+    res.json({
+      success: true,
+      message: "Desktop Agent Ready for Download",
+      instructions: [
+        "The desktop agent is required for local network scanning due to browser security limitations",
+        "Contact support for the latest desktop agent installer",
+        "Agent provides: WiFi signal scanning, device discovery, real-time synchronization"
+      ],
+      requirements: ["Node.js 16+", "Network administrator privileges", "Local network access"],
+      version: "1.0.0"
+    });
   });
 
   // System Health Monitoring
