@@ -126,11 +126,7 @@ export default function Dashboard() {
                     <span className="text-gray-600">{warningDevices} Warning</span>
                   </div>
                 </div>
-                {!isMobile && (
-                  <button className="px-3 py-1.5 bg-blue-600 text-white rounded text-sm font-medium hover:bg-blue-700 touch-friendly">
-                    Save
-                  </button>
-                )}
+                
               </div>
             </div>
           </div>
@@ -168,8 +164,11 @@ export default function Dashboard() {
                     try {
                       console.log("Saving floor plan elements:", elements);
                       
+                      // Extract room elements and create room records
+                      const roomElements = elements.filter(el => el.type === 'room');
+                      
                       // Save sketch elements to the floorplan
-                      const response = await fetch(`/api/floorplans/${floorplan?.id || 1}`, {
+                      const floorplanResponse = await fetch(`/api/floorplans/${floorplan?.id || 1}`, {
                         method: 'PUT',
                         headers: {
                           'Content-Type': 'application/json',
@@ -182,18 +181,47 @@ export default function Dashboard() {
                         })
                       });
 
-                      if (response.ok) {
-                        toast({
-                          title: "Floor plan saved",
-                          description: "Your sketch has been saved successfully",
-                        });
-                        
-                        // Refresh floorplan data
-                        queryClient.invalidateQueries({ queryKey: ['/api/floorplans/1'] });
-                      } else {
+                      if (!floorplanResponse.ok) {
                         throw new Error('Failed to save floor plan');
                       }
+
+                      // Clear existing rooms and create new ones from sketch
+                      if (roomElements.length > 0) {
+                        // Delete all existing rooms first
+                        await fetch('/api/rooms/clear', {
+                          method: 'DELETE'
+                        });
+                        
+                        // Create new room records from sketch elements
+                        for (let i = 0; i < roomElements.length; i++) {
+                          const roomElement = roomElements[i];
+                          await fetch('/api/rooms', {
+                            method: 'POST',
+                            headers: {
+                              'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify({
+                              name: `Room ${i + 1}`,
+                              floorplanId: floorplan?.id || 1,
+                              boundaries: JSON.stringify(roomElement.points),
+                              roomType: 'Living Room', // Default room type
+                              detectedAutomatically: false
+                            })
+                          });
+                        }
+                      }
+
+                      toast({
+                        title: "Floor plan saved",
+                        description: `Saved ${elements.length} elements and ${roomElements.length} rooms`,
+                      });
+                      
+                      // Refresh both floorplan and rooms data
+                      queryClient.invalidateQueries({ queryKey: ['/api/floorplans/1'] });
+                      queryClient.invalidateQueries({ queryKey: ['/api/rooms'] });
+                      
                     } catch (error) {
+                      console.error("Save error:", error);
                       toast({
                         title: "Save failed",
                         description: "Could not save your floor plan sketch",

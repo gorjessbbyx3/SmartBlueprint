@@ -205,6 +205,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.delete("/api/rooms/clear", async (req, res) => {
+    try {
+      await storage.deleteAllRooms();
+      res.json({ message: "All rooms cleared successfully" });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to clear rooms" });
+    }
+  });
+
   // Recommendation routes
   app.get("/api/recommendations", async (req, res) => {
     try {
