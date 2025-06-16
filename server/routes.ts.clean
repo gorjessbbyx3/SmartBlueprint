@@ -7,7 +7,7 @@ import { devices, floorplans, anomalies, recommendations } from "../shared/schem
 import { z } from "zod";
 import { aiAgentBackend } from "./ai-agent-backend.js";
 import { cloudSyncTunnel } from "./cloud-sync-tunnel.js";
-import { networkScanner } from "./device-scanner.js";
+import { deviceScanner } from "./device-scanner.js";
 import { monitoringService } from "./monitoring-service.js";
 import { advancedSignalProcessor } from "./advanced-signal-processing.js";
 import { AdvancedLocationEngine, LSTMAnomalyDetector, IsolationForestDetector } from "./advanced-ml-models.js";
@@ -52,7 +52,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           case 'scan_request':
             // Trigger device scanning
             try {
-              const devices = await networkScanner.startScan();
+              const devices = await deviceScanner.scanDevices();
               ws.send(JSON.stringify({
                 type: 'scan_result',
                 devices: devices
@@ -95,7 +95,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/devices", async (req: Request, res: Response) => {
     try {
       const deviceData = insertDeviceSchema.parse(req.body);
-      const newDevice = await storage.createDevice(deviceData);
+      const newDevice = await storage.addDevice(deviceData);
       
       // Broadcast new device to WebSocket clients
       wss.clients.forEach((client) => {
@@ -181,7 +181,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Device scanning
   app.post("/api/devices/scan", async (req: Request, res: Response) => {
     try {
-      const devices = await networkScanner.startScan();
+      const devices = await deviceScanner.scanDevices();
       res.json({
         success: true,
         devices: devices,
@@ -216,7 +216,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/floorplans", async (req: Request, res: Response) => {
     try {
       const floorplanData = insertFloorplanSchema.parse(req.body);
-      const newFloorplan = await storage.createFloorplan(floorplanData);
+      const newFloorplan = await storage.addFloorplan(floorplanData);
       
       res.json({
         success: true,
