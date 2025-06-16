@@ -8,34 +8,45 @@ const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
-// Serve enhanced desktop agent directly - place before other middleware
+// Serve enhanced desktop agent installer with proper binary distribution
 app.get('/download/desktop-agent-enhanced.js', (req: Request, res: Response) => {
-  console.log('[Download] Desktop agent download requested');
+  console.log('[Download] Enhanced installer download requested');
   
   try {
-    const agentPath = path.join(process.cwd(), 'desktop-agent-enhanced.js');
-    console.log('[Download] Looking for agent at:', agentPath);
+    const installerPath = path.join(process.cwd(), 'enhanced-agent-installer.js');
     
-    if (fs.existsSync(agentPath)) {
-      console.log('[Download] Enhanced agent file found');
-      
-      // Use res.download() for proper file serving
-      res.download(agentPath, 'smartblueprint-agent-enhanced.js', (err) => {
+    if (fs.existsSync(installerPath)) {
+      res.download(installerPath, 'smartblueprint-installer.js', (err) => {
         if (err) {
-          console.error('[Download] Download failed:', err);
+          console.error('[Download] Installer download failed:', err);
           if (!res.headersSent) {
             res.status(500).send('Download failed');
           }
         } else {
-          console.log('[Download] Enhanced desktop agent downloaded successfully');
+          console.log('[Download] Enhanced installer downloaded successfully');
         }
       });
     } else {
-      console.log('[Download] Enhanced agent file not found at:', agentPath);
-      res.status(404).send('Enhanced desktop agent not found');
+      console.log('[Download] Enhanced installer not found, serving direct agent');
+      const agentPath = path.join(process.cwd(), 'desktop-agent-enhanced.js');
+      
+      if (fs.existsSync(agentPath)) {
+        res.download(agentPath, 'smartblueprint-agent-enhanced.js', (err) => {
+          if (err) {
+            console.error('[Download] Agent download failed:', err);
+            if (!res.headersSent) {
+              res.status(500).send('Download failed');
+            }
+          } else {
+            console.log('[Download] Enhanced agent downloaded successfully');
+          }
+        });
+      } else {
+        res.status(404).send('Agent files not found');
+      }
     }
   } catch (error) {
-    console.error('[Download] Failed to serve enhanced desktop agent:', error);
+    console.error('[Download] Failed to serve files:', error);
     res.status(500).send('Download failed');
   }
 });
