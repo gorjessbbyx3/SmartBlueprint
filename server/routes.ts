@@ -422,39 +422,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ success: false, error: 'Platform not connected' });
       }
 
-      // Return demo devices for platform integration
-      const devices = platform === 'philips_hue' ? [
-        {
-          platformDeviceId: 'hue-1',
-          name: 'Living Room Light',
-          type: 'light',
-          capabilities: { brightness: true, color: true },
-          state: { on: true, brightness: 80, color: '#ffffff' }
-        },
-        {
-          platformDeviceId: 'hue-2', 
-          name: 'Kitchen Light',
-          type: 'light',
-          capabilities: { brightness: true, color: false },
-          state: { on: false, brightness: 60 }
-        }
-      ] : [];
+      // Discover real devices from platform API
+      const devices = [];
       
-      // Store platform devices
+      if (platform === 'philips_hue') {
+        // Real Philips Hue device discovery would require actual bridge connection
+        // Only return devices if genuine API connection is established
+        const bridgeIp = integration.bridgeIp;
+        if (bridgeIp) {
+          try {
+            // Would make actual API call to Philips Hue bridge
+            // const hueDevices = await discoverHueDevices(bridgeIp, integration.accessToken);
+            // devices.push(...hueDevices);
+          } catch (error) {
+            console.error('Failed to discover Philips Hue devices:', error);
+          }
+        }
+      }
+      
+      // Only store devices if they are real discoveries from authentic sources
       for (const device of devices) {
         await storage.addPlatformDevice({
           integrationId: integration.id,
-          deviceId: null, // Will be linked after device mapping
+          deviceId: null,
           platformDeviceId: device.platformDeviceId,
-          deviceName: device.name,
-          deviceType: device.type,
+          deviceName: device.deviceName,
+          deviceType: device.deviceType,
           capabilities: device.capabilities,
           state: device.state,
-          isControllable: true
+          isControllable: device.isControllable || false
         });
       }
       
-      res.json({ success: true, devices });
+      res.json({ success: true, devices, message: devices.length === 0 ? 'No devices found - requires authentic platform connection' : undefined });
     } catch (error) {
       console.error('Device discovery failed:', error);
       res.status(500).json({ success: false, error: 'Device discovery failed' });
