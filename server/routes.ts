@@ -431,7 +431,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         deviceId, 
         command, 
         integration.accessToken,
-        integration.bridgeIp
+        integration.bridgeIp || undefined
       );
       
       if (success) {
