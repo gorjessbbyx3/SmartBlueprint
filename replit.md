@@ -235,6 +235,33 @@ This is a full-stack web application for smart home device mapping and network o
 | 📶 **Smart Devices**             | Controlled/discovered by agent; data syncs with cloud                    | ✓ Integrated |
 | 🔁 **Cloud Sync Tunnel**         | WebSocket/HTTPS tunnel connecting agent to cloud                         | ✓ Active |
 
+### Why Desktop Agent is Required (Browser Security Limitations)
+
+**Browser Security Restrictions:**
+- WiFi signal strength (RSSI) access blocked
+- Network interfaces sandboxed (no packet sniffing)
+- MAC addresses / IP neighbors inaccessible  
+- File system and OS-level resources restricted
+- Local device discovery prohibited for security
+
+**Agent-Only Capabilities:**
+
+| Feature | Requires Agent | Technical Reason |
+|---------|----------------|------------------|
+| WiFi Signal Scanning | ✅ | Uses platform CLI tools (nmcli, netsh wlan, iwlist) |
+| ARP/Ping Scanning | ✅ | Raw sockets and broadcast scans blocked in browsers |
+| MQTT Connectivity 24/7 | ✅ | Requires persistent background process |
+| Smart Device Discovery | ✅ | Needs system-level UDP listeners (mDNS, SSDP) |
+| Local AI Anomaly Detection | ✅ | Requires persistent state and direct telemetry access |
+| Network Topology Mapping | ✅ | Browser cannot access gateway ARP tables |
+| Secure Router Pairing | ✅ | Needs OS-level routing and DHCP query access |
+
+**Architecture Analogy:**
+- **Web App** = Command center (UI/control, dashboards, visualization)
+- **Local Agent** = Field technician (scanner, messenger, watchdog)
+- **MQTT** = Communication layer (walkie-talkie between components)
+- **Smart Devices** = Workers (respond to commands, provide telemetry)
+
 ### Meta-AI Monitoring System - ACTIVE ✓
 **Self-Healing AI Infrastructure:**
 1. **Meta-AI Monitor** - Oversees all 7 AI systems, detects issues, generates fixes
