@@ -197,6 +197,33 @@ export default function Sidebar({
             {/* Device Discovery */}
             <DeviceDiscovery />
 
+            {/* Enhanced Device Discovery Navigation */}
+            <Card>
+              <CardContent className="p-4">
+                <h3 className="text-sm font-semibold text-gray-900 mb-3 flex items-center">
+                  <i className="fas fa-wifi mr-2 text-primary"></i>
+                  Direct WiFi Discovery
+                </h3>
+                <div className="space-y-2">
+                  <Button 
+                    variant="outline" 
+                    className="w-full text-xs"
+                    onClick={() => window.open('/device-discovery', '_blank')}
+                  >
+                    <i className="fas fa-search mr-2"></i>
+                    Discover All Devices
+                  </Button>
+                  <div className="text-xs text-gray-500 bg-gray-50 p-2 rounded">
+                    <div className="mb-1 font-medium">Finds:</div>
+                    <div>• Printers (HP, Canon, Epson)</div>
+                    <div>• Game consoles (Xbox, PlayStation)</div>
+                    <div>• Smart TVs & media devices</div>
+                    <div>• Network equipment & NAS</div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
             {/* Discovered Devices */}
             <Card>
               <CardContent className="p-4">
