@@ -1620,6 +1620,76 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // System Health Monitoring
+  app.get('/api/system/health', async (req, res) => {
+    try {
+      const devices = await storage.getDevices();
+      const agentStatus = aiAgentBackend.getAgentStatus();
+      const connectedAgents = cloudSyncTunnel.getConnectedAgents();
+      
+      // Calculate AI agents health
+      const totalAgents = agentStatus.length;
+      const activeAgents = agentStatus.filter(agent => agent.status === 'active').length;
+      const aiAgentsStatus = activeAgents === totalAgents ? 'healthy' : 
+                           activeAgents > 0 ? 'warning' : 'critical';
+
+      // Calculate network scanning health
+      const networkScanningActive = connectedAgents.length > 0;
+      const networkScanningStatus = networkScanningActive ? 'healthy' : 'warning';
+      
+      // Calculate data integrity health
+      const totalRecords = devices.length;
+      const validRecords = devices.filter(d => d.macAddress && d.deviceType).length;
+      const dataIntegrityRatio = totalRecords > 0 ? validRecords / totalRecords : 1;
+      const dataIntegrityStatus = dataIntegrityRatio >= 0.95 ? 'healthy' : 
+                                 dataIntegrityRatio >= 0.8 ? 'warning' : 'critical';
+
+      // Calculate cloud tunnel health
+      const cloudTunnelConnected = connectedAgents.length > 0;
+      const cloudTunnelStatus = cloudTunnelConnected ? 'healthy' : 'warning';
+
+      const healthData = {
+        aiAgents: {
+          totalAgents,
+          activeAgents,
+          lastUpdate: new Date().toLocaleTimeString(),
+          status: aiAgentsStatus
+        },
+        networkScanning: {
+          isActive: networkScanningActive,
+          lastScan: networkScanningActive ? new Date().toLocaleTimeString() : 'No desktop agent connected',
+          devicesFound: devices.length,
+          status: networkScanningStatus
+        },
+        dataIntegrity: {
+          validRecords,
+          totalRecords,
+          lastValidation: new Date().toLocaleTimeString(),
+          status: dataIntegrityStatus
+        },
+        cloudTunnel: {
+          isConnected: cloudTunnelConnected,
+          agentsConnected: connectedAgents.length,
+          lastHeartbeat: cloudTunnelConnected ? new Date().toLocaleTimeString() : 'No agents connected',
+          status: cloudTunnelStatus
+        }
+      };
+
+      res.json({
+        success: true,
+        message: 'System health retrieved successfully',
+        data: healthData
+      });
+    } catch (error) {
+      console.error('System health check failed:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to retrieve system health',
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
   // Monitoring service available but not auto-started
   // Users must manually start monitoring after setting up their floor plan and devices
 

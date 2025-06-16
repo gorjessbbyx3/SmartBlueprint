@@ -161,37 +161,24 @@ export default function Sidebar({
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
         {activeTab === "mapping" && (
           <>
-            {/* Blueprint Section */}
+            {/* Download Desktop Agent */}
             <Card>
               <CardContent className="p-4">
                 <h3 className="text-sm font-semibold text-gray-900 mb-3 flex items-center">
-                  <i className="fas fa-home mr-2 text-primary"></i>
-                  Blueprint Setup
+                  <i className="fas fa-download mr-2 text-primary"></i>
+                  Desktop Agent Required
                 </h3>
                 <div className="space-y-3">
-                  <div>
-                    <input
-                      type="file"
-                      id="blueprint-upload"
-                      className="hidden"
-                      accept=".pdf,.png,.jpg,.jpeg,.svg"
-                      onChange={handleFileUpload}
-                    />
-                    <Button
-                      className="w-full"
-                      onClick={() => document.getElementById("blueprint-upload")?.click()}
-                      disabled={uploadingBlueprint}
-                    >
-                      <i className="fas fa-upload mr-2"></i>
-                      {uploadingBlueprint ? "Uploading..." : "Upload Floorplan"}
-                    </Button>
-                  </div>
-                  <Button variant="outline" className="w-full">
-                    <i className="fas fa-pencil-alt mr-2"></i>Sketch New Plan
+                  <p className="text-xs text-gray-600">
+                    Network scanning requires the desktop agent for WiFi signal access, device discovery, and real-time monitoring.
+                  </p>
+                  <Button className="w-full">
+                    <i className="fas fa-download mr-2"></i>
+                    Download Desktop Agent
                   </Button>
-                  <div className="text-xs text-gray-500 bg-gray-50 p-2 rounded">
+                  <div className="text-xs text-amber-600 bg-amber-50 p-2 rounded">
                     <i className="fas fa-info-circle mr-1"></i>
-                    Supports: PDF, PNG, JPG, SVG
+                    Browser security prevents direct network access
                   </div>
                 </div>
               </CardContent>

@@ -1,5 +1,8 @@
 import { AIInsightsDashboard } from '@/components/ai-insights-dashboard';
+import { SystemHealthMonitor } from '@/components/system-health-monitor';
+import { NetworkDiagnosticTool } from '@/components/network-diagnostic-tool';
 import { Button } from '@/components/ui/button';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ArrowLeft, Home } from 'lucide-react';
 import { Link } from 'wouter';
 
@@ -32,7 +35,25 @@ export default function AIInsights() {
           </div>
         </div>
         
-        <AIInsightsDashboard />
+        <Tabs defaultValue="insights" className="space-y-6">
+          <TabsList className="grid w-full grid-cols-3">
+            <TabsTrigger value="insights">AI Insights</TabsTrigger>
+            <TabsTrigger value="health">System Health</TabsTrigger>
+            <TabsTrigger value="diagnostics">Network Diagnostics</TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="insights">
+            <AIInsightsDashboard />
+          </TabsContent>
+          
+          <TabsContent value="health">
+            <SystemHealthMonitor />
+          </TabsContent>
+          
+          <TabsContent value="diagnostics">
+            <NetworkDiagnosticTool />
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   );
