@@ -268,7 +268,31 @@ class SignalPredictionAgent extends AIAgent {
     this.lastProcessed = new Date();
     
     for (const device of context.devices) {
-      // Track signal history
+      // Use ML-based RSSI anomaly detection
+      const mlPrediction = mlAnomalyDetection.detectRSSIAnomaly(
+        device.id,
+        device.macAddress,
+        device.rssi,
+        new Date()
+      );
+      
+      if (mlPrediction.isAnomaly && mlPrediction.confidence > 0.7) {
+        const insight: Omit<AgentInsight, 'timestamp'> = {
+          type: 'prediction',
+          severity: mlPrediction.confidence > 0.9 ? 'high' : 'medium',
+          title: 'ML-Detected Signal Anomaly',
+          description: `${device.name} shows anomalous RSSI pattern (score: ${mlPrediction.anomalyScore.toFixed(3)})`,
+          actionable: true,
+          action: 'Investigate signal interference or device positioning',
+          confidence: mlPrediction.confidence,
+          deviceId: device.id
+        };
+        
+        this.addInsight(insight);
+        console.log(`[ML Signal Prediction] Anomaly detected for ${device.name}: ${mlPrediction.anomalyScore}`);
+      }
+      
+      // Track signal history for trend analysis
       if (!this.signalHistory.has(device.id)) {
         this.signalHistory.set(device.id, []);
       }
@@ -276,30 +300,8 @@ class SignalPredictionAgent extends AIAgent {
       const history = this.signalHistory.get(device.id)!;
       history.push(device.rssi);
       
-      // Keep only last 100 readings
       if (history.length > 100) {
         history.shift();
-      }
-      
-      // Analyze signal trends if we have enough data
-      if (history.length >= 10) {
-        const trend = this.calculateSignalTrend(history);
-        
-        if (trend.direction === 'declining' && trend.strength > 0.7) {
-          const insight: Omit<AgentInsight, 'timestamp'> = {
-            type: 'prediction',
-            severity: 'medium',
-            title: 'Signal Degradation Predicted',
-            description: `${device.name} signal strength is declining (trend: ${trend.strength.toFixed(2)})`,
-            actionable: true,
-            action: 'Check for interference or consider repositioning device',
-            confidence: trend.strength,
-            deviceId: device.id
-          };
-          
-          this.addInsight(insight);
-          console.log(`[Signal Prediction] Signal degradation predicted for ${device.name}`);
-        }
       }
     }
   }

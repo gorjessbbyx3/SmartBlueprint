@@ -15,7 +15,8 @@ import { NetworkDeviceDiscovery } from "./network-device-discovery";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useAIActions } from "@/hooks/use-ai-actions";
-import { Brain, Home, Zap, TrendingUp, Activity, AlertTriangle, Pen, Wifi, MapPin } from "lucide-react";
+import { Brain, Home, Zap, TrendingUp, Activity, AlertTriangle, Pen, Wifi, MapPin, ExternalLink } from "lucide-react";
+import { Link } from "wouter";
 
 interface SidebarProps {
   activeTab: "mapping" | "analytics" | "sketch";
@@ -143,6 +144,17 @@ export default function Sidebar({
           <TrendingUp className="w-4 h-4 mx-auto mb-1" />
           <span className="block text-xs">Analytics</span>
         </button>
+      </div>
+
+      {/* AI Insights Quick Access */}
+      <div className="p-4 border-b border-gray-200">
+        <Link href="/ai-insights">
+          <Button variant="outline" className="w-full justify-start" size="sm">
+            <Brain className="w-4 h-4 mr-2" />
+            AI Insights Dashboard
+            <ExternalLink className="w-3 h-3 ml-auto" />
+          </Button>
+        </Link>
       </div>
 
       {/* Content */}
