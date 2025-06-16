@@ -7,7 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { 
   Play, 
-  Stop, 
+  Square, 
   RefreshCw, 
   Wifi, 
   Network, 
@@ -221,7 +221,7 @@ export function NetworkDiagnosticTool() {
                   variant="outline"
                   size="sm"
                 >
-                  <Stop className="h-4 w-4 mr-2" />
+                  <Square className="h-4 w-4 mr-2" />
                   Stop
                 </Button>
               )}

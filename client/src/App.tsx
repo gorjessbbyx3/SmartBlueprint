@@ -71,7 +71,7 @@ class ErrorBoundary extends Component<
 function Router() {
   return (
     <Switch>
-      <Route path="/" component={SimpleDashboard} />
+      <Route path="/" component={Dashboard} />
       <Route path="/ai-insights" component={AIInsights} />
       <Route path="/terms" component={TermsOfService} />
       <Route path="/privacy" component={PrivacyPolicy} />
