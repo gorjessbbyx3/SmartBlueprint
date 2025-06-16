@@ -17,6 +17,8 @@ import { activePingProbing } from "./active-ping-probing.js";
 import type { PingMeasurement, ProbeData, CalibrationPoint } from "./active-ping-probing.js";
 import { petRecognitionAI } from "./pet-recognition-ai.js";
 import type { PetDetection, PetDevice, PetBehaviorPattern } from "./pet-recognition-ai.js";
+import { predictiveMaintenanceAI } from "./predictive-maintenance-ai.js";
+import type { FailurePrediction, MaintenanceSchedule, DeviceHealthMetrics } from "./predictive-maintenance-ai.js";
 
 const insertDeviceSchema = createInsertSchema(devices);
 const insertFloorplanSchema = createInsertSchema(floorplans);
@@ -1221,6 +1223,220 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({
         success: false,
         error: 'Failed to update pet detection'
+      });
+    }
+  });
+
+  // Predictive Maintenance API Endpoints
+  app.get('/api/maintenance/predictions', async (req: Request, res: Response) => {
+    try {
+      const predictions = await predictiveMaintenanceAI.getFailurePredictions();
+      
+      res.json({
+        success: true,
+        predictions,
+        count: predictions.length,
+        timestamp: new Date()
+      });
+    } catch (error) {
+      console.error('[Predictive Maintenance] Failed to get predictions:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Failed to retrieve failure predictions'
+      });
+    }
+  });
+
+  app.get('/api/maintenance/schedule', async (req: Request, res: Response) => {
+    try {
+      const schedule = await predictiveMaintenanceAI.getMaintenanceSchedule();
+      
+      res.json({
+        success: true,
+        schedule,
+        count: schedule.length,
+        timestamp: new Date()
+      });
+    } catch (error) {
+      console.error('[Predictive Maintenance] Failed to get schedule:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Failed to retrieve maintenance schedule'
+      });
+    }
+  });
+
+  app.post('/api/maintenance/analyze/:deviceId', async (req: Request, res: Response) => {
+    try {
+      const { deviceId } = req.params;
+      const { telemetryData } = req.body;
+      
+      if (!telemetryData) {
+        return res.status(400).json({
+          success: false,
+          error: 'Telemetry data is required for analysis'
+        });
+      }
+
+      const healthMetrics = await predictiveMaintenanceAI.analyzeDeviceHealth(deviceId, telemetryData);
+      
+      res.json({
+        success: true,
+        deviceId,
+        healthMetrics,
+        timestamp: new Date()
+      });
+    } catch (error) {
+      console.error('[Predictive Maintenance] Analysis failed:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Failed to analyze device health',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  app.get('/api/maintenance/device/:deviceId/health', async (req: Request, res: Response) => {
+    try {
+      const { deviceId } = req.params;
+      const healthStatus = await predictiveMaintenanceAI.getDeviceHealthStatus(deviceId);
+      
+      if (!healthStatus) {
+        return res.status(404).json({
+          success: false,
+          error: 'No health data found for device'
+        });
+      }
+      
+      res.json({
+        success: true,
+        deviceId,
+        healthStatus,
+        timestamp: new Date()
+      });
+    } catch (error) {
+      console.error('[Predictive Maintenance] Failed to get device health:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Failed to retrieve device health status'
+      });
+    }
+  });
+
+  app.get('/api/maintenance/device/:deviceId/trends/:timeframe', async (req: Request, res: Response) => {
+    try {
+      const { deviceId, timeframe } = req.params;
+      
+      if (!['24h', '7d', '30d', '90d'].includes(timeframe)) {
+        return res.status(400).json({
+          success: false,
+          error: 'Invalid timeframe. Use: 24h, 7d, 30d, or 90d'
+        });
+      }
+
+      const trends = await predictiveMaintenanceAI.getPerformanceTrend(
+        deviceId, 
+        timeframe as '24h' | '7d' | '30d' | '90d'
+      );
+      
+      res.json({
+        success: true,
+        deviceId,
+        timeframe,
+        trends,
+        timestamp: new Date()
+      });
+    } catch (error) {
+      console.error('[Predictive Maintenance] Failed to get trends:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Failed to retrieve performance trends'
+      });
+    }
+  });
+
+  app.get('/api/maintenance/device/:deviceId/cost-analysis', async (req: Request, res: Response) => {
+    try {
+      const { deviceId } = req.params;
+      const costAnalysis = await predictiveMaintenanceAI.getCostAnalysis(deviceId);
+      
+      res.json({
+        success: true,
+        deviceId,
+        costAnalysis,
+        timestamp: new Date()
+      });
+    } catch (error) {
+      console.error('[Predictive Maintenance] Failed to get cost analysis:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Failed to retrieve cost analysis'
+      });
+    }
+  });
+
+  app.patch('/api/maintenance/schedule/:scheduleId', async (req: Request, res: Response) => {
+    try {
+      const { scheduleId } = req.params;
+      const { status, notes } = req.body;
+      
+      if (!status) {
+        return res.status(400).json({
+          success: false,
+          error: 'Status is required'
+        });
+      }
+
+      await predictiveMaintenanceAI.updateMaintenanceStatus(scheduleId, status, notes);
+      
+      res.json({
+        success: true,
+        message: 'Maintenance status updated',
+        scheduleId,
+        status,
+        timestamp: new Date()
+      });
+    } catch (error) {
+      console.error('[Predictive Maintenance] Status update failed:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Failed to update maintenance status'
+      });
+    }
+  });
+
+  app.post('/api/maintenance/emergency/:deviceId', async (req: Request, res: Response) => {
+    try {
+      const { deviceId } = req.params;
+      const { reason, urgency } = req.body;
+      
+      // Simulate emergency maintenance scheduling
+      const emergencySchedule = {
+        scheduleId: `emergency_${deviceId}_${Date.now()}`,
+        deviceId,
+        deviceName: `Device ${deviceId}`,
+        maintenanceType: 'emergency',
+        scheduledDate: new Date(Date.now() + 2 * 60 * 60 * 1000), // 2 hours from now
+        estimatedDuration: 180,
+        priority: 'critical',
+        description: `Emergency maintenance: ${reason || 'Critical failure risk detected'}`,
+        requiredParts: ['emergency_kit'],
+        estimatedCost: 200,
+        status: 'scheduled',
+        notes: `Urgency level: ${urgency || 10}/10`
+      };
+      
+      res.json({
+        success: true,
+        message: 'Emergency maintenance scheduled',
+        schedule: emergencySchedule,
+        timestamp: new Date()
+      });
+    } catch (error) {
+      console.error('[Predictive Maintenance] Emergency scheduling failed:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Failed to schedule emergency maintenance'
       });
     }
   });
