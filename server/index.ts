@@ -8,6 +8,13 @@ const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
+// Priority API route handler to prevent Vite middleware interference
+app.use('/api/*', (req, res, next) => {
+  // Mark this as an API request to prevent HTML responses
+  req.isApiRequest = true;
+  next();
+});
+
 // Serve enhanced desktop agent installer with proper binary distribution
 app.get('/download/desktop-agent-enhanced.js', (req: Request, res: Response) => {
   console.log('[Download] Enhanced installer download requested');

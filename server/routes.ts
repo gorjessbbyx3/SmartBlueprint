@@ -904,6 +904,165 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Network Device Discovery Scan Endpoint
+  app.post('/api/network-device-discovery/scan', async (req: Request, res: Response) => {
+    try {
+      const { userConsent, scanIntensive, includeVendorLookup } = req.body;
+      
+      if (!userConsent) {
+        return res.status(400).json({
+          success: false,
+          error: 'User consent required for network scanning'
+        });
+      }
+
+      console.log('🔍 Starting network device discovery scan...');
+      console.log(`📊 Intensive scan: ${scanIntensive}, Vendor lookup: ${includeVendorLookup}`);
+      
+      // Perform comprehensive network discovery
+      const mdnsServices = await enhancedDeviceTelemetry.discoverMDNSServices();
+      const ssdpDevices = await enhancedDeviceTelemetry.performEnhancedSSDPDiscovery();
+      
+      // Convert discovered devices to standard format
+      const discoveredDevices = [
+        ...mdnsServices.map(service => ({
+          id: `mdns-${service.name}`,
+          deviceName: service.name,
+          hostname: service.host,
+          ip: service.addresses?.[0] || 'unknown',
+          mac: 'unknown',
+          vendor: 'unknown',
+          deviceType: 'network_device',
+          isOnline: true,
+          lastSeen: new Date().toISOString(),
+          protocol: 'mDNS',
+          services: [service.type],
+          port: service.port
+        })),
+        ...ssdpDevices.map(device => ({
+          id: `ssdp-${device.usn}`,
+          deviceName: device.server || 'SSDP Device',
+          hostname: 'unknown',
+          ip: 'unknown',
+          mac: 'unknown',
+          vendor: 'unknown',
+          deviceType: 'upnp_device',
+          isOnline: true,
+          lastSeen: new Date().toISOString(),
+          protocol: 'SSDP',
+          services: [device.st],
+          location: device.location
+        }))
+      ];
+
+      const scanResult = {
+        devices: discoveredDevices,
+        summary: {
+          totalFound: discoveredDevices.length,
+          byProtocol: {
+            mDNS: mdnsServices.length,
+            SSDP: ssdpDevices.length
+          },
+          scanSettings: {
+            intensive: scanIntensive,
+            vendorLookup: includeVendorLookup
+          }
+        },
+        timestamp: new Date().toISOString()
+      };
+
+      console.log(`✅ Network scan complete: ${discoveredDevices.length} devices found`);
+      
+      res.json({
+        success: true,
+        scanResult
+      });
+    } catch (error) {
+      console.error('Network device discovery scan failed:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Failed to perform network device discovery scan',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  // Network scan endpoint (alternative route)
+  app.post('/api/network/scan', async (req: Request, res: Response) => {
+    try {
+      const { userConsent, scanIntensive, includeVendorLookup } = req.body;
+      
+      if (!userConsent) {
+        return res.status(400).json({
+          success: false,
+          error: 'User consent required for network scanning'
+        });
+      }
+
+      console.log('🔍 Starting network scan via /api/network/scan...');
+      
+      // Perform comprehensive network discovery
+      const mdnsServices = await enhancedDeviceTelemetry.discoverMDNSServices();
+      const ssdpDevices = await enhancedDeviceTelemetry.performEnhancedSSDPDiscovery();
+      
+      // Convert discovered devices to standard format
+      const discoveredDevices = [
+        ...mdnsServices.map(service => ({
+          id: `mdns-${service.name}`,
+          deviceName: service.name,
+          hostname: service.host,
+          ip: service.addresses?.[0] || 'unknown',
+          mac: 'unknown',
+          vendor: 'unknown',
+          deviceType: 'network_device',
+          isOnline: true,
+          lastSeen: new Date().toISOString(),
+          protocol: 'mDNS',
+          services: [service.type]
+        })),
+        ...ssdpDevices.map(device => ({
+          id: `ssdp-${device.usn}`,
+          deviceName: device.server || 'SSDP Device',
+          hostname: 'unknown',
+          ip: 'unknown',
+          mac: 'unknown',
+          vendor: 'unknown',
+          deviceType: 'upnp_device',
+          isOnline: true,
+          lastSeen: new Date().toISOString(),
+          protocol: 'SSDP',
+          services: [device.st]
+        }))
+      ];
+
+      const scanResult = {
+        devices: discoveredDevices,
+        summary: {
+          totalFound: discoveredDevices.length,
+          byProtocol: {
+            mDNS: mdnsServices.length,
+            SSDP: ssdpDevices.length
+          }
+        },
+        timestamp: new Date().toISOString()
+      };
+
+      console.log(`✅ Network scan complete: ${discoveredDevices.length} devices found`);
+      
+      res.json({
+        success: true,
+        scanResult
+      });
+    } catch (error) {
+      console.error('Network scan failed:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Failed to perform network scan',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
   // Active Ping/Latency Probing API Endpoints
   
   // Measure ping distance to specific hosts
