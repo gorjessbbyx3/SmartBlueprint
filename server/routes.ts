@@ -423,20 +423,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Discover real devices from platform API
-      const devices = [];
+      const devices: any[] = [];
       
       if (platform === 'philips_hue') {
-        // Real Philips Hue device discovery would require actual bridge connection
+        // Real Philips Hue device discovery requires actual bridge connection
         // Only return devices if genuine API connection is established
         const bridgeIp = integration.bridgeIp;
-        if (bridgeIp) {
+        if (bridgeIp && integration.accessToken) {
           try {
-            // Would make actual API call to Philips Hue bridge
+            // Real API call to Philips Hue bridge would be implemented here
             // const hueDevices = await discoverHueDevices(bridgeIp, integration.accessToken);
             // devices.push(...hueDevices);
+            console.log(`[Platform Integration] Philips Hue bridge at ${bridgeIp} - requires authentic API connection`);
           } catch (error) {
             console.error('Failed to discover Philips Hue devices:', error);
           }
+        } else {
+          console.log('[Platform Integration] Philips Hue requires bridge IP and access token');
         }
       }
       
@@ -454,7 +457,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       
-      res.json({ success: true, devices, message: devices.length === 0 ? 'No devices found - requires authentic platform connection' : undefined });
+      res.json({ 
+        success: true, 
+        devices, 
+        message: devices.length === 0 ? 'No devices found - requires authentic platform API connection' : undefined 
+      });
     } catch (error) {
       console.error('Device discovery failed:', error);
       res.status(500).json({ success: false, error: 'Device discovery failed' });

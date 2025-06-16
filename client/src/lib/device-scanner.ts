@@ -30,61 +30,52 @@ export class DeviceScanner {
     this.scanResults = [];
 
     try {
-      // Simulate device discovery process
-      await this.simulateNetworkScan();
+      // Browser security prevents direct network scanning
+      // Require desktop agent for authentic device discovery
+      await this.requestDesktopAgentScan();
       return this.scanResults;
     } finally {
       this.scanning = false;
     }
   }
 
-  private async simulateNetworkScan(): Promise<void> {
-    // Simulate scanning delay
-    await new Promise(resolve => setTimeout(resolve, 2000));
+  private async requestDesktopAgentScan(): Promise<void> {
+    try {
+      // Call server API which interfaces with desktop agent
+      const response = await fetch('/api/device-discovery/scan', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          protocols: ['mdns', 'ssdp', 'arp'],
+          timeout: 10000
+        })
+      });
 
-    // Simulate discovered devices
-    const mockDevices: ScannedDevice[] = [
-      {
-        name: "Amazon Echo Dot",
-        macAddress: "DD:EE:FF:00:11:22",
-        deviceType: "smart_speaker",
-        protocol: "wifi",
-        rssi: -48,
-        manufacturer: "Amazon",
-        model: "Echo Dot 4th Gen"
-      },
-      {
-        name: "Samsung Smart Fridge",
-        macAddress: "33:44:55:66:77:88",
-        deviceType: "smart_fridge",
-        protocol: "wifi",
-        rssi: -41,
-        manufacturer: "Samsung",
-        model: "RF28T5001SR"
-      },
-      {
-        name: "Ring Video Doorbell",
-        macAddress: "99:AA:BB:CC:DD:EE",
-        deviceType: "doorbell",
-        protocol: "wifi",
-        rssi: -55,
-        manufacturer: "Ring",
-        model: "Video Doorbell Pro"
-      },
-      {
-        name: "TP-Link Smart Plug",
-        macAddress: "FF:EE:DD:CC:BB:AA",
-        deviceType: "smart_plug",
-        protocol: "wifi",
-        rssi: -39,
-        manufacturer: "TP-Link",
-        model: "Kasa HS105"
+      if (!response.ok) {
+        throw new Error('Desktop agent not available - network scanning requires local agent');
       }
-    ];
 
-    // Randomly select 2-4 devices to simulate realistic discovery
-    const numDevices = Math.floor(Math.random() * 3) + 2;
-    this.scanResults = mockDevices.slice(0, numDevices);
+      const data = await response.json();
+      
+      if (data.success && data.devices) {
+        // Only use authentic devices discovered by desktop agent
+        this.scanResults = data.devices.map((device: any) => ({
+          name: device.name,
+          macAddress: device.mac,
+          deviceType: device.deviceType,
+          protocol: device.protocol,
+          rssi: device.rssi || -50,
+          manufacturer: device.vendor,
+          model: device.model
+        }));
+      } else {
+        // No devices found - legitimate empty result
+        this.scanResults = [];
+      }
+    } catch (error) {
+      console.error('Network scan failed:', error);
+      throw new Error('Network scanning requires desktop agent - please run desktop-agent-ping.js');
+    }
   }
 
   isScanning(): boolean {
