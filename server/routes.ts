@@ -21,6 +21,7 @@ import { mlAnalytics } from './ml-analytics';
 import { monitoringService } from './monitoring-service';
 import { networkDiscoveryService } from './network-discovery';
 import { testDeviceDiscovery } from './test-device-discovery';
+import { metaAIMonitor } from './meta-ai-monitor';
 
 const execAsync = promisify(exec);
 
@@ -1347,6 +1348,67 @@ export async function registerRoutes(app: Express): Promise<Server> {
     ws.on('close', () => {
       console.log('WebSocket client disconnected');
     });
+  });
+
+  // Meta-AI Monitor API Endpoints
+  app.get("/api/meta-ai/reports", async (req, res) => {
+    try {
+      const reports = metaAIMonitor.getActiveReports();
+      res.json(reports);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch AI system reports" });
+    }
+  });
+
+  app.get("/api/meta-ai/fixes", async (req, res) => {
+    try {
+      const fixes = metaAIMonitor.getFixQueue();
+      res.json(fixes);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch fix queue" });
+    }
+  });
+
+  app.get("/api/meta-ai/virtual-environment", async (req, res) => {
+    try {
+      const virtualEnv = metaAIMonitor.getVirtualEnvironmentStatus();
+      res.json(virtualEnv);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch virtual environment status" });
+    }
+  });
+
+  app.get("/api/meta-ai/statistics", async (req, res) => {
+    try {
+      const stats = metaAIMonitor.getSystemStatistics();
+      res.json(stats);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch Meta-AI statistics" });
+    }
+  });
+
+  app.post("/api/meta-ai/report-error", async (req, res) => {
+    try {
+      const errorReport = z.object({
+        systemId: z.string(),
+        systemName: z.string(),
+        errorType: z.enum(['restriction', 'error', 'performance', 'data_integrity', 'api_failure']),
+        errorMessage: z.string(),
+        errorContext: z.any().optional(),
+        severity: z.enum(['low', 'medium', 'high', 'critical']).default('medium'),
+        affectedComponents: z.array(z.string())
+      }).parse(req.body);
+
+      const reportId = metaAIMonitor.reportError(errorReport);
+      
+      res.json({
+        success: true,
+        reportId,
+        message: "Error reported to Meta-AI Monitor for automated fixing"
+      });
+    } catch (error) {
+      res.status(400).json({ message: "Invalid error report format" });
+    }
   });
 
   // Monitoring service available but not auto-started
