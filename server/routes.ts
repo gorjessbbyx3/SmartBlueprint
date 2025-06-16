@@ -757,5 +757,67 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Direct WiFi Device Discovery Test Route
+  app.get('/api/devices/discover-direct', async (req: Request, res: Response) => {
+    try {
+      console.log('🔍 Starting comprehensive direct WiFi device discovery...');
+      
+      // Perform mDNS discovery
+      const mdnsServices = await enhancedDeviceTelemetry.discoverMDNSServices();
+      console.log(`📡 Discovered ${mdnsServices.length} mDNS services`);
+      
+      // Perform SSDP discovery
+      const ssdpDevices = await enhancedDeviceTelemetry.performEnhancedSSDPDiscovery();
+      console.log(`📡 Discovered ${ssdpDevices.length} SSDP devices`);
+      
+      // Classify all discovered devices
+      const allDiscovered = [
+        ...mdnsServices.map(service => ({
+          type: 'mDNS',
+          name: service.name,
+          host: service.host,
+          addresses: service.addresses,
+          serviceType: service.type,
+          port: service.port
+        })),
+        ...ssdpDevices.map(device => ({
+          type: 'SSDP',
+          location: device.location,
+          usn: device.usn,
+          st: device.st,
+          server: device.server
+        }))
+      ];
+      
+      res.json({
+        success: true,
+        discovery: {
+          mdns: {
+            count: mdnsServices.length,
+            services: mdnsServices
+          },
+          ssdp: {
+            count: ssdpDevices.length,
+            devices: ssdpDevices
+          },
+          summary: {
+            totalDiscovered: allDiscovered.length,
+            byProtocol: {
+              mDNS: mdnsServices.length,
+              SSDP: ssdpDevices.length
+            }
+          }
+        }
+      });
+    } catch (error) {
+      console.error('Direct device discovery failed:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Failed to discover direct WiFi devices',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
   return httpServer;
 }
