@@ -224,6 +224,58 @@ export default function Sidebar({
               </CardContent>
             </Card>
 
+            {/* Active Ping/Latency Probing */}
+            <Card>
+              <CardContent className="p-4">
+                <h3 className="text-sm font-semibold text-gray-900 mb-3 flex items-center">
+                  <i className="fas fa-satellite-dish mr-2 text-primary"></i>
+                  RTT Distance Measurement
+                </h3>
+                <div className="space-y-2">
+                  <Button 
+                    variant="outline" 
+                    className="w-full text-xs"
+                    onClick={() => window.open('/ping-monitoring', '_blank')}
+                  >
+                    <i className="fas fa-satellite-dish mr-2"></i>
+                    Open Ping Monitor
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    className="w-full text-xs"
+                    onClick={async () => {
+                      try {
+                        const response = await fetch('/api/ping/measure', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ 
+                            hosts: ['192.168.1.1', '192.168.1.254', '192.168.0.1'],
+                            trials: 3
+                          })
+                        });
+                        const data = await response.json();
+                        if (data.success) {
+                          console.log('Ping measurements:', data.measurements);
+                        }
+                      } catch (error) {
+                        console.error('Ping measurement failed:', error);
+                      }
+                    }}
+                  >
+                    <i className="fas fa-play mr-2"></i>
+                    Quick Measure
+                  </Button>
+                  <div className="text-xs text-gray-500 bg-gray-50 p-2 rounded">
+                    <div className="mb-1 font-medium">Features:</div>
+                    <div>• Meter-level accuracy</div>
+                    <div>• RTT-based ranging</div>
+                    <div>• No special hardware</div>
+                    <div>• Works with any AP</div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
             {/* Discovered Devices */}
             <Card>
               <CardContent className="p-4">
