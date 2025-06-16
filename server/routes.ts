@@ -379,13 +379,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
   aiAgentBackend.start();
   
   // WebSocket server setup for real-time updates
-  wss.on('connection', (ws: WebSocket) => {
-    console.log('WebSocket client connected');
+  wss.on('connection', (ws: WebSocket, request) => {
+    console.log('WebSocket client connected from:', request.socket.remoteAddress);
     
     ws.send(JSON.stringify({
       type: 'connection',
-      message: 'Connected to SmartBlueprint Pro'
+      message: 'Connected to SmartBlueprint Pro',
+      timestamp: new Date()
     }));
+    
+    // Send initial device data
+    ws.send(JSON.stringify({
+      type: 'devices_update',
+      data: []
+    }));
+    
+    ws.on('message', (data) => {
+      try {
+        const message = JSON.parse(data.toString());
+        console.log('Received WebSocket message:', message.type);
+        
+        // Handle different message types
+        switch (message.type) {
+          case 'ping':
+            ws.send(JSON.stringify({ type: 'pong', timestamp: new Date() }));
+            break;
+          case 'device_scan_request':
+            // Trigger device scan
+            break;
+          default:
+            console.log('Unknown message type:', message.type);
+        }
+      } catch (error) {
+        console.error('Error parsing WebSocket message:', error);
+      }
+    });
     
     ws.on('close', () => {
       console.log('WebSocket client disconnected');

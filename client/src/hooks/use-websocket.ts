@@ -19,6 +19,7 @@ export function useWebSocket(url: string, options: UseWebSocketOptions = {}) {
     
     const connect = () => {
       try {
+        console.log('Attempting WebSocket connection to:', wsUrl);
         ws.current = new WebSocket(wsUrl);
         
         ws.current.onopen = (event) => {
@@ -53,7 +54,12 @@ export function useWebSocket(url: string, options: UseWebSocketOptions = {}) {
         
         ws.current.onerror = (event) => {
           console.error("WebSocket error:", event);
+          setIsConnected(false);
           options.onError?.(event);
+          
+          // Don't attempt reconnection on 403/400 errors
+          // Just log the error and continue without WebSocket
+          console.warn("WebSocket connection failed - continuing without real-time updates");
         };
       } catch (error) {
         console.error("Failed to create WebSocket connection:", error);

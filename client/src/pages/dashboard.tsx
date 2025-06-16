@@ -52,14 +52,21 @@ export default function Dashboard() {
     queryKey: ["/api/recommendations"],
   });
 
-  // WebSocket connection for real-time updates
-  useWebSocket("/ws", {
+  // WebSocket connection for real-time updates (optional)
+  const { isConnected } = useWebSocket("/ws", {
     onMessage: (event) => {
-      const message = JSON.parse(event.data);
-      if (message.type === "devices_update") {
-        refetchDevices();
+      try {
+        const message = JSON.parse(event.data);
+        if (message.type === "devices_update") {
+          refetchDevices();
+        }
+      } catch (error) {
+        console.warn("Failed to parse WebSocket message:", error);
       }
     },
+    onError: (error) => {
+      console.warn("WebSocket connection failed - app will work without real-time updates");
+    }
   });
 
   const handleDeviceClick = (device: Device) => {
