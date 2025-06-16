@@ -635,6 +635,12 @@ export default function Sidebar({
                 Platform Integrations
               </Button>
             </Link>
+            <Link href="/device-control">
+              <Button variant="ghost" size="sm" className="w-full justify-start text-xs">
+                <Gamepad2 className="w-4 h-4 mr-2" />
+                Device Control
+              </Button>
+            </Link>
           </div>
           <div className="flex justify-between items-center text-xs text-gray-500">
             <a href="/terms" className="hover:text-primary underline">Terms of Service</a>

@@ -1,0 +1,152 @@
+1. Device Discovery & Telemetry Ingestion
+mDNS/SSDP/UPnP Scanning
+
+Use Python packages like zeroconf or netdisco to discover on-local-network devices that speak mDNS/SSDP.
+
+Identify each device’s MAC, IP, model, and any available telemetry API (e.g. Philips Hue HTTP, Samsung SmartThings).
+
+Passive Wi-Fi Sniffing for RSSI/CSI
+
+Put your Wi-Fi NIC in monitor mode (e.g. wlan0mon) and sniff 802.11 beacon/probe-response frames with scapy.
+
+Collect per-frame RSSI or (if your driver supports it) full CSI.
+
+Tag each measurement with the source MAC → now you have a stream of (timestamp, MAC, rssi/CSI[]).
+
+API Polling for Device-Specific Sensors
+
+For devices that expose power draw, light level, temperature, motion events or other status via REST or MQTT, poll at 1-5 Hz and normalize those readings into your sensor stream.
+
+python
+Copy
+Edit
+# Example: discover via zeroconf, then poll HTTP API for a smart bulb
+from zeroconf import Zeroconf, ServiceBrowser
+import requests, threading, time
+
+class BulbListener:
+    def __init__(self):
+        self.devices = {}
+    def remove_service(self, *args): pass
+    def add_service(self, zc, type, name):
+        info = zc.get_service_info(type, name)
+        ip = ".".join(map(str, info.addresses[0]))
+        self.devices[info.properties[b"id"].decode()] = ip
+
+zc = Zeroconf()
+listener = BulbListener()
+ServiceBrowser(zc, "_hue._tcp.local.", listener)
+
+def poll_bulb_metrics():
+    while True:
+        for bulb_id, ip in listener.devices.items():
+            data = requests.get(f"http://{ip}/api/sensor").json()
+            # e.g., data["light_level"], data["power"]
+            ingest_sensor(bulb_id, data)
+        time.sleep(1)
+
+threading.Thread(target=poll_bulb_metrics, daemon=True).start()
+2. Calibration & Fingerprint Database
+User-Guided or Passive Calibration
+
+Guided: user taps each discovered device on a floorplan; record its (x,y).
+
+Passive: walk through rooms holding a BLE beacon (or just your phone), correlate time-synced telemetry/viewer location from your mobile UI to automatically assign devices to rooms.
+
+Build the Fingerprint DB
+
+For each device, record a signature vector:
+
+ini
+Copy
+Edit
+sig = [mean_RSSI, std_RSSI, (optional) CSI_PCs… , sensor_metrics…]
+coord = (x,y)
+Store as JSON for k-NN or regression model training.
+
+3. Spatial Inference Engine
+Feature Vector Assembly
+
+Every 200 ms, collect the latest RSSI/CSI vector from each anchor device and any sensor metrics.
+
+Concatenate into a fixed-length feature:
+
+ini
+Copy
+Edit
+F = [rssi_dev1, ..., rssi_devN, sensor1, ..., sensorM]
+Localization Model
+
+Lightweight k-NN: scikit-learn’s KNeighborsRegressor on your fingerprint DB → returns (x,y).
+
+ML Regressor: train an MLP or tree-based regressor on your collected calibration data.
+
+Bayesian Filter: optionally smooth over time with a Kalman or particle filter.
+
+python
+Copy
+Edit
+# mapping_engine.py
+from sklearn.neighbors import KNeighborsRegressor
+import json, numpy as np
+
+db = json.load(open("fingerprint_db.json"))
+X = [entry["sig"] for entry in db.values()]
+Y = [entry["coord"] for entry in db.values()]
+model = KNeighborsRegressor(3).fit(X, Y)
+
+def infer_position(current_features):
+    return model.predict([current_features])[0].tolist()
+4. AI-Based Anomaly Detection
+Temporal Model:
+
+Stack the last T positions (and optionally sensor anomalies) into a sequence.
+
+Run a small LSTM or 1D-CNN autoencoder to compute a reconstruction error or “anomaly score.”
+
+Rule-Based Alerts:
+
+If anomaly_score > θ OR your ML model flags an outlier → trigger alert.
+
+Fuse with vision (if you have cameras) or device motion sensors for higher confidence.
+
+5. Recommendation Engine
+Coverage Map Generation:
+
+Given device coordinates and an estimated coverage radius (from RSSI path-loss modeling), rasterize a coverage heatmap on your blueprint.
+
+Gap Detection & Candidate Sites:
+
+Identify grid cells under a coverage threshold.
+
+Filter candidate grid cells to those near power outlets or Ethernet jacks.
+
+Optimization:
+
+Solve a small set-cover or genetic-algorithm problem to pick the minimal set of new devices/extenders to place.
+
+python
+Copy
+Edit
+# recommend.py (greedy)
+def suggest_extender(coverage_grid, candidate_sites, k=1):
+    # coverage_grid: dict[(i,j)] -> coverage_score
+    # candidate_sites: list[(x,y)]
+    chosen = []
+    for _ in range(k):
+        # pick site that maximally raises the minimum coverage
+        best = max(candidate_sites, key=lambda s: coverage_with(s, coverage_grid) - coverage_grid_min(coverage_grid))
+        chosen.append(best)
+        apply_coverage(s, coverage_grid)
+    return chosen
+6. System & Deployment Notes
+Edge-Only Inference: run all sniffing, ML models, and recommendation logic on a local hub (Raspberry Pi, Jetson, or mini-PC).
+
+WebSocket API: stream (x,y,anomaly_score) updates to your React dashboard in real time.
+
+Privacy: no raw camera or packet data leaves the hub—only high-level events and anonymized logs.
+
+Scaling: start with 3–5 anchor devices; add more as needed to improve spatial resolution.
+
+Summary
+By treating each smart device as an “anchor” beacon (via RSSI/CSI) plus optional sensor node—and building a feature-to-coordinate regression model—you can seamlessly integrate them into your existing Wi-Fi mapping + AI security pipeline. Calibration, ML inference, and recommendation engines slot in right after your CSI-only pipeline, enriching localization and enabling automated placement guidance.
