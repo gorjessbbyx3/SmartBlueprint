@@ -30,6 +30,9 @@ const execAsync = promisify(exec);
 
 export async function registerRoutes(app: Express): Promise<Server> {
   const httpServer = createServer(app);
+  
+  // WebSocket server for real-time updates
+  const wss = new WebSocketServer({ server: httpServer, path: '/ws' });
 
   // Device routes
   app.get("/api/devices", async (req, res) => {
@@ -369,85 +372,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // WebSocket server for real-time updates
-  const wss = new WebSocketServer({ server: httpServer, path: '/ws' });
-
   // Initialize Cloud Sync Tunnel for desktop agents
   cloudSyncTunnel.initializeAgentTunnel(httpServer);
   
   // Start AI Agent Backend for intelligent monitoring
   aiAgentBackend.start();
   
+  // WebSocket server setup for real-time updates
   wss.on('connection', (ws: WebSocket) => {
     console.log('WebSocket client connected');
     
-    // Send initial data
     ws.send(JSON.stringify({
       type: 'connection',
-      message: 'Connected to SmartMap Pro'
+      message: 'Connected to SmartBlueprint Pro'
     }));
-    
-    // Real-time monitoring of discovered devices
-    const interval = setInterval(async () => {
-      try {
-        const devices = await storage.getDevices();
-        
-        if (devices.length > 0) {
-          // Perform periodic ping checks on discovered devices to update their status
-          for (const device of devices) {
-            try {
-              // Use system ping to check device status
-              const { stdout } = await execAsync(`ping -c 1 -W 1 ${device.macAddress} 2>/dev/null || true`);
-              const isAlive = stdout.includes('1 received') || stdout.includes('1 packets transmitted, 1 received');
-              
-              if (!isAlive && device.isOnline) {
-                // Device went offline
-                await storage.updateDevice(device.id, { isOnline: false });
-                
-                const anomaly = {
-                  deviceId: device.id,
-                  type: "device_offline" as const,
-                  severity: "medium" as const,
-                  description: `${device.name} has gone offline`,
-                };
-                
-                await storage.createAnomaly(anomaly);
-                
-                ws.send(JSON.stringify({
-                  type: 'anomaly',
-                  data: anomaly
-                }));
-              } else if (isAlive && !device.isOnline) {
-                // Device came back online
-                await storage.updateDevice(device.id, { isOnline: true });
-              }
-            } catch (error) {
-              // If we can't ping by MAC, skip this device
-              continue;
-            }
-          }
-          
-          // Send updated device data
-          const updatedDevices = await storage.getDevices();
-          ws.send(JSON.stringify({
-            type: 'devices_update',
-            data: updatedDevices
-          }));
-        }
-        
-      } catch (error) {
-        console.error('Error in WebSocket update:', error);
-      }
-    }, 15000); // Check every 15 seconds
     
     ws.on('close', () => {
       console.log('WebSocket client disconnected');
-      clearInterval(interval);
     });
     
     ws.on('error', (error) => {
       console.error('WebSocket error:', error);
-      clearInterval(interval);
     });
   });
 
