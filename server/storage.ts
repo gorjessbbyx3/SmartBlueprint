@@ -322,6 +322,10 @@ export class MemStorage implements IStorage {
     return this.rooms.delete(id);
   }
 
+  async deleteAllRooms(): Promise<void> {
+    this.rooms.clear();
+  }
+
   // Device telemetry operations
   async getDeviceTelemetry(deviceId: number, limit = 100): Promise<DeviceTelemetry[]> {
     const telemetry = Array.from(this.deviceTelemetry.values())
