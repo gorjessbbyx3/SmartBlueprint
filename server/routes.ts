@@ -1593,66 +1593,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Desktop Agent Download - Simple working version
+  // Desktop Agent Download
   app.get('/api/download/desktop-agent', (req, res) => {
     const fs = require('fs');
     const path = require('path');
     
-    console.log('[Desktop Agent Download] Serving installer file...');
-    
-    const installerPath = path.join(process.cwd(), 'desktop-agent-installer.js');
+    try {
+      const installerPath = path.join(process.cwd(), 'desktop-agent-installer.js');
       
       if (fs.existsSync(installerPath)) {
-        console.log('[Desktop Agent Download] Found installer file on disk');
-        const installerContent = fs.readFileSync(installerPath, 'utf8');
-        
-        res.setHeader('Content-Type', 'application/javascript; charset=utf-8');
+        res.setHeader('Content-Type', 'text/plain');
         res.setHeader('Content-Disposition', 'attachment; filename="smartblueprint-agent-installer.js"');
-        res.setHeader('Cache-Control', 'no-cache');
-        res.send(installerContent);
-        return;
+        res.sendFile(installerPath);
+      } else {
+        res.status(404).json({ error: "Desktop agent installer not found" });
       }
-      
-      // Generate installer content directly
-      const installerContent = `#!/usr/bin/env node
-
-/**
- * SmartBlueprint Pro Desktop Agent Installer
- * Downloads and installs the desktop agent for local network scanning
- */
-
-const fs = require('fs');
-const path = require('path');
-const os = require('os');
-const { execSync } = require('child_process');
-
-const AGENT_VERSION = '1.0.0';
-const INSTALL_DIR = path.join(os.homedir(), '.smartblueprint-agent');
-const CONFIG_FILE = path.join(INSTALL_DIR, 'config.json');
-
-console.log('🔧 SmartBlueprint Pro Desktop Agent Installer');
-console.log('================================================');
-
-async function installAgent() {
-  try {
-    // Create installation directory
-    if (!fs.existsSync(INSTALL_DIR)) {
-      fs.mkdirSync(INSTALL_DIR, { recursive: true });
-      console.log('✓ Created installation directory');
+    } catch (error) {
+      console.error('Desktop agent download error:', error);
+      res.status(500).json({ error: "Failed to download desktop agent" });
     }
+  });
 
-    // Agent script content
-    const agentScript = \`const WebSocket = require('ws');
-const os = require('os');
-const fs = require('fs');
-const path = require('path');
-const { execSync } = require('child_process');
+  // System Health Monitoring
+  app.get('/api/system/health', async (req, res) => {
+    try {
+      const devices = await storage.getDevices();
+      const agentStatus = aiAgentBackend.getAgentStatus();
+      const connectedAgents = cloudSyncTunnel.getConnectedAgents();
+      
+      // Calculate AI agents health
+      const totalAgents = agentStatus.length;
+      const activeAgents = agentStatus.filter(agent => agent.status === 'active').length;
+      const aiAgentsStatus = activeAgents === totalAgents ? 'healthy' : 
+                           activeAgents > 0 ? 'warning' : 'critical';
 
-class DesktopAgent {
-  constructor() {
-    this.config = this.loadConfig();
-    this.ws = null;
-    this.scanning = false;
+      // Calculate network scanning health
+      const networkScanningActive = connectedAgents.length > 0;
     this.devices = new Map();
   }
 
@@ -1840,27 +1816,12 @@ process.on('SIGINT', () => {
 
 // Run installer
 installAgent();
-\`;
+`;
         
-        res.setHeader('Content-Type', 'application/javascript; charset=utf-8');
-        res.setHeader('Content-Disposition', 'attachment; filename="smartblueprint-agent-installer.js"');
-        res.setHeader('Cache-Control', 'no-cache');
-        res.send(installerContent);
-        
-      } else {
-        // Serve the existing installer file if available
-        const fs = require('fs');
-        const path = require('path');
-        const installerPath = path.join(process.cwd(), 'desktop-agent-installer.js');
-        
-        if (fs.existsSync(installerPath)) {
-          res.setHeader('Content-Type', 'text/plain');
-          res.setHeader('Content-Disposition', 'attachment; filename="smartblueprint-agent-installer.js"');
-          res.sendFile(installerPath);
-        } else {
-          res.status(404).json({ message: "Desktop agent installer not found" });
-        }
-      }
+      res.setHeader('Content-Type', 'application/javascript; charset=utf-8');
+      res.setHeader('Content-Disposition', 'attachment; filename="smartblueprint-agent-installer.js"');
+      res.setHeader('Cache-Control', 'no-cache');
+      res.send(installerContent);
       
     } catch (error) {
       console.error('Desktop agent download failed:', error);
