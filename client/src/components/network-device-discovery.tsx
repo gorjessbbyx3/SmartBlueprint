@@ -102,7 +102,7 @@ export function NetworkDeviceDiscovery({ onDevicesDiscovered }: NetworkDeviceDis
   const [scanProgress, setScanProgress] = useState(0);
   const [showRoomAssignment, setShowRoomAssignment] = useState(false);
   const [discoveredDevices, setDiscoveredDevices] = useState<Device[]>([]);
-  const [isTestMode, setIsTestMode] = useState(false);
+  // Removed test mode - data integrity enforcement
   
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -176,14 +176,14 @@ export function NetworkDeviceDiscovery({ onDevicesDiscovered }: NetworkDeviceDis
     }
   });
 
-  // Test device discovery mutation
-  const testScanMutation = useMutation({
+  // Real device discovery - no test mode allowed for data integrity
+  const realScanMutation = useMutation({
     mutationFn: async (scanRequest: {
       userConsent: boolean;
       scanIntensive: boolean;
       includeVendorLookup: boolean;
     }) => {
-      const response = await fetch('/api/network/test-scan', {
+      const response = await fetch('/api/network/scan', {
         method: 'POST',
         body: JSON.stringify(scanRequest),
         headers: {
@@ -192,14 +192,13 @@ export function NetworkDeviceDiscovery({ onDevicesDiscovered }: NetworkDeviceDis
       });
       
       if (!response.ok) {
-        throw new Error(`Test scan failed: ${response.statusText}`);
+        throw new Error(`Network scan failed: ${response.statusText}`);
       }
       
       return response.json();
     },
     onSuccess: (data) => {
       setScanResult(data.scanResult);
-      setIsTestMode(true);
       onDevicesDiscovered?.(data.scanResult.devices);
       
       // Convert network devices to Device format for room assignment
@@ -306,7 +305,7 @@ export function NetworkDeviceDiscovery({ onDevicesDiscovered }: NetworkDeviceDis
       });
     }, 200);
 
-    testScanMutation.mutate({
+    realScanMutation.mutate({
       userConsent,
       scanIntensive,
       includeVendorLookup
