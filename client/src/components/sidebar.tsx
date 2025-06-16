@@ -619,9 +619,23 @@ export default function Sidebar({
         )}
       </div>
 
-      {/* Footer with Legal Links */}
+      {/* Footer with Navigation Links */}
       <div className="border-t border-gray-200 p-4">
-        <div className="space-y-2">
+        <div className="space-y-3">
+          <div className="space-y-2">
+            <Link href="/ai-insights">
+              <Button variant="ghost" size="sm" className="w-full justify-start text-xs">
+                <Brain className="w-4 h-4 mr-2" />
+                AI Insights & Analytics
+              </Button>
+            </Link>
+            <Link href="/platforms">
+              <Button variant="ghost" size="sm" className="w-full justify-start text-xs">
+                <Home className="w-4 h-4 mr-2" />
+                Platform Integrations
+              </Button>
+            </Link>
+          </div>
           <div className="flex justify-between items-center text-xs text-gray-500">
             <a href="/terms" className="hover:text-primary underline">Terms of Service</a>
             <a href="/privacy" className="hover:text-primary underline">Privacy Policy</a>
