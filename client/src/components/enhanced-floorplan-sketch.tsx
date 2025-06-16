@@ -40,6 +40,7 @@ interface SketchToolsProps {
 export default function EnhancedFloorplanSketch({ onSave, onLoad, initialElements = [], backgroundImage }: SketchToolsProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const backgroundImageDimensions = useRef<{ width: number; height: number } | null>(null);
   
   // Drawing state
   const [tool, setTool] = useState<'select' | 'pen' | 'wall' | 'room' | 'door' | 'window' | 'rectangle' | 'circle' | 'eraser' | 'router' | 'location'>('select');
@@ -324,7 +325,10 @@ export default function EnhancedFloorplanSketch({ onSave, onLoad, initialElement
         drawWidth = drawHeight * imgAspect;
       }
       
-      ctx.globalAlpha = 0.7;
+      // Store image dimensions for room tracing
+      backgroundImageDimensions.current = { width: drawWidth, height: drawHeight };
+      
+      ctx.globalAlpha = 0.8; // Slightly more visible for better room tracing
       ctx.drawImage(backgroundImageElement, 0, 0, drawWidth, drawHeight);
       ctx.globalAlpha = 1;
     }
@@ -861,12 +865,13 @@ export default function EnhancedFloorplanSketch({ onSave, onLoad, initialElement
                     <div className="text-xs text-gray-500 mt-1">Quick guide to get you started</div>
                   </div>
                   <ul className="text-sm space-y-1">
-                    <li>• Use walls to outline your space boundaries</li>
-                    <li>• Draw rooms to define separate areas</li>
-                    <li>• Add doors and windows for accuracy</li>
+                    <li>• Select room type, then trace boundaries on your blueprint</li>
+                    <li>• Follow room edges carefully for accurate mapping</li>
+                    <li>• Complete room outlines by connecting back to start</li>
+                    <li>• Use walls for structural elements</li>
                     <li>• Grid snapping helps with precision</li>
-                    <li>• Zoom in for detailed work</li>
-                    <li>• Use undo/redo to fix mistakes</li>
+                    <li>• Zoom in for detailed tracing work</li>
+                    <li>• Each room appears in analytics automatically</li>
                   </ul>
                 </div>
               </TooltipContent>
@@ -898,6 +903,42 @@ export default function EnhancedFloorplanSketch({ onSave, onLoad, initialElement
               {snapToGrid && <Badge variant="secondary" className="text-xs">Grid Snap</Badge>}
             </div>
           </div>
+
+          {/* Room Tracing Guide */}
+          {backgroundImage && tool === 'room' && (
+            <div className="absolute top-4 right-4 bg-blue-50 dark:bg-blue-900/20 px-4 py-3 rounded-lg shadow-sm border border-blue-200 dark:border-blue-700 max-w-xs">
+              <div className="flex items-start gap-2">
+                <div className="text-blue-600 dark:text-blue-400 mt-0.5">
+                  <Home className="h-4 w-4" />
+                </div>
+                <div className="text-sm">
+                  <div className="font-semibold text-blue-900 dark:text-blue-100 mb-1">Room Tracing Mode</div>
+                  <div className="text-blue-700 dark:text-blue-300 text-xs space-y-1">
+                    <div>• Follow room edges on your blueprint</div>
+                    <div>• Click to place boundary points</div>
+                    <div>• Complete the outline to finish</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Blueprint Upload Guide */}
+          {!backgroundImage && (
+            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+              <div className="bg-white dark:bg-gray-800 px-6 py-4 rounded-lg shadow-sm border border-dashed border-gray-300 dark:border-gray-600 text-center max-w-md">
+                <div className="text-gray-500 dark:text-gray-400 mb-2">
+                  <Upload className="h-8 w-8 mx-auto mb-2" />
+                </div>
+                <div className="text-sm text-gray-600 dark:text-gray-300 font-medium mb-1">
+                  Upload Your Floor Plan
+                </div>
+                <div className="text-xs text-gray-500 dark:text-gray-400">
+                  Upload a blueprint image to trace room boundaries directly on your floor plan
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </TooltipProvider>
