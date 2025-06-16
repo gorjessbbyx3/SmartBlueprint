@@ -14,6 +14,7 @@ import WiFiConnectionCheck from "./wifi-connection-check";
 import { NetworkDeviceDiscovery } from "./network-device-discovery";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
+import { useAIActions } from "@/hooks/use-ai-actions";
 import { Brain, Home, Zap, TrendingUp, Activity, AlertTriangle, Pen, Wifi, MapPin } from "lucide-react";
 
 interface SidebarProps {
@@ -36,6 +37,7 @@ export default function Sidebar({
   onBlueprintUpload,
 }: SidebarProps) {
   const [uploadingBlueprint, setUploadingBlueprint] = useState(false);
+  const { createAIHandler, executeAIAction } = useAIActions();
 
   const { data: anomalies = [] } = useQuery({
     queryKey: ["/api/anomalies"],

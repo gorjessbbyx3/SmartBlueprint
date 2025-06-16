@@ -84,36 +84,44 @@ export default function EnhancedFloorplanSketch({ onSave, onLoad, initialElement
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
-  // Save function
-  const handleSaveSketch = useCallback(async () => {
-    setIsSaving(true);
-    try {
-      console.log("Saving floor plan elements:", elements);
-      await onSave(elements);
-      
-      // Update save state
-      setLastSaved(new Date());
-      setHasUnsavedChanges(false);
-      
-      // Show success toast
-      toast({
-        title: "Floor Plan Saved",
-        description: `Successfully saved ${elements.length} elements including rooms and reference points.`,
-        duration: 3000,
-      });
-      
-    } catch (error) {
-      console.error("Save failed:", error);
-      toast({
-        title: "Save Failed",
-        description: "Failed to save floor plan. Please try again.",
-        variant: "destructive",
-        duration: 4000,
-      });
-    } finally {
-      setIsSaving(false);
-    }
-  }, [elements, onSave, toast]);
+  // AI-driven save function
+  const handleSaveSketch = useCallback(
+    createAIHandler(
+      async () => {
+        setIsSaving(true);
+        try {
+          console.log("Saving floor plan elements:", elements);
+          await onSave(elements);
+          
+          // Update save state
+          setLastSaved(new Date());
+          setHasUnsavedChanges(false);
+          
+          // Show success toast
+          toast({
+            title: "Floor Plan Saved",
+            description: `Successfully saved ${elements.length} elements including rooms and reference points.`,
+            duration: 3000,
+          });
+          
+        } catch (error) {
+          console.error("Save failed:", error);
+          toast({
+            title: "Save Failed",
+            description: "Failed to save floor plan. Please try again.",
+            variant: "destructive",
+            duration: 4000,
+          });
+        } finally {
+          setIsSaving(false);
+        }
+      },
+      'save_floorplan',
+      'save my floor plan with the rooms I drew',
+      { elementCount: elements.length, roomCount: elements.filter(el => el.type === 'room').length }
+    ),
+    [elements, onSave, toast, createAIHandler]
+  );
 
   // Track changes to mark unsaved state
   useEffect(() => {
@@ -581,7 +589,7 @@ export default function EnhancedFloorplanSketch({ onSave, onLoad, initialElement
                 <Button
                   variant={tool === 'wall' ? 'default' : 'outline'}
                   size="sm"
-                  onClick={() => setTool('wall')}
+                  onClick={createAIHandler(() => setTool('wall'), 'select_tool', 'switch to wall drawing tool', { tool: 'wall' })}
                 >
                   <RectangleHorizontal className="h-4 w-4" />
                 </Button>
@@ -599,7 +607,7 @@ export default function EnhancedFloorplanSketch({ onSave, onLoad, initialElement
                 <Button
                   variant={tool === 'room' ? 'default' : 'outline'}
                   size="sm"
-                  onClick={() => setTool('room')}
+                  onClick={createAIHandler(() => setTool('room'), 'select_tool', 'switch to room drawing tool', { tool: 'room' })}
                 >
                   <Home className="h-4 w-4" />
                 </Button>
