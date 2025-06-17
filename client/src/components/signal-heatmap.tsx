@@ -53,11 +53,11 @@ export default function SignalHeatmap({
   const animationRef = useRef<number>();
   
   // Heatmap configuration
-  const [heatmapIntensity, setHeatmapIntensity] = useState(0.7);
-  const [interpolationRadius, setInterpolationRadius] = useState(80);
+  const [heatmapIntensity, setHeatmapIntensity] = useState(0.9);
+  const [interpolationRadius, setInterpolationRadius] = useState(100);
   const [showDeviceLabels, setShowDeviceLabels] = useState(true);
-  const [showSignalContours, setShowSignalContours] = useState(false);
-  const [animationSpeed, setAnimationSpeed] = useState(1.0);
+  const [showSignalContours, setShowSignalContours] = useState(true);
+  const [animationSpeed, setAnimationSpeed] = useState(1.5);
   const [isAnimating, setIsAnimating] = useState(realTimeUpdate);
   
   // Signal data processing
@@ -65,26 +65,26 @@ export default function SignalHeatmap({
   const [signalContours, setSignalContours] = useState<SignalContour[]>([]);
   const [animationFrame, setAnimationFrame] = useState(0);
 
-  // Signal strength color mapping
+  // Signal strength color mapping - Enhanced for better visibility
   const getSignalColor = useCallback((strength: number): { r: number; g: number; b: number; a: number } => {
     // Normalize signal strength from -100 to -20 dBm to 0-1 scale
     const normalized = Math.max(0, Math.min(1, (strength + 100) / 80));
     
     if (normalized >= 0.8) {
-      // Excellent signal: Green
-      return { r: 34, g: 197, b: 94, a: heatmapIntensity };
+      // Excellent signal: Bright Green
+      return { r: 0, g: 255, b: 0, a: heatmapIntensity };
     } else if (normalized >= 0.6) {
-      // Good signal: Yellow-Green
-      return { r: 132, g: 204, b: 22, a: heatmapIntensity };
+      // Good signal: Lime Green
+      return { r: 128, g: 255, b: 0, a: heatmapIntensity };
     } else if (normalized >= 0.4) {
-      // Fair signal: Yellow
-      return { r: 251, g: 191, b: 36, a: heatmapIntensity };
+      // Fair signal: Bright Yellow
+      return { r: 255, g: 255, b: 0, a: heatmapIntensity };
     } else if (normalized >= 0.2) {
-      // Poor signal: Orange
-      return { r: 249, g: 115, b: 22, a: heatmapIntensity };
+      // Poor signal: Bright Orange
+      return { r: 255, g: 128, b: 0, a: heatmapIntensity };
     } else {
-      // Very poor signal: Red
-      return { r: 239, g: 68, b: 68, a: heatmapIntensity };
+      // Very poor signal: Bright Red
+      return { r: 255, g: 0, b: 0, a: heatmapIntensity };
     }
   }, [heatmapIntensity]);
 
@@ -123,8 +123,8 @@ export default function SignalHeatmap({
       }
     });
 
-    // Generate interpolated grid points for smooth visualization
-    const gridSize = 40;
+    // Generate interpolated grid points for smooth visualization - Higher density for bolder effect
+    const gridSize = 60;
     const stepX = floorplan.width / gridSize;
     const stepY = floorplan.height / gridSize;
     
@@ -146,22 +146,22 @@ export default function SignalHeatmap({
     setHeatmapData(points);
   }, [devices, floorplan, interpolateSignalStrength]);
 
-  // Generate signal contour lines
+  // Generate signal contour lines - Enhanced for bolder visibility
   const generateSignalContours = useCallback(() => {
     const contours: SignalContour[] = [];
     const levels = [-80, -70, -60, -50, -40, -30]; // dBm levels
     
     levels.forEach((level, index) => {
-      const color = index < 2 ? '#ef4444' : index < 4 ? '#f59e0b' : '#10b981';
-      const opacity = 0.3 + (index * 0.1);
+      const color = index < 2 ? '#ff0000' : index < 4 ? '#ff8800' : '#00ff00';
+      const opacity = 0.7 + (index * 0.05); // Higher opacity for bolder effect
       
-      // Simple contour generation - in production, use marching squares algorithm
+      // Higher resolution contour generation for smoother lines
       const points: { x: number; y: number }[] = [];
       
-      for (let x = 0; x < floorplan.width; x += 20) {
-        for (let y = 0; y < floorplan.height; y += 20) {
+      for (let x = 0; x < floorplan.width; x += 10) {
+        for (let y = 0; y < floorplan.height; y += 10) {
           const strength = interpolateSignalStrength(x, y, heatmapData);
-          if (Math.abs(strength - level) < 5) {
+          if (Math.abs(strength - level) < 3) {
             points.push({ x, y });
           }
         }
