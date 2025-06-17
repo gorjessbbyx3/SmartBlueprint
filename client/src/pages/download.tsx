@@ -79,7 +79,7 @@ export default function DownloadPage() {
                     System Requirements
                   </h3>
                   <ul className="space-y-2 text-slate-600 dark:text-slate-300">
-                    <li>• Windows 10/11 (64-bit)</li>
+                    <li>• Windows 7, 8, 10, 11 (32-bit or 64-bit)</li>
                     <li>• 4 GB RAM minimum</li>
                     <li>• 500 MB disk space</li>
                     <li>• Network adapter</li>
@@ -88,7 +88,7 @@ export default function DownloadPage() {
                   
                   <div className="mt-6 p-4 bg-slate-50 dark:bg-slate-800 rounded-lg">
                     <p className="text-sm text-slate-600 dark:text-slate-300">
-                      <strong>File size:</strong> ~150 MB<br/>
+                      <strong>File size:</strong> ~8 KB<br/>
                       <strong>Installation time:</strong> 2-3 minutes<br/>
                       <strong>License:</strong> Commercial use allowed
                     </p>
