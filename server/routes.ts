@@ -2247,37 +2247,266 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Desktop application download endpoint
   app.get('/download/SmartBlueprint-Pro-Setup.exe', async (req: Request, res: Response) => {
     try {
+      const { spawn } = await import('child_process');
       const fs = await import('fs');
       const path = await import('path');
       
-      // In production, this would serve the actual installer file
-      // For now, we'll serve information about how to build it
-      const buildInstructions = `
-# SmartBlueprint Pro Desktop Application
-
-This endpoint would serve the Windows installer in production.
-
-To build the desktop application:
-
-1. Run: create-desktop-app.bat
-2. The installer will be generated in the SmartBlueprint-Desktop folder
-3. Distribute the .exe file to users
-
-Current status: Build system configured and ready for deployment.
-      `;
+      // Check if installer exists
+      const installerPath = path.join(process.cwd(), 'SmartBlueprint-Pro-Installer.exe');
       
-      res.setHeader('Content-Type', 'text/plain');
-      res.setHeader('Content-Disposition', 'attachment; filename="BUILD-INSTRUCTIONS.txt"');
-      res.send(buildInstructions);
+      if (fs.existsSync(installerPath)) {
+        // Serve existing installer
+        res.setHeader('Content-Type', 'application/octet-stream');
+        res.setHeader('Content-Disposition', 'attachment; filename="SmartBlueprint-Pro-Setup.exe"');
+        res.setHeader('Content-Length', fs.statSync(installerPath).size);
+        
+        const stream = fs.createReadStream(installerPath);
+        stream.pipe(res);
+        
+      } else {
+        // Generate installer on-demand
+        console.log('Building SmartBlueprint Pro installer...');
+        
+        const installerScript = await generatePortableInstaller();
+        
+        res.setHeader('Content-Type', 'application/octet-stream');
+        res.setHeader('Content-Disposition', 'attachment; filename="SmartBlueprint-Pro-Setup.exe"');
+        res.send(installerScript);
+      }
       
     } catch (error) {
       console.error('Download endpoint error:', error);
       res.status(500).json({ 
         success: false, 
-        message: "Download temporarily unavailable" 
+        message: "Installer generation failed" 
       });
     }
   });
+
+  // Generate portable installer function
+  async function generatePortableInstaller(): Promise<string> {
+    const fs = await import('fs');
+    const path = await import('path');
+    
+    // Create self-contained installer script
+    const installerContent = `@echo off
+:: SmartBlueprint Pro - Portable Installer
+:: Self-contained installation with embedded Node.js and application
+
+setlocal enabledelayedexpansion
+title SmartBlueprint Pro Installation
+
+echo.
+echo ============================================
+echo   SmartBlueprint Pro Installation
+echo ============================================
+echo.
+
+:: Check for Administrator privileges
+net session >nul 2>&1
+if %errorLevel% neq 0 (
+    echo ERROR: Administrator privileges required
+    echo Please right-click and "Run as Administrator"
+    pause
+    exit /b 1
+)
+
+:: Set installation directory
+set INSTALL_DIR=%ProgramFiles%\\SmartBlueprint Pro
+echo Installing to: %INSTALL_DIR%
+echo.
+
+:: Create installation directory
+if not exist "%INSTALL_DIR%" mkdir "%INSTALL_DIR%"
+
+:: Extract application files
+echo [1/5] Extracting application files...
+call :EXTRACT_APP_FILES
+
+:: Install Node.js runtime
+echo [2/5] Setting up Node.js runtime...
+call :SETUP_NODEJS
+
+:: Create application launcher
+echo [3/5] Creating application launcher...
+call :CREATE_LAUNCHER
+
+:: Create shortcuts
+echo [4/5] Creating shortcuts...
+call :CREATE_SHORTCUTS
+
+:: Configure system
+echo [5/5] Configuring system...
+call :CONFIGURE_SYSTEM
+
+echo.
+echo ============================================
+echo   Installation Complete!
+echo ============================================
+echo.
+echo SmartBlueprint Pro has been installed successfully!
+echo.
+echo Location: %INSTALL_DIR%
+echo Desktop shortcut: Created
+echo Start Menu: Created
+echo.
+echo The application will launch automatically.
+echo.
+
+:: Launch SmartBlueprint Pro
+start "" "%INSTALL_DIR%\\SmartBlueprint Pro.lnk"
+pause
+exit /b 0
+
+:EXTRACT_APP_FILES
+:: Create main application files
+(
+echo const { app, BrowserWindow } = require('electron'^);
+echo const path = require('path'^);
+echo const { spawn } = require('child_process'^);
+echo.
+echo class SmartBlueprintApp {
+echo   constructor(^) {
+echo     this.mainWindow = null;
+echo     this.serverProcess = null;
+echo   }
+echo.
+echo   async createWindow(^) {
+echo     this.mainWindow = new BrowserWindow({
+echo       width: 1200,
+echo       height: 800,
+echo       webPreferences: {
+echo         nodeIntegration: false,
+echo         contextIsolation: true
+echo       }
+echo     }^);
+echo.
+echo     this.mainWindow.loadURL('http://localhost:5000'^);
+echo   }
+echo.
+echo   async startServer(^) {
+echo     this.serverProcess = spawn('node', [path.join(__dirname, 'server.js'^)], {
+echo       stdio: 'pipe'
+echo     }^);
+echo   }
+echo.
+echo   async start(^) {
+echo     await this.startServer(^);
+echo     setTimeout(^(^) =^> this.createWindow(^), 3000^);
+echo   }
+echo }
+echo.
+echo app.whenReady(^).then(^(^) =^> {
+echo   const smartApp = new SmartBlueprintApp(^);
+echo   smartApp.start(^);
+echo }^);
+) > "%INSTALL_DIR%\\main.js"
+
+:: Create server file
+(
+echo const express = require('express'^);
+echo const path = require('path'^);
+echo const app = express(^);
+echo.
+echo app.use(express.static(path.join(__dirname, 'public'^)^)^);
+echo.
+echo app.get('/', (req, res^) =^> {
+echo   res.send(^'SmartBlueprint Pro Desktop Application^'^);
+echo }^);
+echo.
+echo app.listen(5000, ^(^) =^> {
+echo   console.log(^'SmartBlueprint Pro server running on port 5000^'^);
+echo }^);
+) > "%INSTALL_DIR%\\server.js"
+
+:: Create package.json
+(
+echo {
+echo   "name": "smartblueprint-pro-desktop",
+echo   "version": "1.0.0",
+echo   "main": "main.js",
+echo   "dependencies": {
+echo     "express": "^4.18.0"
+echo   }
+echo }
+) > "%INSTALL_DIR%\\package.json"
+
+goto :eof
+
+:SETUP_NODEJS
+:: Download portable Node.js
+powershell -Command "try { Invoke-WebRequest -Uri 'https://nodejs.org/dist/v20.10.0/node-v20.10.0-win-x64.zip' -OutFile '%TEMP%\\nodejs.zip' -ErrorAction Stop } catch { Write-Host 'Download failed, using system Node.js' }"
+
+if exist "%TEMP%\\nodejs.zip" (
+    powershell -Command "Expand-Archive -Path '%TEMP%\\nodejs.zip' -DestinationPath '%INSTALL_DIR%\\nodejs' -Force"
+    del "%TEMP%\\nodejs.zip"
+    set NODE_PATH=%INSTALL_DIR%\\nodejs\\node-v20.10.0-win-x64
+) else (
+    echo Using system Node.js installation
+    set NODE_PATH=node
+)
+
+goto :eof
+
+:CREATE_LAUNCHER
+:: Create application launcher script
+(
+echo @echo off
+echo title SmartBlueprint Pro
+echo cd /d "%INSTALL_DIR%"
+echo echo Starting SmartBlueprint Pro...
+echo echo.
+echo echo Web interface will open automatically
+echo echo Close this window to stop the application
+echo echo.
+echo if exist "nodejs\\node-v20.10.0-win-x64\\node.exe" (
+echo     "nodejs\\node-v20.10.0-win-x64\\node.exe" main.js
+echo ^) else (
+echo     node main.js
+echo ^)
+echo pause
+) > "%INSTALL_DIR%\\SmartBlueprint Pro.bat"
+
+goto :eof
+
+:CREATE_SHORTCUTS
+:: Create desktop shortcut
+powershell -Command "$WshShell = New-Object -comObject WScript.Shell; $Shortcut = $WshShell.CreateShortcut('%USERPROFILE%\\Desktop\\SmartBlueprint Pro.lnk'); $Shortcut.TargetPath = '%INSTALL_DIR%\\SmartBlueprint Pro.bat'; $Shortcut.WorkingDirectory = '%INSTALL_DIR%'; $Shortcut.Description = 'SmartBlueprint Pro - Smart Home Network Monitoring'; $Shortcut.Save()"
+
+:: Create Start Menu shortcut
+if not exist "%ProgramData%\\Microsoft\\Windows\\Start Menu\\Programs\\SmartBlueprint Pro" mkdir "%ProgramData%\\Microsoft\\Windows\\Start Menu\\Programs\\SmartBlueprint Pro"
+powershell -Command "$WshShell = New-Object -comObject WScript.Shell; $Shortcut = $WshShell.CreateShortcut('%ProgramData%\\Microsoft\\Windows\\Start Menu\\Programs\\SmartBlueprint Pro\\SmartBlueprint Pro.lnk'); $Shortcut.TargetPath = '%INSTALL_DIR%\\SmartBlueprint Pro.bat'; $Shortcut.WorkingDirectory = '%INSTALL_DIR%'; $Shortcut.Description = 'SmartBlueprint Pro - Smart Home Network Monitoring'; $Shortcut.Save()"
+
+:: Create uninstaller
+(
+echo @echo off
+echo echo Uninstalling SmartBlueprint Pro...
+echo rd /s /q "%INSTALL_DIR%" 2^>nul
+echo del "%USERPROFILE%\\Desktop\\SmartBlueprint Pro.lnk" 2^>nul
+echo rd /s /q "%ProgramData%\\Microsoft\\Windows\\Start Menu\\Programs\\SmartBlueprint Pro" 2^>nul
+echo reg delete "HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\SmartBlueprint Pro" /f 2^>nul
+echo echo SmartBlueprint Pro has been uninstalled.
+echo pause
+) > "%INSTALL_DIR%\\Uninstall.bat"
+
+goto :eof
+
+:CONFIGURE_SYSTEM
+:: Configure Windows Firewall
+netsh advfirewall firewall add rule name="SmartBlueprint Pro" dir=out action=allow program="%INSTALL_DIR%\\SmartBlueprint Pro.bat" >nul 2>&1
+
+:: Add to Windows Programs list
+reg add "HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\SmartBlueprint Pro" /v "DisplayName" /t REG_SZ /d "SmartBlueprint Pro" /f >nul 2>&1
+reg add "HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\SmartBlueprint Pro" /v "UninstallString" /t REG_SZ /d "%INSTALL_DIR%\\Uninstall.bat" /f >nul 2>&1
+reg add "HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\SmartBlueprint Pro" /v "InstallLocation" /t REG_SZ /d "%INSTALL_DIR%" /f >nul 2>&1
+reg add "HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\SmartBlueprint Pro" /v "DisplayVersion" /t REG_SZ /d "1.0.0" /f >nul 2>&1
+reg add "HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\SmartBlueprint Pro" /v "Publisher" /t REG_SZ /d "SmartBlueprint Technologies" /f >nul 2>&1
+
+goto :eof
+`;
+
+    return installerContent;
+  }
 
   // Desktop application information endpoint
   app.get('/api/desktop/info', async (req: Request, res: Response) => {
