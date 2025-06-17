@@ -285,6 +285,48 @@ export default function Dashboard() {
         {!isMobile && (
           <div className="w-80 bg-white border-l border-gray-200 overflow-y-auto">
             <div className="p-4 space-y-4">
+              {/* Blueprint Setup */}
+              <div className="bg-white rounded-lg border border-gray-200 p-4">
+                <h3 className="text-sm font-semibold text-gray-900 mb-3 flex items-center">
+                  <i className="fas fa-home mr-2 text-primary"></i>
+                  Blueprint Setup
+                </h3>
+                <div className="space-y-3">
+                  <div>
+                    <input
+                      type="file"
+                      id="blueprint-upload-right"
+                      className="hidden"
+                      accept=".pdf,.png,.jpg,.jpeg,.svg"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          const reader = new FileReader();
+                          reader.onload = (event) => {
+                            setUploadedBlueprint(event.target?.result as string);
+                          };
+                          reader.readAsDataURL(file);
+                        }
+                      }}
+                    />
+                    <button
+                      className="w-full px-3 py-2 text-xs bg-blue-50 text-blue-700 rounded border border-blue-200 hover:bg-blue-100"
+                      onClick={() => document.getElementById("blueprint-upload-right")?.click()}
+                    >
+                      <i className="fas fa-upload mr-2"></i>
+                      Upload Floorplan
+                    </button>
+                  </div>
+                  <button className="w-full px-3 py-2 text-xs border border-gray-200 rounded hover:bg-gray-50">
+                    <i className="fas fa-pencil-alt mr-2"></i>Sketch New Plan
+                  </button>
+                  <div className="text-xs text-gray-500 bg-gray-50 p-2 rounded">
+                    <i className="fas fa-info-circle mr-1"></i>
+                    Supports: PDF, PNG, JPG, SVG
+                  </div>
+                </div>
+              </div>
+
               {/* Coverage Analysis */}
               <div className="bg-white rounded-lg border border-gray-200 p-4">
                 <h3 className="text-sm font-semibold text-gray-900 mb-3 flex items-center">
