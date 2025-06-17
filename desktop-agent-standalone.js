@@ -265,7 +265,7 @@ class StandaloneDesktopAgent {
   }
 
   detectServerUrl() {
-    // Check environment variables
+    // Check environment variables first
     if (process.env.WS_URL) {
       return process.env.WS_URL;
     }
@@ -276,7 +276,29 @@ class StandaloneDesktopAgent {
       return `${protocol}//${host}/ws`;
     }
     
-    // Default to localhost for development
+    // Try to detect Replit deployment automatically
+    if (process.env.REPLIT_DOMAINS) {
+      const domain = process.env.REPLIT_DOMAINS.split(',')[0];
+      return `wss://${domain}/ws`;
+    }
+    
+    if (process.env.REPL_ID) {
+      // Construct Replit WebSocket URL
+      return `wss://${process.env.REPL_ID}.replit.app/ws`;
+    }
+    
+    // For deployed applications, try common production patterns
+    const hostname = process.env.HOSTNAME || process.env.HOST;
+    if (hostname && !hostname.includes('localhost')) {
+      return `wss://${hostname}/ws`;
+    }
+    
+    // Default deployment URL pattern for SmartBlueprint Pro
+    if (process.env.NODE_ENV === 'production') {
+      return 'wss://smartblueprint-pro.replit.app/ws';
+    }
+    
+    // Fallback to localhost for development
     return 'ws://localhost:5000/ws';
   }
 
