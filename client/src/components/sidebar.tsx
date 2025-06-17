@@ -172,7 +172,221 @@ export default function Sidebar({
                   <p className="text-xs text-gray-600">
                     Network scanning requires the desktop agent for WiFi signal access, device discovery, and real-time monitoring.
                   </p>
-                  <Button className="w-full">
+                  <Button 
+                    className="w-full"
+                    onClick={async () => {
+                      try {
+                        // Create desktop agent content
+                        const agentContent = `const WebSocket = require('ws');
+const ping = require('ping');
+const os = require('os');
+
+// Desktop Agent Configuration
+const WS_URL = process.env.WS_URL || 'ws://localhost:5000/ws';
+const PING_TARGETS = ['192.168.1.1', '192.168.1.254', '8.8.8.8', '1.1.1.1'];
+const PING_INTERVAL = 5000;
+
+class SmartBlueprintAgent {
+  constructor() {
+    this.ws = null;
+    this.agentId = 'agent-' + Math.random().toString(36).substring(7);
+    this.isRunning = false;
+    this.pingInterval = null;
+    
+    console.log('🏠 SmartBlueprint Pro Desktop Agent v2.0.0');
+    console.log('===========================================');
+    console.log('Agent ID:', this.agentId);
+    console.log('Server URL:', WS_URL);
+  }
+
+  async start() {
+    console.log('[Agent] Starting comprehensive monitoring...');
+    this.connect();
+    this.startPingMonitoring();
+    this.isRunning = true;
+    
+    console.log('[Agent] All systems operational');
+    console.log('[Agent] Monitoring network performance...');
+  }
+
+  connect() {
+    try {
+      this.ws = new WebSocket(WS_URL);
+      
+      this.ws.on('open', () => {
+        console.log('[Agent] Connected to SmartBlueprint Pro server');
+        this.register();
+      });
+      
+      this.ws.on('message', (data) => {
+        try {
+          const message = JSON.parse(data);
+          this.handleMessage(message);
+        } catch (e) {
+          console.log('[Agent] Received non-JSON message:', data.toString());
+        }
+      });
+      
+      this.ws.on('error', (error) => {
+        console.error('[Agent] WebSocket error:', error.message);
+      });
+      
+      this.ws.on('close', () => {
+        console.log('[Agent] Connection closed. Attempting reconnect...');
+        setTimeout(() => this.connect(), 5000);
+      });
+      
+    } catch (error) {
+      console.error('[Agent] Connection failed:', error.message);
+      setTimeout(() => this.connect(), 5000);
+    }
+  }
+
+  register() {
+    const registration = {
+      type: 'agent_register',
+      agent_id: this.agentId,
+      capabilities: ['ping_measurement', 'device_discovery', 'network_monitoring'],
+      system_info: {
+        platform: os.platform(),
+        arch: os.arch(),
+        hostname: os.hostname(),
+        memory: os.totalmem(),
+        cpus: os.cpus().length
+      },
+      timestamp: new Date().toISOString()
+    };
+    
+    this.send(registration);
+    console.log('[Agent] Registration sent');
+  }
+
+  startPingMonitoring() {
+    if (this.pingInterval) return;
+    
+    this.pingInterval = setInterval(async () => {
+      const results = await this.measurePing();
+      this.sendPingResults(results);
+    }, PING_INTERVAL);
+    
+    console.log('[Agent] Ping monitoring started');
+  }
+
+  async measurePing() {
+    const results = {};
+    
+    for (const target of PING_TARGETS) {
+      try {
+        const res = await ping.promise.probe(target, {
+          timeout: 2,
+          extra: ['-c', '1']
+        });
+        
+        results[target] = {
+          alive: res.alive,
+          time: res.time === 'unknown' ? -1 : parseFloat(res.time),
+          host: res.host,
+          numeric_host: res.numeric_host
+        };
+      } catch (error) {
+        results[target] = {
+          alive: false,
+          time: -1,
+          error: error.message
+        };
+      }
+    }
+    
+    return results;
+  }
+
+  sendPingResults(results) {
+    const message = {
+      type: 'ping_measurement',
+      agent_id: this.agentId,
+      timestamp: new Date().toISOString(),
+      results: results,
+      system_metrics: {
+        uptime: os.uptime(),
+        loadavg: os.loadavg(),
+        freemem: os.freemem(),
+        totalmem: os.totalmem()
+      }
+    };
+    
+    this.send(message);
+  }
+
+  handleMessage(message) {
+    switch (message.type) {
+      case 'config_update':
+        console.log('[Agent] Configuration updated');
+        break;
+      case 'ping_request':
+        console.log('[Agent] Manual ping request received');
+        break;
+      default:
+        console.log('[Agent] Unknown message type:', message.type);
+    }
+  }
+
+  send(message) {
+    if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+      this.ws.send(JSON.stringify(message));
+    }
+  }
+
+  stop() {
+    console.log('[Agent] Stopping monitoring...');
+    this.isRunning = false;
+    
+    if (this.pingInterval) {
+      clearInterval(this.pingInterval);
+      this.pingInterval = null;
+    }
+    
+    if (this.ws) {
+      this.ws.close();
+    }
+  }
+}
+
+// Auto-start agent
+const agent = new SmartBlueprintAgent();
+
+process.on('SIGINT', () => {
+  console.log('\\\\n[Agent] Shutdown signal received');
+  agent.stop();
+  process.exit(0);
+});
+
+process.on('SIGTERM', () => {
+  console.log('\\\\n[Agent] Termination signal received');
+  agent.stop();
+  process.exit(0);
+});
+
+// Start the agent
+agent.start().catch(console.error);
+
+console.log('[Agent] Press Ctrl+C to stop');
+`;
+
+                        // Download the file
+                        const blob = new Blob([agentContent], { type: 'text/javascript' });
+                        const url = URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = 'smartblueprint-desktop-agent.js';
+                        document.body.appendChild(a);
+                        a.click();
+                        document.body.removeChild(a);
+                        URL.revokeObjectURL(url);
+                      } catch (error) {
+                        console.error('Download failed:', error);
+                      }
+                    }}
+                  >
                     <i className="fas fa-download mr-2"></i>
                     Download Desktop Agent
                   </Button>
