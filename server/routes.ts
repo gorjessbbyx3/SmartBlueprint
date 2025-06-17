@@ -2217,6 +2217,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
     return recommendations;
   }
 
+  // Route to serve the standalone desktop agent
+  app.get('/desktop-agent-standalone.js', async (req: Request, res: Response) => {
+    try {
+      const fs = await import('fs');
+      const path = await import('path');
+      const filePath = path.join(process.cwd(), 'desktop-agent-standalone.js');
+      
+      if (fs.existsSync(filePath)) {
+        const content = fs.readFileSync(filePath, 'utf8');
+        res.setHeader('Content-Type', 'application/javascript');
+        res.setHeader('Content-Disposition', 'attachment; filename="smartblueprint-desktop-agent.js"');
+        res.send(content);
+      } else {
+        res.status(404).json({ 
+          success: false, 
+          message: "Desktop agent file not found" 
+        });
+      }
+    } catch (error) {
+      console.error('Failed to serve desktop agent:', error);
+      res.status(500).json({ 
+        success: false, 
+        message: "Failed to serve desktop agent file" 
+      });
+    }
+  });
+
   // Generate enhanced agent code
   function generateEnhancedAgent() {
     return `#!/usr/bin/env node
