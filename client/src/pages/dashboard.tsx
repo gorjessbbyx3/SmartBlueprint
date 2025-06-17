@@ -280,6 +280,108 @@ export default function Dashboard() {
             />
           )}
         </div>
+
+        {/* Right Sidebar - Analysis Tools */}
+        {!isMobile && (
+          <div className="w-80 bg-white border-l border-gray-200 overflow-y-auto">
+            <div className="p-4 space-y-4">
+              {/* Coverage Analysis */}
+              <div className="bg-white rounded-lg border border-gray-200 p-4">
+                <h3 className="text-sm font-semibold text-gray-900 mb-3 flex items-center">
+                  <i className="fas fa-chart-area mr-2 text-primary"></i>
+                  Coverage Analysis
+                </h3>
+                <div className="space-y-2">
+                  <button 
+                    className="w-full px-3 py-2 text-xs bg-blue-50 text-blue-700 rounded border border-blue-200 hover:bg-blue-100"
+                    onClick={() => window.open('/advanced-analytics', '_blank')}
+                  >
+                    <i className="fas fa-chart-line mr-2"></i>
+                    View Analytics
+                  </button>
+                  <div className="text-xs text-gray-500 bg-gray-50 p-2 rounded">
+                    <div className="mb-1 font-medium">Real-time Analysis:</div>
+                    <div>• Signal strength mapping</div>
+                    <div>• Coverage gap detection</div>
+                    <div>• Performance optimization</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* RTT Distance Measurement */}
+              <div className="bg-white rounded-lg border border-gray-200 p-4">
+                <h3 className="text-sm font-semibold text-gray-900 mb-3 flex items-center">
+                  <i className="fas fa-satellite-dish mr-2 text-primary"></i>
+                  RTT Distance Measurement
+                </h3>
+                <div className="space-y-2">
+                  <button 
+                    className="w-full px-3 py-2 text-xs bg-blue-50 text-blue-700 rounded border border-blue-200 hover:bg-blue-100"
+                    onClick={() => window.open('/ping-monitoring', '_blank')}
+                  >
+                    <i className="fas fa-satellite-dish mr-2"></i>
+                    Open Ping Monitor
+                  </button>
+                  <button 
+                    className="w-full px-3 py-2 text-xs border border-gray-200 rounded hover:bg-gray-50"
+                    onClick={async () => {
+                      try {
+                        const response = await fetch('/api/ping/measure', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ 
+                            hosts: ['192.168.1.1', '192.168.1.254', '192.168.0.1'],
+                            trials: 3
+                          })
+                        });
+                        const data = await response.json();
+                        if (data.success) {
+                          console.log('Ping measurements:', data.measurements);
+                        }
+                      } catch (error) {
+                        console.error('Ping measurement failed:', error);
+                      }
+                    }}
+                  >
+                    <i className="fas fa-play mr-2"></i>
+                    Quick Measure
+                  </button>
+                  <div className="text-xs text-gray-500 bg-gray-50 p-2 rounded">
+                    <div className="mb-1 font-medium">Features:</div>
+                    <div>• Meter-level accuracy</div>
+                    <div>• RTT-based ranging</div>
+                    <div>• No special hardware</div>
+                    <div>• Works with any AP</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* System Setup Guide */}
+              <div className="bg-white rounded-lg border border-gray-200 p-4">
+                <h3 className="text-sm font-semibold text-gray-900 mb-3 flex items-center">
+                  <i className="fas fa-rocket mr-2 text-primary"></i>
+                  System Setup
+                </h3>
+                <div className="space-y-2">
+                  <button 
+                    className="w-full px-3 py-2 text-xs bg-blue-50 text-blue-700 rounded border border-blue-200 hover:bg-blue-100"
+                    onClick={() => window.open('/onboarding', '_blank')}
+                  >
+                    <i className="fas fa-cog mr-2"></i>
+                    Setup Guide
+                  </button>
+                  <div className="text-xs text-gray-500 bg-gray-50 p-2 rounded">
+                    <div className="mb-1 font-medium">Complete Setup:</div>
+                    <div>• Desktop agent installation</div>
+                    <div>• Authentic device discovery</div>
+                    <div>• Platform integrations</div>
+                    <div>• Ping calibration system</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Modals and Panels */}
