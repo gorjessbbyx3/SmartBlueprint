@@ -293,9 +293,9 @@ class StandaloneDesktopAgent {
       return `wss://${hostname}/ws`;
     }
     
-    // Default deployment URL pattern for SmartBlueprint Pro
+    // Default deployment URL for SmartBlueprint Pro
     if (process.env.NODE_ENV === 'production') {
-      return 'wss://smartblueprint-pro.replit.app/ws';
+      return 'wss://smartplueprint.replit.app/ws';
     }
     
     // Fallback to localhost for development

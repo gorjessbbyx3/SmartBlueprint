@@ -21,12 +21,12 @@ node smartblueprint-desktop-agent.js
 
 **Option 2: Manual WebSocket URL**
 ```bash
-WS_URL=wss://your-deployed-app.com/ws node smartblueprint-desktop-agent.js
+WS_URL=wss://smartplueprint.replit.app/ws node smartblueprint-desktop-agent.js
 ```
 
 **Option 3: Using Deployment Domain**
 ```bash
-SMARTBLUEPRINT_HOST=your-deployed-app.com node smartblueprint-desktop-agent.js
+SMARTBLUEPRINT_HOST=smartplueprint.replit.app node smartblueprint-desktop-agent.js
 ```
 
 ### Expected Connection Output
