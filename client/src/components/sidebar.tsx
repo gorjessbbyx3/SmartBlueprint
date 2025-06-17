@@ -15,7 +15,7 @@ import { NetworkDeviceDiscovery } from "./network-device-discovery";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useAIActions } from "@/hooks/use-ai-actions";
-import { Brain, Home, Zap, TrendingUp, Activity, AlertTriangle, Pen, Wifi, MapPin, ExternalLink, Gamepad2 } from "lucide-react";
+import { Brain, Home, Zap, TrendingUp, Activity, AlertTriangle, Pen, Wifi, MapPin, ExternalLink, Gamepad2, Download } from "lucide-react";
 import { Link } from "wouter";
 
 interface SidebarProps {
@@ -98,15 +98,32 @@ export default function Sidebar({
     <div className="w-80 bg-surface border-r border-gray-200 flex flex-col">
       {/* Header */}
       <div className="p-6 border-b border-gray-200">
-        <div className="flex items-center space-x-3">
-          <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-            <i className="fas fa-map-marked-alt text-white text-sm"></i>
-          </div>
-          <div>
-            <h1 className="text-lg font-semibold text-gray-900">SmartBlueprint Pro</h1>
-            <p className="text-xs text-gray-500">v2.1.3 by GorJess & Co.</p>
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center space-x-3">
+            <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
+              <i className="fas fa-map-marked-alt text-white text-sm"></i>
+            </div>
+            <div>
+              <h1 className="text-lg font-semibold text-gray-900">SmartBlueprint Pro</h1>
+              <p className="text-xs text-gray-500">v2.1.3 by GorJess & Co.</p>
+            </div>
           </div>
         </div>
+        
+        {/* Desktop App Download */}
+        <Link href="/download">
+          <Button 
+            variant="outline" 
+            size="sm" 
+            className="w-full bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200 hover:from-blue-100 hover:to-indigo-100 text-blue-700 hover:text-blue-800 cursor-pointer transition-all duration-200 hover:shadow-md"
+            asChild
+          >
+            <span className="flex items-center justify-center">
+              <Download className="w-4 h-4 mr-2" />
+              Download Desktop App
+            </span>
+          </Button>
+        </Link>
       </div>
 
       {/* Navigation Tabs */}
