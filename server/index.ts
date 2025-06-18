@@ -15,73 +15,52 @@ app.use('/api/*', (req: any, res: Response, next: NextFunction) => {
   next();
 });
 
-// Desktop application installer download - MUST be before Vite middleware
-app.get('/download/SmartBlueprint-Pro-Setup.exe', async (req: Request, res: Response) => {
-  console.log('[Download] Windows executable requested');
+// Electron Desktop Application download - Primary download route
+app.get('/download/SmartBlueprint-Pro-Setup.exe', (req: Request, res: Response) => {
+  console.log('[Download] Complete Electron desktop application requested');
   
   try {
-    const fs = await import('fs');
-    const path = await import('path');
+    const desktopApps = [
+      'SmartBlueprint-Pro-Setup.exe',
+      'SmartBlueprint-Desktop.exe', 
+      'dist/SmartBlueprint-Pro.exe',
+      'SmartBlueprint-Pro.exe'
+    ];
     
-    // Check if compiled Windows executable exists
-    const exePath64 = path.join(process.cwd(), 'SmartBlueprint-x64.exe');
-    const exePath86 = path.join(process.cwd(), 'SmartBlueprint-x86.exe');
-    const sourceCode = path.join(process.cwd(), 'SmartBlueprint-Windows.cpp');
-    
-    // Serve existing compiled executable if available
-    if (fs.existsSync(exePath64)) {
-      console.log('[Download] Serving 64-bit Windows executable');
-      res.setHeader('Content-Type', 'application/octet-stream');
-      res.setHeader('Content-Disposition', 'attachment; filename="SmartBlueprint-Pro.exe"');
-      res.setHeader('Content-Length', fs.statSync(exePath64).size);
-      
-      const stream = fs.createReadStream(exePath64);
-      stream.pipe(res);
-      return;
+    let foundApp = null;
+    for (const appPath of desktopApps) {
+      const fullPath = path.join(process.cwd(), appPath);
+      if (fs.existsSync(fullPath)) {
+        foundApp = fullPath;
+        break;
+      }
     }
     
-    if (fs.existsSync(exePath86)) {
-      console.log('[Download] Serving 32-bit Windows executable');
-      res.setHeader('Content-Type', 'application/octet-stream');
-      res.setHeader('Content-Disposition', 'attachment; filename="SmartBlueprint-Pro.exe"');
-      res.setHeader('Content-Length', fs.statSync(exePath86).size);
-      
-      const stream = fs.createReadStream(exePath86);
-      stream.pipe(res);
-      return;
+    if (foundApp) {
+      console.log('[Download] Serving Electron desktop application');
+      res.download(foundApp, 'SmartBlueprint-Pro-Setup.exe', (err) => {
+        if (err) {
+          console.error('[Download] Desktop app download failed:', err);
+          if (!res.headersSent) {
+            res.status(500).send('Download failed');
+          }
+        } else {
+          console.log('[Download] Complete desktop application downloaded successfully');
+        }
+      });
+    } else {
+      console.log('[Download] Electron app not found, providing build status');
+      res.status(202).json({ 
+        message: 'Desktop application is being built. Please try again in a few minutes.',
+        status: 'building',
+        note: 'The complete Electron desktop app includes the full web interface and monitoring agent'
+      });
     }
-    
-    // Serve source code with compilation instructions if no executable exists
-    if (fs.existsSync(sourceCode)) {
-      console.log('[Download] Serving Windows source code with build instructions');
-      
-      const buildInstructions = `// SmartBlueprint Pro - Windows Source Code Package
-// To compile: Use Visual Studio Developer Command Prompt and run compile-windows.bat
-// Requirements: Visual Studio with C++ compiler
-
-${fs.readFileSync(sourceCode, 'utf8')}`;
-      
-      res.setHeader('Content-Type', 'text/plain');
-      res.setHeader('Content-Disposition', 'attachment; filename="SmartBlueprint-Windows-Source.cpp"');
-      res.setHeader('Content-Length', Buffer.byteLength(buildInstructions));
-      res.send(buildInstructions);
-      return;
-    }
-    
-    // Fallback: Create installer package
-    console.log('[Download] Creating installer package with source code');
-    const installerPackage = await createWindowsInstaller();
-    
-    res.setHeader('Content-Type', 'application/zip');
-    res.setHeader('Content-Disposition', 'attachment; filename="SmartBlueprint-Pro-Windows.zip"');
-    res.setHeader('Content-Length', Buffer.byteLength(installerPackage));
-    res.send(installerPackage);
-    
   } catch (error) {
-    console.error('[Download] Windows executable generation failed:', error);
+    console.error('[Download] Desktop application download failed:', error);
     res.status(500).json({ 
       success: false, 
-      message: "Executable generation failed" 
+      message: "Desktop application download failed" 
     });
   }
 });

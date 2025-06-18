@@ -2244,8 +2244,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Desktop application download endpoint
-  app.get('/download/SmartBlueprint-Pro-Setup.exe', async (req: Request, res: Response) => {
+  // Console application download endpoint (separate from Electron app)
+  app.get('/download/SmartBlueprint-Console.exe', async (req: Request, res: Response) => {
     try {
       const { spawn } = await import('child_process');
       const fs = await import('fs');
@@ -2257,7 +2257,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (fs.existsSync(installerPath)) {
         // Serve existing installer
         res.setHeader('Content-Type', 'application/octet-stream');
-        res.setHeader('Content-Disposition', 'attachment; filename="SmartBlueprint-Pro-Setup.exe"');
+        res.setHeader('Content-Disposition', 'attachment; filename="SmartBlueprint-Console.exe"');
         res.setHeader('Content-Length', fs.statSync(installerPath).size);
         
         const stream = fs.createReadStream(installerPath);
@@ -2265,20 +2265,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
       } else {
         // Generate installer on-demand
-        console.log('Building SmartBlueprint Pro installer...');
+        console.log('Building SmartBlueprint Pro console installer...');
         
         const installerScript = await generatePortableInstaller();
         
         res.setHeader('Content-Type', 'application/octet-stream');
-        res.setHeader('Content-Disposition', 'attachment; filename="SmartBlueprint-Pro-Setup.exe"');
+        res.setHeader('Content-Disposition', 'attachment; filename="SmartBlueprint-Console.exe"');
         res.send(installerScript);
       }
       
     } catch (error) {
-      console.error('Download endpoint error:', error);
+      console.error('Console download endpoint error:', error);
       res.status(500).json({ 
         success: false, 
-        message: "Installer generation failed" 
+        message: "Console installer generation failed" 
       });
     }
   });
