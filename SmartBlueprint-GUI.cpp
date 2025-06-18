@@ -39,6 +39,9 @@
 #include "imgui_impl_opengl3.h"
 #include <GL/gl.h>
 
+// Resource definitions
+#define IDI_SMARTBLUEPRINT 101
+
 struct PersistentConfig {
     bool autoRefresh = true;
     int refreshInterval = 30;
@@ -831,13 +834,15 @@ LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) {
 }
 
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow) {
-    // Register window class
+    // Register window class with professional icon
     WNDCLASSEX wc = {};
     wc.cbSize = sizeof(WNDCLASSEX);
     wc.style = CS_CLASSDC;
     wc.lpfnWndProc = WndProc;
     wc.hInstance = hInstance;
     wc.hCursor = LoadCursor(NULL, IDC_ARROW);
+    wc.hIcon = LoadIcon(hInstance, MAKEINTRESOURCE(IDI_SMARTBLUEPRINT));
+    wc.hIconSm = LoadIcon(hInstance, MAKEINTRESOURCE(IDI_SMARTBLUEPRINT));
     wc.lpszClassName = L"SmartBlueprintProGUI";
     RegisterClassEx(&wc);
 

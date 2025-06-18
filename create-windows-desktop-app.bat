@@ -26,11 +26,13 @@ echo     "appId": "com.smartblueprint.pro",
 echo     "productName": "SmartBlueprint Pro",
 echo     "win": {
 echo       "target": "nsis",
-echo       "icon": "icon.ico"
+echo       "icon": "icon.png"
 echo     },
 echo     "nsis": {
 echo       "oneClick": false,
-echo       "allowToChangeInstallationDirectory": true
+echo       "allowToChangeInstallationDirectory": true,
+echo       "installerIcon": "icon.png",
+echo       "uninstallerIcon": "icon.png"
 echo     }
 echo   },
 echo   "dependencies": {
@@ -148,8 +150,14 @@ if exist ..\dist (
     ) > ui\index.html
 )
 
-REM Create icon file
-echo iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg== > icon.ico.base64
+REM Copy professional icon from assets
+if exist "..\attached_assets\smartpriny_1750234391584.png" (
+    copy "..\attached_assets\smartpriny_1750234391584.png" "icon.png"
+    echo Professional icon copied
+) else (
+    echo Creating fallback icon...
+    echo iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg== > icon.ico.base64
+)
 
 REM Install dependencies
 echo Installing dependencies...
