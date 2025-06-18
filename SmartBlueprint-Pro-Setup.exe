@@ -1,0 +1,9 @@
+SmartBlueprint Pro Desktop Application Setup
+This is a placeholder installer file for demonstration purposes.
+In production, this would be the complete Electron-based desktop application.
+
+Version: 1.0.0
+Size: Complete Windows installer with embedded web interface
+Features: Full offline functionality, network monitoring, AI analytics
+
+To build the actual executable, run: node build-electron-app.cjs

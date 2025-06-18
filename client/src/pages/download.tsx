@@ -23,91 +23,175 @@ export default function DownloadPage() {
           </p>
         </div>
 
-        {/* Download Section */}
-        <div className="max-w-4xl mx-auto mb-12">
+        {/* Download Options */}
+        <div className="max-w-6xl mx-auto mb-12 grid md:grid-cols-2 gap-8">
+          
+          {/* Complete Desktop Application */}
           <Card className="border-2 border-blue-200 dark:border-blue-800 shadow-xl">
             <CardHeader className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950 dark:to-indigo-950">
               <div className="flex items-center justify-between">
                 <div>
-                  <CardTitle className="text-2xl text-blue-900 dark:text-blue-100">
-                    SmartBlueprint Pro Desktop
+                  <CardTitle className="text-xl text-blue-900 dark:text-blue-100">
+                    Complete Desktop App
                   </CardTitle>
-                  <CardDescription className="text-lg text-blue-700 dark:text-blue-300">
-                    Complete standalone Windows application
+                  <CardDescription className="text-blue-700 dark:text-blue-300">
+                    Full web interface + monitoring agent
                   </CardDescription>
                 </div>
                 <Badge variant="secondary" className="text-sm">
-                  Version 1.0.0
+                  Recommended
                 </Badge>
               </div>
             </CardHeader>
-            <CardContent className="p-8">
-              <div className="grid md:grid-cols-2 gap-8">
-                <div>
-                  <h3 className="text-lg font-semibold mb-4 text-slate-900 dark:text-slate-100">
-                    What's Included
-                  </h3>
-                  <ul className="space-y-3">
-                    <li className="flex items-center gap-3">
-                      <CheckCircle className="h-5 w-5 text-green-600" />
-                      <span>Complete web interface</span>
-                    </li>
-                    <li className="flex items-center gap-3">
-                      <CheckCircle className="h-5 w-5 text-green-600" />
-                      <span>Integrated network monitoring</span>
-                    </li>
-                    <li className="flex items-center gap-3">
-                      <CheckCircle className="h-5 w-5 text-green-600" />
-                      <span>Real-time device discovery</span>
-                    </li>
-                    <li className="flex items-center gap-3">
-                      <CheckCircle className="h-5 w-5 text-green-600" />
-                      <span>AI-powered analytics</span>
-                    </li>
-                    <li className="flex items-center gap-3">
-                      <CheckCircle className="h-5 w-5 text-green-600" />
-                      <span>Signal heatmap visualization</span>
-                    </li>
-                    <li className="flex items-center gap-3">
-                      <CheckCircle className="h-5 w-5 text-green-600" />
-                      <span>Windows Service option</span>
-                    </li>
-                  </ul>
+            <CardContent className="p-6">
+              <div className="space-y-3 mb-6">
+                <div className="flex items-center gap-2">
+                  <CheckCircle className="h-4 w-4 text-green-600" />
+                  <span className="text-sm">Complete web interface</span>
                 </div>
-                <div>
-                  <h3 className="text-lg font-semibold mb-4 text-slate-900 dark:text-slate-100">
-                    System Requirements
-                  </h3>
-                  <ul className="space-y-2 text-slate-600 dark:text-slate-300">
-                    <li>• Windows 7, 8, 10, 11 (32-bit or 64-bit)</li>
-                    <li>• 4 GB RAM minimum</li>
-                    <li>• 500 MB disk space</li>
-                    <li>• Network adapter</li>
-                    <li>• Administrator privileges for installation</li>
-                  </ul>
-                  
-                  <div className="mt-6 p-4 bg-slate-50 dark:bg-slate-800 rounded-lg">
-                    <p className="text-sm text-slate-600 dark:text-slate-300">
-                      <strong>File size:</strong> ~8 KB<br/>
-                      <strong>Installation time:</strong> 2-3 minutes<br/>
-                      <strong>License:</strong> Commercial use allowed
-                    </p>
-                  </div>
+                <div className="flex items-center gap-2">
+                  <CheckCircle className="h-4 w-4 text-green-600" />
+                  <span className="text-sm">Integrated network monitoring</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <CheckCircle className="h-4 w-4 text-green-600" />
+                  <span className="text-sm">AI-powered analytics</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <CheckCircle className="h-4 w-4 text-green-600" />
+                  <span className="text-sm">Offline functionality</span>
                 </div>
               </div>
               
-              <div className="mt-8 text-center">
-                <Button 
-                  onClick={handleDownload}
-                  size="lg" 
-                  className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 text-lg"
-                >
-                  <Download className="mr-2 h-5 w-5" />
-                  Download SmartBlueprint Pro Desktop
-                </Button>
-                <p className="text-sm text-slate-500 dark:text-slate-400 mt-2">
-                  Free download • No registration required
-                </p>
+              <Button 
+                onClick={handleDownload}
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+              >
+                <Download className="mr-2 h-4 w-4" />
+                Download Complete App
+              </Button>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-2 text-center">
+                ~50 MB • One-click installer
+              </p>
+            </CardContent>
+          </Card>
+
+          {/* Desktop Agent Only */}
+          <Card className="border-2 border-green-200 dark:border-green-800 shadow-xl">
+            <CardHeader className="bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-950 dark:to-emerald-950">
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="text-xl text-green-900 dark:text-green-100">
+                    Desktop Agent Only
+                  </CardTitle>
+                  <CardDescription className="text-green-700 dark:text-green-300">
+                    Lightweight monitoring agent
+                  </CardDescription>
+                </div>
+                <Badge variant="outline" className="text-sm">
+                  Advanced
+                </Badge>
+              </div>
+            </CardHeader>
+            <CardContent className="p-6">
+              <div className="space-y-3 mb-6">
+                <div className="flex items-center gap-2">
+                  <CheckCircle className="h-4 w-4 text-green-600" />
+                  <span className="text-sm">Network device discovery</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <CheckCircle className="h-4 w-4 text-green-600" />
+                  <span className="text-sm">Real-time monitoring</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <CheckCircle className="h-4 w-4 text-green-600" />
+                  <span className="text-sm">Cloud synchronization</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <CheckCircle className="h-4 w-4 text-green-600" />
+                  <span className="text-sm">Command line interface</span>
+                </div>
+              </div>
+              
+              <Button 
+                onClick={() => window.open('/download/desktop-agent-enhanced.js', '_blank')}
+                variant="outline"
+                className="w-full border-green-600 text-green-600 hover:bg-green-50"
+              >
+                <Download className="mr-2 h-4 w-4" />
+                Download Agent
+              </Button>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-2 text-center">
+                ~20 KB • Node.js required
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Comparison Table */}
+        <div className="max-w-4xl mx-auto mb-12">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-center">Choose the Right Option</CardTitle>
+              <CardDescription className="text-center">
+                Compare features to find what works best for your setup
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="p-6">
+              <div className="overflow-x-auto">
+                <table className="w-full border-collapse">
+                  <thead>
+                    <tr className="border-b">
+                      <th className="text-left p-3 font-semibold text-slate-900 dark:text-slate-100">Feature</th>
+                      <th className="text-center p-3 font-semibold text-blue-900 dark:text-blue-100">Complete App</th>
+                      <th className="text-center p-3 font-semibold text-green-900 dark:text-green-100">Agent Only</th>
+                    </tr>
+                  </thead>
+                  <tbody className="text-sm">
+                    <tr className="border-b">
+                      <td className="p-3 text-slate-600 dark:text-slate-300">Web Interface</td>
+                      <td className="p-3 text-center">
+                        <CheckCircle className="h-4 w-4 text-green-600 mx-auto" />
+                      </td>
+                      <td className="p-3 text-center">
+                        <span className="text-slate-400">Web Only</span>
+                      </td>
+                    </tr>
+                    <tr className="border-b">
+                      <td className="p-3 text-slate-600 dark:text-slate-300">Network Monitoring</td>
+                      <td className="p-3 text-center">
+                        <CheckCircle className="h-4 w-4 text-green-600 mx-auto" />
+                      </td>
+                      <td className="p-3 text-center">
+                        <CheckCircle className="h-4 w-4 text-green-600 mx-auto" />
+                      </td>
+                    </tr>
+                    <tr className="border-b">
+                      <td className="p-3 text-slate-600 dark:text-slate-300">Offline Functionality</td>
+                      <td className="p-3 text-center">
+                        <CheckCircle className="h-4 w-4 text-green-600 mx-auto" />
+                      </td>
+                      <td className="p-3 text-center">
+                        <span className="text-slate-400">No</span>
+                      </td>
+                    </tr>
+                    <tr className="border-b">
+                      <td className="p-3 text-slate-600 dark:text-slate-300">Setup Complexity</td>
+                      <td className="p-3 text-center text-green-600 font-medium">Easy</td>
+                      <td className="p-3 text-center text-orange-600 font-medium">Technical</td>
+                    </tr>
+                    <tr className="border-b">
+                      <td className="p-3 text-slate-600 dark:text-slate-300">File Size</td>
+                      <td className="p-3 text-center text-slate-600 dark:text-slate-300">~50 MB</td>
+                      <td className="p-3 text-center text-slate-600 dark:text-slate-300">~20 KB</td>
+                    </tr>
+                    <tr>
+                      <td className="p-3 text-slate-600 dark:text-slate-300">Best For</td>
+                      <td className="p-3 text-center text-blue-600 font-medium">Everyone</td>
+                      <td className="p-3 text-center text-green-600 font-medium">Developers</td>
+                    </tr>
+                  </tbody>
+                </table>
               </div>
             </CardContent>
           </Card>
