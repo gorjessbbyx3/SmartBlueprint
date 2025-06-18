@@ -164,14 +164,14 @@ registerRoutes(app);
 
 const PORT = parseInt(process.env.PORT || "5000", 10);
 
-if (process.env.NODE_ENV === "development") {
-  setupVite(app);
-} else {
-  serveStatic(app);
-}
-
 const httpServer = app.listen(PORT, "0.0.0.0", () => {
   log(`Server running on port ${PORT}`);
 });
+
+if (process.env.NODE_ENV === "development") {
+  setupVite(app, httpServer);
+} else {
+  serveStatic(app);
+}
 
 export default httpServer;
