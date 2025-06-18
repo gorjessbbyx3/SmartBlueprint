@@ -1,0 +1,24 @@
+{
+  "name": "smartblueprint-pro-desktop",
+  "version": "1.0.0",
+  "description": "SmartBlueprint Pro Windows Desktop Application",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "start-windows": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2"
+  },
+  "engines": {
+    "node": ">=14.0.0"
+  },
+  "author": "GorJess & Co",
+  "license": "MIT",
+  "keywords": [
+    "smart-home",
+    "network-monitoring",
+    "desktop-application",
+    "windows"
+  ]
+}
