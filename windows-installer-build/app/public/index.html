@@ -1,0 +1,123 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SmartBlueprint Pro - Desktop Application</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);
+            color: white;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+        .container {
+            text-align: center;
+            max-width: 800px;
+            background: rgba(255,255,255,0.1);
+            padding: 40px;
+            border-radius: 20px;
+            backdrop-filter: blur(10px);
+        }
+        h1 {
+            font-size: 3em;
+            margin-bottom: 20px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+        .subtitle {
+            font-size: 1.5em;
+            margin-bottom: 30px;
+            opacity: 0.9;
+        }
+        .features {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin: 30px 0;
+        }
+        .feature {
+            background: rgba(255,255,255,0.1);
+            padding: 20px;
+            border-radius: 10px;
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+        .status {
+            margin-top: 30px;
+            padding: 15px;
+            background: rgba(34, 197, 94, 0.2);
+            border: 1px solid rgba(34, 197, 94, 0.4);
+            border-radius: 10px;
+        }
+        .launcher-btn {
+            background: #10b981;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            font-size: 1.2em;
+            border-radius: 10px;
+            cursor: pointer;
+            margin: 20px 10px;
+            transition: all 0.3s ease;
+        }
+        .launcher-btn:hover {
+            background: #059669;
+            transform: translateY(-2px);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🏠 SmartBlueprint Pro</h1>
+        <div class="subtitle">Desktop Application - Windows 10 Compatible</div>
+        
+        <div class="features">
+            <div class="feature">
+                <h3>🔍 Device Discovery</h3>
+                <p>Automatic network scanning and smart home device detection</p>
+            </div>
+            <div class="feature">
+                <h3>🤖 AI Analytics</h3>
+                <p>Machine learning powered insights and anomaly detection</p>
+            </div>
+            <div class="feature">
+                <h3>📊 Real-time Monitoring</h3>
+                <p>Live network performance and device health tracking</p>
+            </div>
+            <div class="feature">
+                <h3>🗺️ Interactive Mapping</h3>
+                <p>Visual floor plans with signal strength heatmaps</p>
+            </div>
+        </div>
+
+        <div class="status">
+            ✅ Desktop Application Successfully Installed<br>
+            🖥️ Windows 10/11 Compatible Version<br>
+            ⚡ Running Offline - No Internet Required
+        </div>
+
+        <button class="launcher-btn" onclick="window.location.href='http://localhost:3000'">
+            Launch Full Application
+        </button>
+        
+        <button class="launcher-btn" onclick="window.open('http://localhost:3000/onboarding', '_blank')">
+            Setup Guide
+        </button>
+    </div>
+
+    <script>
+        // Auto-redirect to main application after 5 seconds
+        setTimeout(() => {
+            if (confirm('Launch the full SmartBlueprint Pro application?')) {
+                window.location.href = 'http://localhost:3000';
+            }
+        }, 5000);
+    </script>
+</body>
+</html>
