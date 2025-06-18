@@ -44,7 +44,7 @@ export default function Sidebar({
     queryKey: ["/api/anomalies"],
   });
 
-  const unresolved = anomalies.filter((a: any) => !a.resolved);
+  const unresolved = Array.isArray(anomalies) ? (anomalies as any[]).filter((a: any) => !a.resolved) : [];
 
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -100,8 +100,22 @@ export default function Sidebar({
       <div className="p-6 border-b border-gray-200">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center space-x-3">
-            <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-              <i className="fas fa-map-marked-alt text-white text-sm"></i>
+            <div className="w-8 h-8 rounded-lg flex items-center justify-center overflow-hidden">
+              <img 
+                src="/assets/smartpriny_1750234391584.png" 
+                alt="SmartBlueprint Pro" 
+                className="w-full h-full object-contain"
+                onError={(e) => {
+                  e.currentTarget.style.display = 'none';
+                  const fallbackElement = e.currentTarget.nextElementSibling as HTMLElement;
+                  if (fallbackElement) {
+                    fallbackElement.style.display = 'flex';
+                  }
+                }}
+              />
+              <div className="w-8 h-8 bg-primary rounded-lg items-center justify-center hidden">
+                <i className="fas fa-map-marked-alt text-white text-sm"></i>
+              </div>
             </div>
             <div>
               <h1 className="text-lg font-semibold text-gray-900">SmartBlueprint Pro</h1>

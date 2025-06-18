@@ -159,6 +159,9 @@ app.get('/download/desktop-agent-enhanced.js', (req: Request, res: Response) => 
   }
 });
 
+// Serve attached assets including professional icon
+app.use('/assets', express.static(path.join(process.cwd(), 'attached_assets')));
+
 // Register API routes and start server
 registerRoutes(app);
 
