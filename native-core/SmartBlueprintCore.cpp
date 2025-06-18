@@ -1,45 +1,93 @@
-#include <iostream>
-#include <vector>
-#include <string>
-#include <thread>
-#include <chrono>
-#include <memory>
-#include <map>
-#include <mutex>
+#include "SmartBlueprintCore.h"
 
-#ifdef _WIN32
-#include <windows.h>
-#include <winsock2.h>
-#include <ws2tcpip.h>
-#include <iphlpapi.h>
-#pragma comment(lib, "ws2_32.lib")
-#pragma comment(lib, "iphlpapi.lib")
-#elif __APPLE__
-#include <CoreWLAN/CoreWLAN.h>
-#include <SystemConfiguration/SystemConfiguration.h>
-#elif __ANDROID__
-#include <jni.h>
-#include <android/log.h>
-#endif
+SmartBlueprintCore::SmartBlueprintCore() : monitoring(false) {
+    scanner = std::make_unique<NetworkScanner>();
+    mlEngine = std::make_unique<MLEngine>();
+    classifier = std::make_unique<DeviceClassifier>();
+    signalProcessor = std::make_unique<SignalProcessor>();
+}
 
-namespace SmartBlueprint {
+SmartBlueprintCore::~SmartBlueprintCore() {
+    stopMonitoring();
+}
 
-class Device {
-public:
-    std::string macAddress;
-    std::string ipAddress;
-    std::string hostname;
-    std::string deviceType;
-    int rssi;
-    bool isOnline;
-    std::chrono::system_clock::time_point lastSeen;
-    std::map<std::string, std::string> telemetryData;
+void SmartBlueprintCore::startMonitoring() {
+    if (monitoring.load()) return;
     
-    Device(const std::string& mac, const std::string& ip) 
-        : macAddress(mac), ipAddress(ip), rssi(-100), isOnline(false) {
-        lastSeen = std::chrono::system_clock::now();
+    monitoring.store(true);
+    scanner->startScanning();
+    
+    monitoringThread = std::thread(&SmartBlueprintCore::monitoringLoop, this);
+}
+
+void SmartBlueprintCore::stopMonitoring() {
+    if (!monitoring.load()) return;
+    
+    monitoring.store(false);
+    scanner->stopScanning();
+    
+    if (monitoringThread.joinable()) {
+        monitoringThread.join();
     }
-};
+}
+
+void SmartBlueprintCore::monitoringLoop() {
+    while (monitoring.load()) {
+        try {
+            // Get latest device data
+            auto devices = scanner->getCurrentDevices();
+            
+            // Process and classify devices
+            {
+                std::lock_guard<std::mutex> lock(dataMutex);
+                currentDevices = devices;
+                updateDeviceClassifications();
+                processSignalData();
+                
+                // Detect anomalies
+                currentAnomalies = mlEngine->detectAnomalies(currentDevices);
+            }
+            
+            // Wait before next iteration
+            std::this_thread::sleep_for(std::chrono::seconds(5));
+            
+        } catch (const std::exception& e) {
+            // Log error and continue
+            std::this_thread::sleep_for(std::chrono::seconds(1));
+        }
+    }
+}
+
+std::vector<std::shared_ptr<NetworkDevice>> SmartBlueprintCore::getCurrentDevices() {
+    std::lock_guard<std::mutex> lock(dataMutex);
+    return currentDevices;
+}
+
+std::vector<std::pair<std::shared_ptr<NetworkDevice>, double>> SmartBlueprintCore::detectAnomalies() {
+    std::lock_guard<std::mutex> lock(dataMutex);
+    return currentAnomalies;
+}
+
+void SmartBlueprintCore::performScan() {
+    scanner->performNetworkScan();
+}
+
+void SmartBlueprintCore::updateDeviceClassifications() {
+    for (auto& device : currentDevices) {
+        if (device->deviceType.empty()) {
+            device->deviceType = classifier->classifyDevice(device);
+            device->vendor = classifier->identifyVendor(device->macAddress);
+        }
+    }
+}
+
+void SmartBlueprintCore::processSignalData() {
+    for (auto& device : currentDevices) {
+        // Process RSSI for signal smoothing
+        double processedRSSI = signalProcessor->processRSSI(device->rssi, device->macAddress);
+        device->rssi = static_cast<int>(processedRSSI);
+    }
+}
 
 class NetworkScanner {
 private:

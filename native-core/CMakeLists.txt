@@ -58,11 +58,31 @@ target_link_libraries(SmartBlueprintCore ${PLATFORM_LIBS})
 
 # Desktop application
 add_executable(SmartBlueprintDesktop
-    main.cpp
+    main_new.cpp
     DesktopUI.cpp
+    NetworkScanner.cpp
+    MLEngine.cpp
+    DeviceClassifier.cpp
+    SignalProcessor.cpp
+    SmartBlueprintCore.cpp
 )
 
-target_link_libraries(SmartBlueprintDesktop SmartBlueprintCore)
+target_link_libraries(SmartBlueprintDesktop ${PLATFORM_LIBS})
+
+# Set output properties for Windows executable
+if(WIN32)
+    set_target_properties(SmartBlueprintDesktop PROPERTIES
+        OUTPUT_NAME "SmartBlueprint-${PLATFORM_ARCH}"
+        LINK_FLAGS "/SUBSYSTEM:CONSOLE"
+    )
+    
+    # Add manifest for Windows compatibility
+    if(MSVC)
+        set_target_properties(SmartBlueprintDesktop PROPERTIES
+            LINK_FLAGS "/MANIFEST:EMBED /MANIFESTINPUT:${CMAKE_CURRENT_SOURCE_DIR}/app.manifest"
+        )
+    endif()
+endif()
 
 # Android library
 if(ANDROID)
