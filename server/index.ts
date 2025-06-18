@@ -159,6 +159,51 @@ app.get('/download/desktop-agent-enhanced.js', (req: Request, res: Response) => 
   }
 });
 
+// Serve complete Electron desktop application
+app.get('/download/SmartBlueprint-Pro-Setup.exe', (req: Request, res: Response) => {
+  console.log('[Download] Complete desktop application download requested');
+  
+  try {
+    const desktopApps = [
+      'SmartBlueprint-Pro-Setup.exe',
+      'SmartBlueprint-Desktop.exe', 
+      'dist/SmartBlueprint-Pro.exe',
+      'SmartBlueprint-Pro.exe'
+    ];
+    
+    let foundApp = null;
+    for (const appPath of desktopApps) {
+      const fullPath = path.join(process.cwd(), appPath);
+      if (fs.existsSync(fullPath)) {
+        foundApp = fullPath;
+        break;
+      }
+    }
+    
+    if (foundApp) {
+      res.download(foundApp, 'SmartBlueprint-Pro-Setup.exe', (err) => {
+        if (err) {
+          console.error('[Download] Desktop app download failed:', err);
+          if (!res.headersSent) {
+            res.status(500).send('Download failed');
+          }
+        } else {
+          console.log('[Download] Complete desktop application downloaded successfully');
+        }
+      });
+    } else {
+      console.log('[Download] Desktop application not found, building on demand...');
+      res.status(202).json({ 
+        message: 'Desktop application is being built. Please try again in a few minutes.',
+        status: 'building'
+      });
+    }
+  } catch (error) {
+    console.error('[Download] Failed to serve desktop application:', error);
+    res.status(500).send('Download failed');
+  }
+});
+
 // Serve attached assets including professional icon
 app.use('/assets', express.static(path.join(process.cwd(), 'attached_assets')));
 
