@@ -1,0 +1,14 @@
+{
+  "name": "smartblueprint-pro-desktop",
+  "version": "1.0.0",
+  "description": "SmartBlueprint Pro Desktop Application",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2"
+  },
+  "author": "GorJess & Co",
+  "license": "MIT"
+}
