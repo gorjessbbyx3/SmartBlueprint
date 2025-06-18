@@ -234,55 +234,7 @@ pause`;
     async createExecutableInstaller() {
         console.log('🔧 Creating executable installer...');
         
-        // Create NSIS installer script
-        const nsisScript = `
-!define APPNAME "SmartBlueprint Pro"
-!define COMPANYNAME "GorJess & Co"
-!define DESCRIPTION "Smart Home Network Monitoring Platform"
-!define VERSIONMAJOR 1
-!define VERSIONMINOR 0
-!define VERSIONBUILD 0
-
-RequestExecutionLevel admin
-InstallDir "$PROGRAMFILES\\SmartBlueprint Pro"
-Name "SmartBlueprint Pro"
-OutFile "SmartBlueprint-Pro-Setup.exe"
-
-Page directory
-Page instfiles
-
-Section "install"
-    SetOutPath $INSTDIR
-    File /r "app\\*.*"
-    
-    # Create shortcuts
-    CreateDirectory "$SMPROGRAMS\\${APPNAME}"
-    CreateShortcut "$SMPROGRAMS\\${APPNAME}\\${APPNAME}.lnk" "$INSTDIR\\SmartBlueprint-Pro.bat"
-    CreateShortcut "$DESKTOP\\${APPNAME}.lnk" "$INSTDIR\\SmartBlueprint-Pro.bat"
-    
-    # Registry entries
-    WriteRegStr HKLM "Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\${APPNAME}" "DisplayName" "${APPNAME}"
-    WriteRegStr HKLM "Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\${APPNAME}" "UninstallString" "$INSTDIR\\uninstall.exe"
-    WriteRegStr HKLM "Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\${APPNAME}" "InstallLocation" "$INSTDIR"
-    WriteRegStr HKLM "Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\${APPNAME}" "Publisher" "${COMPANYNAME}"
-    WriteRegDWORD HKLM "Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\${APPNAME}" "VersionMajor" ${VERSIONMAJOR}
-    WriteRegDWORD HKLM "Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\${APPNAME}" "VersionMinor" ${VERSIONMINOR}
-    WriteRegDWORD HKLM "Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\${APPNAME}" "NoModify" 1
-    WriteRegDWORD HKLM "Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\${APPNAME}" "NoRepair" 1
-    
-    WriteUninstaller "$INSTDIR\\uninstall.exe"
-SectionEnd
-
-Section "uninstall"
-    Delete "$SMPROGRAMS\\${APPNAME}\\${APPNAME}.lnk"
-    RMDir "$SMPROGRAMS\\${APPNAME}"
-    Delete "$DESKTOP\\${APPNAME}.lnk"
-    
-    RMDir /r $INSTDIR
-    
-    DeleteRegKey HKLM "Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\${APPNAME}"
-SectionEnd
-`;
+        // Skip NSIS for now and go directly to batch installer
 
         // For now, create a self-extracting archive approach
         const installerScript = `@echo off
