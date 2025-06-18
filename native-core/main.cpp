@@ -1,4 +1,5 @@
-#include "SmartBlueprintCore.cpp"
+#include "SmartBlueprintCore.h"
+#include "DesktopUI.h"
 #include <iostream>
 #include <chrono>
 #include <thread>
