@@ -1,25 +1,30 @@
-# SmartBlueprint Pro - Smart Home Device Mapping Platform
+# SmartBlueprint Pro - Native Smart Home Device Mapping Platform
 
 ## Overview
 
-This is a full-stack web application for smart home device mapping and network optimization. The platform provides real-time visualization of IoT devices on interactive floorplans, analyzes signal strength patterns, and offers intelligent recommendations for improving network coverage. Built with React, Express, and PostgreSQL, it features a modern component-based architecture with real-time WebSocket communication.
+This is a native-first smart home device mapping and network optimization platform. The system provides real-time network device discovery, signal strength analysis, and intelligent recommendations through native desktop and mobile applications. Built with C++ core engine, native Android (Kotlin/Jetpack Compose), and iOS (SwiftUI) interfaces, it features cross-platform device discovery with ML-powered anomaly detection.
 
 ## System Architecture
 
-### Frontend Architecture
-- **React 18** with TypeScript for the user interface
-- **Vite** as the build tool and development server
-- **Tailwind CSS** with shadcn/ui components for styling
-- **TanStack Query** for server state management and caching
-- **Wouter** for client-side routing
-- **WebSocket** integration for real-time device updates
+### Native Core Engine
+- **C++ Core Library** (`SmartBlueprintCore.cpp`) - Cross-platform network scanning and ML processing
+- **CMake Build System** - Multi-platform compilation for Windows, macOS, Linux, iOS, Android
+- **Platform-Specific Network APIs** - Windows WinAPI, macOS Core WLAN, Linux /proc/net/arp, Android JNI
+- **ML Anomaly Detection** - Real-time signal analysis and device behavior monitoring
+- **Multi-threaded Scanner** - Continuous network device discovery with 30-second intervals
 
-### Backend Architecture
-- **Express.js** server with TypeScript
-- **WebSocket Server** for real-time communication
-- **Drizzle ORM** for database operations
-- **Zod** for runtime type validation
-- **PostgreSQL** as the primary database (configured for Neon)
+### Mobile Applications
+- **Android Native** - Kotlin with Jetpack Compose UI, WiFi scanning with WifiManager
+- **iOS Native** - SwiftUI interface with Network framework and Bonjour/mDNS discovery
+- **Real-time Device Lists** - Live network device detection with signal strength indicators
+- **Permission Management** - Location and WiFi access handling for device scanning
+- **Native Performance** - Direct system API access without web wrapper overhead
+
+### Desktop Applications
+- **Native Console UI** - C++ terminal interface with real-time device monitoring
+- **Cross-platform Compatibility** - Windows, macOS, Linux native executables
+- **Live Device Display** - Real-time network scanning with anomaly detection alerts
+- **Interactive Commands** - Refresh, force scan, and quit controls via keyboard input
 
 ### Database Design
 - **devices** table: Stores device information including position, signal strength, and status
