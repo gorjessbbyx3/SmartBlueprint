@@ -15,7 +15,7 @@ import { NetworkDeviceDiscovery } from "./network-device-discovery";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useAIActions } from "@/hooks/use-ai-actions";
-import { Brain, Home, Zap, TrendingUp, Activity, AlertTriangle, Pen, Wifi, MapPin, ExternalLink, Gamepad2, Download } from "lucide-react";
+import { Brain, Home, Zap, TrendingUp, Activity, AlertTriangle, Pen, Wifi, MapPin, ExternalLink, Gamepad2, Download, Monitor } from "lucide-react";
 import { Link } from "wouter";
 
 interface SidebarProps {
@@ -424,6 +424,43 @@ console.log('[Agent] Press Ctrl+C to stop');
                   <div className="text-xs text-amber-600 bg-amber-50 p-2 rounded">
                     <i className="fas fa-info-circle mr-1"></i>
                     Browser security prevents direct network access
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Windows Desktop Download */}
+            <Card className="bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200">
+              <CardContent className="p-4">
+                <h3 className="text-sm font-semibold text-gray-900 mb-3 flex items-center">
+                  <Monitor className="w-4 h-4 mr-2 text-blue-600" />
+                  Windows Desktop App
+                </h3>
+                <div className="space-y-3">
+                  <div className="text-xs text-gray-600 mb-2">
+                    Get the complete offline desktop application with all AI features
+                  </div>
+                  <Button
+                    size="sm"
+                    className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+                    onClick={() => {
+                      // Create download link for Windows executable
+                      const link = document.createElement('a');
+                      link.href = '/SmartBlueprint-Windows/SmartBlueprint-Pro.exe';
+                      link.download = 'SmartBlueprint-Pro.exe';
+                      document.body.appendChild(link);
+                      link.click();
+                      document.body.removeChild(link);
+                    }}
+                  >
+                    <Download className="w-4 h-4 mr-2" />
+                    Download for Windows
+                  </Button>
+                  <div className="text-xs text-blue-600 bg-blue-50 p-2 rounded">
+                    <div className="font-medium mb-1">Includes:</div>
+                    <div>• 7+ AI/ML systems</div>
+                    <div>• Real-time monitoring</div>
+                    <div>• Complete offline operation</div>
                   </div>
                 </div>
               </CardContent>

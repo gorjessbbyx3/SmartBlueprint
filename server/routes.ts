@@ -2,6 +2,9 @@ import { Express, Request, Response } from "express";
 import { createServer, Server } from "http";
 import { WebSocketServer, WebSocket } from "ws";
 import { storage } from "./storage.js";
+import path from "path";
+import { fileURLToPath } from "url";
+import fs from "fs";
 import { createInsertSchema } from "drizzle-zod";
 import { devices, floorplans, anomalies, recommendations } from "../shared/schema.js";
 import { z } from "zod";
@@ -3059,6 +3062,80 @@ console.log('🤖 AI-powered failure prediction and analysis');
 console.log('\\nPress Ctrl+C to stop the agent');
 `;
   }
+
+  // Windows Desktop Download Route
+  app.get('/SmartBlueprint-Windows/SmartBlueprint-Pro.exe', async (req: Request, res: Response) => {
+    try {
+      const __filename = fileURLToPath(import.meta.url);
+      const __dirname = path.dirname(__filename);
+      const exePath = path.join(__dirname, '..', 'SmartBlueprint-Windows', 'SmartBlueprint-Pro.exe');
+      
+      if (!fs.existsSync(exePath)) {
+        return res.status(404).json({
+          error: 'Windows executable not found'
+        });
+      }
+
+      res.setHeader('Content-Type', 'application/octet-stream');
+      res.setHeader('Content-Disposition', 'attachment; filename="SmartBlueprint-Pro.exe"');
+      res.setHeader('Cache-Control', 'no-cache');
+      
+      const fileStream = fs.createReadStream(exePath);
+      fileStream.pipe(res);
+      
+    } catch (error) {
+      console.error('Download error:', error);
+      res.status(500).json({
+        error: 'Failed to download Windows application'
+      });
+    }
+  });
+
+  // Windows Package Info Route
+  app.get('/api/windows-package/info', async (req: Request, res: Response) => {
+    try {
+      const __filename = fileURLToPath(import.meta.url);
+      const __dirname = path.dirname(__filename);
+      const packagePath = path.join(__dirname, '..', 'SmartBlueprint-Windows');
+      
+      const packageInfo = {
+        available: fs.existsSync(packagePath),
+        files: [],
+        size: 0,
+        version: '1.0.0',
+        features: [
+          '7+ AI/ML systems for anomaly detection',
+          'Real-time device monitoring and discovery',
+          'Advanced signal processing with Kalman filtering',
+          'Network mapping and visualization',
+          'Predictive maintenance alerts',
+          'Complete offline operation',
+          'Windows 11 native integration'
+        ]
+      };
+
+      if (packageInfo.available) {
+        const files = fs.readdirSync(packagePath);
+        packageInfo.files = files;
+        
+        // Calculate total package size
+        for (const file of files) {
+          const filePath = path.join(packagePath, file);
+          if (fs.statSync(filePath).isFile()) {
+            packageInfo.size += fs.statSync(filePath).size;
+          }
+        }
+      }
+
+      res.json(packageInfo);
+      
+    } catch (error) {
+      console.error('Package info error:', error);
+      res.status(500).json({
+        error: 'Failed to get package information'
+      });
+    }
+  });
 
   return httpServer;
 }
