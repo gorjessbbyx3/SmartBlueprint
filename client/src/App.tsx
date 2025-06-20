@@ -13,6 +13,7 @@ import PingMonitoring from "@/pages/ping-monitoring";
 import UserOnboarding from "@/pages/user-onboarding";
 import PetRecognition from "@/pages/pet-recognition";
 import PredictiveMaintenance from "@/pages/predictive-maintenance";
+import PredictiveAnalytics from "@/pages/predictive-analytics";
 import AdvancedAnalytics from "@/pages/advanced-analytics";
 import NetworkTopology from "@/pages/network-topology";
 import MobilePingDashboard from "@/pages/mobile-ping-dashboard";
@@ -91,6 +92,7 @@ function Router() {
       <Route path="/onboarding" component={UserOnboarding} />
       <Route path="/pet-recognition" component={PetRecognition} />
       <Route path="/predictive-maintenance" component={PredictiveMaintenance} />
+      <Route path="/predictive-analytics" component={PredictiveAnalytics} />
       <Route path="/advanced-analytics" component={AdvancedAnalytics} />
       <Route path="/network-topology" component={NetworkTopology} />
       <Route path="/mobile-ping" component={MobilePingDashboard} />

@@ -3106,22 +3106,23 @@ console.log('\\nPress Ctrl+C to stop the agent');
         return res.status(400).json({ error: 'device_id and telemetry are required' });
       }
 
-      // Call Python predictive analytics engine
+      // Call enhanced ML monitoring system
+      const telemetryJson = JSON.stringify(telemetry).replace(/"/g, '\\"');
       const pythonScript = `
 import sys
 import json
 sys.path.append('.')
-from predictive_analytics_engine import predictive_engine
+from enhanced_ml_monitoring import health_monitor
 
 # Add telemetry data
 device_id = "${device_id}"
-telemetry = ${JSON.stringify(telemetry)}
-predictive_engine.add_device_telemetry(device_id, telemetry)
+telemetry = json.loads("${telemetryJson}")
+health_monitor.add_telemetry(device_id, telemetry)
 
-print(json.dumps({"status": "success", "message": "Telemetry added"}))
+print(json.dumps({"status": "success", "message": "Telemetry added successfully"}))
       `;
 
-      const { stdout } = await execAsync(`python3 -c "${pythonScript}"`);
+      const { stdout } = await execAsync(`python3 -c '${pythonScript}'`);
       const result = JSON.parse(stdout.trim());
       
       res.json(result);
