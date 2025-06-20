@@ -2429,6 +2429,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Enhanced Windows GUI application download
+  app.get('/download/SmartBlueprint-Pro-Windows-Enhanced.tar.gz', async (req: Request, res: Response) => {
+    try {
+      const fs = await import('fs');
+      const path = await import('path');
+      
+      const filePath = path.join(process.cwd(), 'SmartBlueprint-Pro-Windows-Enhanced.tar.gz');
+      
+      if (fs.existsSync(filePath)) {
+        res.setHeader('Content-Type', 'application/gzip');
+        res.setHeader('Content-Disposition', 'attachment; filename="SmartBlueprint-Pro-Windows-Enhanced.tar.gz"');
+        res.setHeader('Content-Length', fs.statSync(filePath).size);
+        res.setHeader('Cache-Control', 'no-cache');
+        
+        const stream = fs.createReadStream(filePath);
+        stream.pipe(res);
+        console.log('[Download] Enhanced Windows GUI application downloaded');
+        
+      } else {
+        res.status(404).json({ 
+          success: false, 
+          message: "Enhanced Windows GUI application not found" 
+        });
+      }
+      
+    } catch (error) {
+      console.error('Enhanced GUI download error:', error);
+      res.status(500).json({ 
+        success: false, 
+        message: "Enhanced GUI download failed" 
+      });
+    }
+  });
+
   // Console application download endpoint (separate from Electron app)
   app.get('/download/SmartBlueprint-Console.exe', async (req: Request, res: Response) => {
     try {
