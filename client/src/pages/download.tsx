@@ -5,8 +5,8 @@ import { Download, Shield, Monitor, Wifi, Zap, CheckCircle } from "lucide-react"
 
 export default function DownloadPage() {
   const handleDownloadGUI = () => {
-    // Download the new Windows GUI application
-    window.open('/download/SmartBlueprint-Pro-Windows-GUI.tar.gz', '_blank');
+    // Download the enhanced Windows GUI application
+    window.open('/download/SmartBlueprint-Pro-Windows-Enhanced.tar.gz', '_blank');
   };
 
   const handleDownloadLegacy = () => {
