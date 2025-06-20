@@ -1790,9 +1790,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const fs = require('fs');
       const path = require('path');
       
-      const agentPath = path.join(process.cwd(), 'desktop-agent-enhanced.js');
+      // Check multiple paths for the enhanced agent
+      const agentPaths = [
+        path.join(process.cwd(), 'desktop-agent-enhanced.js'),
+        path.join(process.cwd(), 'public/downloads/desktop-agent-enhanced.js')
+      ];
       
-      if (fs.existsSync(agentPath)) {
+      let agentPath = null;
+      for (const p of agentPaths) {
+        if (fs.existsSync(p)) {
+          agentPath = p;
+          break;
+        }
+      }
+      
+      if (agentPath) {
         const agentContent = fs.readFileSync(agentPath, 'utf8');
         
         res.setHeader('Content-Disposition', 'attachment; filename="smartblueprint-agent-enhanced.js"');
@@ -1803,14 +1815,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
         res.send(agentContent);
         console.log('[Download] Enhanced desktop agent downloaded via API');
       } else {
-        const enhancedAgentCode = generateEnhancedAgent();
-        
-        res.setHeader('Content-Disposition', 'attachment; filename="smartblueprint-agent-enhanced.js"');
-        res.setHeader('Content-Type', 'application/javascript');
-        res.setHeader('Content-Length', Buffer.byteLength(enhancedAgentCode, 'utf8'));
-        
-        res.send(enhancedAgentCode);
-        console.log('[Download] Generated enhanced agent served via API');
+        // Redirect to deployed site if file not found locally
+        const deployedUrl = process.env.DEPLOYED_WEBPAGE_URL || process.env.REPL_URL;
+        if (deployedUrl) {
+          res.redirect(`${deployedUrl}/downloads/desktop-agent-enhanced.js`);
+        } else {
+          const enhancedAgentCode = generateEnhancedAgent();
+          
+          res.setHeader('Content-Disposition', 'attachment; filename="smartblueprint-agent-enhanced.js"');
+          res.setHeader('Content-Type', 'application/javascript');
+          res.setHeader('Content-Length', Buffer.byteLength(enhancedAgentCode, 'utf8'));
+          
+          res.send(enhancedAgentCode);
+          console.log('[Download] Generated enhanced agent served via API');
+        }
       }
     } catch (error) {
       console.error('[Download] API download failed:', error);
@@ -1818,6 +1836,57 @@ export async function registerRoutes(app: Express): Promise<Server> {
         success: false, 
         message: "Failed to download desktop agent",
         error: error.message 
+      });
+    }
+  });
+
+  // Direct desktop agent download endpoint
+  app.get("/download/desktop-agent-enhanced.js", (req: Request, res: Response) => {
+    try {
+      const fs = require('fs');
+      const path = require('path');
+      
+      // Check multiple paths for the enhanced agent
+      const agentPaths = [
+        path.join(process.cwd(), 'desktop-agent-enhanced.js'),
+        path.join(process.cwd(), 'public/downloads/desktop-agent-enhanced.js')
+      ];
+      
+      let agentPath = null;
+      for (const p of agentPaths) {
+        if (fs.existsSync(p)) {
+          agentPath = p;
+          break;
+        }
+      }
+      
+      if (agentPath) {
+        const agentContent = fs.readFileSync(agentPath, 'utf8');
+        
+        res.setHeader('Content-Disposition', 'attachment; filename="desktop-agent-enhanced.js"');
+        res.setHeader('Content-Type', 'application/javascript');
+        res.setHeader('Content-Length', Buffer.byteLength(agentContent, 'utf8'));
+        res.setHeader('Cache-Control', 'no-cache');
+        
+        res.send(agentContent);
+        console.log('[Download] Desktop agent enhanced downloaded');
+      } else {
+        // Redirect to deployed site if file not found locally
+        const deployedUrl = process.env.DEPLOYED_WEBPAGE_URL || process.env.REPL_URL;
+        if (deployedUrl) {
+          res.redirect(`${deployedUrl}/downloads/desktop-agent-enhanced.js`);
+        } else {
+          res.status(404).json({ 
+            success: false, 
+            message: "Desktop agent enhanced not found" 
+          });
+        }
+      }
+    } catch (error) {
+      console.error('[Download] Desktop agent download failed:', error);
+      res.status(500).json({ 
+        success: false, 
+        message: "Desktop agent download failed" 
       });
     }
   });
@@ -2240,6 +2309,59 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ 
         success: false, 
         message: "Failed to serve desktop agent file" 
+      });
+    }
+  });
+
+  // Windows desktop installer download endpoint
+  app.get('/download/SmartBlueprint-Pro-Setup.exe', async (req: Request, res: Response) => {
+    try {
+      const fs = await import('fs');
+      const path = await import('path');
+      
+      // Check if installer exists in root or public/downloads
+      const installerPaths = [
+        path.join(process.cwd(), 'SmartBlueprint-Pro-Setup.exe'),
+        path.join(process.cwd(), 'public/downloads/SmartBlueprint-Pro-Setup.exe')
+      ];
+      
+      let installerPath = null;
+      for (const p of installerPaths) {
+        if (fs.existsSync(p)) {
+          installerPath = p;
+          break;
+        }
+      }
+      
+      if (installerPath) {
+        // Serve existing installer
+        res.setHeader('Content-Type', 'application/octet-stream');
+        res.setHeader('Content-Disposition', 'attachment; filename="SmartBlueprint-Pro-Setup.exe"');
+        res.setHeader('Content-Length', fs.statSync(installerPath).size);
+        res.setHeader('Cache-Control', 'no-cache');
+        
+        const stream = fs.createReadStream(installerPath);
+        stream.pipe(res);
+        console.log('[Download] SmartBlueprint Pro Setup downloaded');
+        
+      } else {
+        // Redirect to deployed site if file not found locally
+        const deployedUrl = process.env.DEPLOYED_WEBPAGE_URL || process.env.REPL_URL;
+        if (deployedUrl) {
+          res.redirect(`${deployedUrl}/downloads/SmartBlueprint-Pro-Setup.exe`);
+        } else {
+          res.status(404).json({ 
+            success: false, 
+            message: "SmartBlueprint Pro Setup installer not found" 
+          });
+        }
+      }
+      
+    } catch (error) {
+      console.error('Windows installer download error:', error);
+      res.status(500).json({ 
+        success: false, 
+        message: "Windows installer download failed" 
       });
     }
   });
