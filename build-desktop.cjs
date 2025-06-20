@@ -274,17 +274,17 @@ app.on('activate', () => {
         const filePath = path.join(distPath, file);
         const stats = fs.statSync(filePath);
         const sizeMB = (stats.size / (1024 * 1024)).toFixed(1);
-        console.log(\`  📦 \${file} (\${sizeMB} MB)\`);
+        console.log(`  📦 ${file} (${sizeMB} MB)`);
       });
       
-      console.log('\n✅ Your SmartBlueprint Pro Windows application includes:');
+      console.log('\\n✅ Your SmartBlueprint Pro Windows application includes:');
       console.log('   • Complete web application with all features');
       console.log('   • Embedded Express.js server (no external dependencies)');
       console.log('   • Full ML anomaly detection system');
       console.log('   • Real-time device monitoring');
       console.log('   • Native Windows 11 integration');
       console.log('   • Offline operation (no internet required)');
-      console.log('\n🚀 Ready to distribute and install on any Windows 11 system!');
+      console.log('\\n🚀 Ready to distribute and install on any Windows 11 system!');
     }
     
   } catch (error) {
