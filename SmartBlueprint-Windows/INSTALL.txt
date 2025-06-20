@@ -1,0 +1,36 @@
+SmartBlueprint Pro - Windows Installation Guide
+==============================================
+
+QUICK START:
+1. Double-click "launcher.bat" to start the application
+2. The web interface will open automatically
+3. Begin monitoring your IoT devices immediately
+
+DETAILED INSTALLATION:
+1. Extract all files to a permanent location (e.g., C:\SmartBlueprint-Pro)
+2. Run "install.ps1" as Administrator for system-wide installation
+3. Use desktop shortcut or Start Menu to launch
+
+SYSTEM REQUIREMENTS:
+- Windows 10/11 (64-bit)
+- 4GB RAM minimum, 8GB recommended
+- 2GB available disk space
+- Network adapter for device scanning
+
+FEATURES INCLUDED:
+- Complete web application interface
+- 7+ integrated AI/ML systems
+- Real-time device monitoring
+- Advanced anomaly detection
+- Network mapping and analysis
+- Predictive maintenance alerts
+- Offline operation (no internet required)
+
+TROUBLESHOOTING:
+- If Windows blocks execution, right-click > Properties > Unblock
+- For firewall issues, allow SmartBlueprint-Pro.exe through Windows Firewall
+- Default port: localhost:3000 (automatically configured)
+
+SUPPORT:
+Built-in diagnostics available through the application interface.
+All processing happens locally for maximum security and privacy.
