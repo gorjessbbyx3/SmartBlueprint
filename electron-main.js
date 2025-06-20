@@ -9,21 +9,35 @@ let serverProcess;
 const isDev = process.env.NODE_ENV === 'development';
 
 function createWindow() {
-  // Create the browser window
+  // Create the browser window with Windows 11 styling
   mainWindow = new BrowserWindow({
-    width: 1400,
-    height: 900,
+    width: 1600,
+    height: 1000,
     minWidth: 1200,
-    minHeight: 700,
-    icon: path.join(__dirname, 'assets', 'icon.png'),
+    minHeight: 800,
+    icon: path.join(__dirname, 'generated-icon.png'),
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
       enableRemoteModule: false,
+      webSecurity: true,
       preload: path.join(__dirname, 'electron-preload.js')
     },
     titleBarStyle: 'default',
-    show: false
+    titleBarOverlay: {
+      color: '#1f2937',
+      symbolColor: '#ffffff'
+    },
+    backgroundColor: '#1f2937',
+    show: false,
+    frame: true,
+    resizable: true,
+    maximizable: true,
+    minimizable: true,
+    fullscreenable: true,
+    autoHideMenuBar: false,
+    vibrancy: 'ultra-dark', // Windows 11 acrylic effect
+    transparent: false
   });
 
   // Start the Express server

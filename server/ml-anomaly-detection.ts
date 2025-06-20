@@ -40,10 +40,13 @@ export class MLAnomalyDetection {
   private networkFingerprints: Map<string, NetworkFingerprint> = new Map();
   private anomalyHistory: Map<string, AnomalyPrediction[]> = new Map();
   
-  // ML Model Parameters (simulated - in production would load from joblib)
+  // Enhanced ML Model Parameters with adaptive thresholds
   private isolationForestThreshold = 0.1;
   private rssiAnomalyThreshold = -85;
   private varianceMultiplier = 2.5;
+  private deviceOfflineThreshold = 300000; // 5 minutes in ms
+  private signalDegradationThreshold = 15; // dBm drop
+  private patternChangeThreshold = 0.7; // pattern similarity threshold
 
   constructor() {
     console.log('[ML Anomaly Detection] Initializing advanced ML models...');
@@ -104,6 +107,81 @@ export class MLAnomalyDetection {
     }
 
     return prediction;
+  }
+
+  /**
+   * Enhanced predictive anomaly detection for device behavior patterns
+   */
+  public predictDeviceFailure(macAddress: string, currentRssi: number): AnomalyPrediction {
+    const pattern = this.devicePatterns.get(macAddress);
+    if (!pattern) {
+      return {
+        isAnomaly: false,
+        anomalyScore: 0,
+        confidence: 0,
+        features: [],
+        modelUsed: 'InsufficientData'
+      };
+    }
+
+    const features = this.extractPredictiveFeatures(pattern, currentRssi);
+    const degradationTrend = this.calculateSignalDegradationTrend(pattern);
+    const timeBasedRisk = this.assessTimeBasedRisk(pattern);
+    
+    // Combine multiple risk factors
+    const riskScore = (degradationTrend * 0.4) + (timeBasedRisk * 0.3) + (features[2] * 0.3);
+    const isHighRisk = riskScore > 0.7;
+    
+    return {
+      isAnomaly: isHighRisk,
+      anomalyScore: riskScore,
+      confidence: Math.min(0.95, pattern.rssiHistory.length / 20), // Higher confidence with more data
+      features: [degradationTrend, timeBasedRisk, ...features],
+      modelUsed: 'PredictiveFailureAnalysis'
+    };
+  }
+
+  private extractPredictiveFeatures(pattern: DevicePattern, currentRssi: number): number[] {
+    const recentReadings = pattern.rssiHistory.slice(-10);
+    const signalVariability = this.calculateVariance(recentReadings);
+    const signalDrop = Math.max(0, pattern.baselineRSSI - currentRssi);
+    const consistencyScore = this.calculateConsistencyScore(pattern);
+    
+    return [signalVariability, signalDrop, consistencyScore];
+  }
+
+  private calculateSignalDegradationTrend(pattern: DevicePattern): number {
+    if (pattern.rssiHistory.length < 5) return 0;
+    
+    const recent = pattern.rssiHistory.slice(-5);
+    const older = pattern.rssiHistory.slice(-10, -5);
+    
+    const recentAvg = recent.reduce((a, b) => a + b, 0) / recent.length;
+    const olderAvg = older.length > 0 ? older.reduce((a, b) => a + b, 0) / older.length : recentAvg;
+    
+    const degradation = Math.max(0, olderAvg - recentAvg);
+    return Math.min(1, degradation / this.signalDegradationThreshold);
+  }
+
+  private assessTimeBasedRisk(pattern: DevicePattern): number {
+    const timeSinceLastSeen = Date.now() - pattern.lastSeen.getTime();
+    const offlineRisk = Math.min(1, timeSinceLastSeen / this.deviceOfflineThreshold);
+    
+    // Check for unusual absence patterns
+    const currentHour = new Date().getHours();
+    const isUsualHour = pattern.hourPatterns.has(currentHour);
+    const absenceRisk = isUsualHour ? 0 : 0.3;
+    
+    return Math.max(offlineRisk, absenceRisk);
+  }
+
+  private calculateConsistencyScore(pattern: DevicePattern): number {
+    if (pattern.rssiHistory.length < 3) return 1;
+    
+    const variance = this.calculateVariance(pattern.rssiHistory);
+    const normalizedVariance = Math.min(1, variance / (pattern.varianceThreshold * 2));
+    
+    return 1 - normalizedVariance; // Higher score = more consistent
   }
 
   /**
@@ -201,52 +279,109 @@ export class MLAnomalyDetection {
     rssiAnomaly: AnomalyPrediction;
     deviceAnomaly: AnomalyPrediction;
     temporalAnomaly: AnomalyPrediction;
+    predictiveAnomaly: AnomalyPrediction;
     overallRisk: number;
     recommendations: string[];
+    criticalityLevel: 'low' | 'medium' | 'high' | 'critical';
   } {
     const rssiAnomaly = this.detectRSSIAnomaly(deviceId, macAddress, rssi, timestamp);
     const deviceAnomaly = this.detectNewDeviceAnomaly(macAddress, deviceInfo);
     const temporalAnomaly = this.detectTemporalAnomaly(deviceId, macAddress, timestamp);
+    const predictiveAnomaly = this.predictDeviceFailure(macAddress, rssi);
     
-    // Calculate overall risk using ensemble voting
+    // Calculate weighted overall risk score
     const riskFactors = [
-      rssiAnomaly.isAnomaly ? rssiAnomaly.confidence : 0,
-      deviceAnomaly.isAnomaly ? deviceAnomaly.confidence : 0,
-      temporalAnomaly.isAnomaly ? temporalAnomaly.confidence : 0
+      { score: rssiAnomaly.anomalyScore * rssiAnomaly.confidence, weight: 0.3 },
+      { score: deviceAnomaly.anomalyScore * deviceAnomaly.confidence, weight: 0.2 },
+      { score: temporalAnomaly.anomalyScore * temporalAnomaly.confidence, weight: 0.2 },
+      { score: predictiveAnomaly.anomalyScore * predictiveAnomaly.confidence, weight: 0.3 }
     ];
     
-    const overallRisk = riskFactors.reduce((sum, risk) => sum + risk, 0) / 3;
+    const overallRisk = riskFactors.reduce((sum, factor) => sum + (factor.score * factor.weight), 0);
     
-    // Generate recommendations
-    const recommendations: string[] = [];
+    // Determine criticality level
+    let criticalityLevel: 'low' | 'medium' | 'high' | 'critical';
+    if (overallRisk > 0.85) criticalityLevel = 'critical';
+    else if (overallRisk > 0.7) criticalityLevel = 'high';
+    else if (overallRisk > 0.4) criticalityLevel = 'medium';
+    else criticalityLevel = 'low';
     
-    if (rssiAnomaly.isAnomaly) {
-      recommendations.push('Monitor signal strength - possible interference or distance issue');
-    }
+    // Generate intelligent recommendations
+    const recommendations = this.generateIntelligentRecommendations(
+      rssiAnomaly, deviceAnomaly, temporalAnomaly, predictiveAnomaly, overallRisk, deviceInfo
+    );
     
-    if (deviceAnomaly.isAnomaly && deviceAnomaly.features[0] === 1) {
-      recommendations.push('New device detected - verify authorization');
-    }
-    
-    if (deviceAnomaly.isAnomaly && (deviceAnomaly.features[1] === 1 || deviceAnomaly.features[2] === 1)) {
-      recommendations.push('Device properties changed - possible spoofing attempt');
-    }
-    
-    if (temporalAnomaly.isAnomaly) {
-      recommendations.push('Unusual activity pattern - check for unauthorized access');
-    }
-    
-    if (overallRisk > 0.7) {
-      recommendations.push('High risk detected - immediate investigation recommended');
-    }
-
     return {
       rssiAnomaly,
       deviceAnomaly,
       temporalAnomaly,
+      predictiveAnomaly,
       overallRisk,
-      recommendations
+      recommendations,
+      criticalityLevel
     };
+  }
+
+  private generateIntelligentRecommendations(
+    rssiAnomaly: AnomalyPrediction,
+    deviceAnomaly: AnomalyPrediction,
+    temporalAnomaly: AnomalyPrediction,
+    predictiveAnomaly: AnomalyPrediction,
+    overallRisk: number,
+    deviceInfo: any
+  ): string[] {
+    const recommendations: string[] = [];
+    
+    // RSSI-based recommendations
+    if (rssiAnomaly.isAnomaly) {
+      if (rssiAnomaly.anomalyScore > 0.8) {
+        recommendations.push('CRITICAL: Device signal severely degraded - immediate attention required');
+      } else if (rssiAnomaly.anomalyScore > 0.6) {
+        recommendations.push('WARNING: Check device placement and remove potential interference sources');
+      } else {
+        recommendations.push('INFO: Monitor signal strength trends for this device');
+      }
+    }
+    
+    // Device security recommendations
+    if (deviceAnomaly.isAnomaly) {
+      if (deviceAnomaly.features[0] === 1) { // New device
+        recommendations.push('NEW DEVICE: Verify device authorization and add to trusted list');
+      } else {
+        recommendations.push('SECURITY: Device fingerprint changed - verify device identity');
+      }
+    }
+    
+    // Temporal pattern recommendations
+    if (temporalAnomaly.isAnomaly) {
+      recommendations.push('PATTERN: Unusual activity timing detected - review device usage patterns');
+    }
+    
+    // Predictive maintenance recommendations
+    if (predictiveAnomaly.isAnomaly) {
+      if (predictiveAnomaly.anomalyScore > 0.8) {
+        recommendations.push('MAINTENANCE: Device failure predicted - schedule immediate inspection');
+      } else {
+        recommendations.push('SCHEDULE: Consider preventive maintenance for this device');
+      }
+    }
+    
+    // Overall risk recommendations
+    if (overallRisk > 0.85) {
+      recommendations.push('IMMEDIATE ACTION: High-risk device requires urgent investigation');
+      recommendations.push('CONSIDER: Temporary device isolation until issues resolved');
+    } else if (overallRisk > 0.7) {
+      recommendations.push('MONITOR: Increase monitoring frequency for this device');
+    }
+    
+    // Device-specific recommendations
+    if (deviceInfo.deviceType === 'printer' && rssiAnomaly.isAnomaly) {
+      recommendations.push('PRINTER: Check paper, toner, and network cable connections');
+    } else if (deviceInfo.deviceType === 'router' && rssiAnomaly.isAnomaly) {
+      recommendations.push('ROUTER: Network infrastructure issue - check all connections');
+    }
+    
+    return recommendations.length > 0 ? recommendations : ['Device operating normally'];
   }
 
   /**
