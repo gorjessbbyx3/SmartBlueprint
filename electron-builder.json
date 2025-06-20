@@ -26,11 +26,18 @@
       {
         "target": "nsis",
         "arch": ["x64"]
+      },
+      {
+        "target": "portable",
+        "arch": ["x64"]
       }
     ],
-    "icon": "assets/icon.ico",
+    "icon": "generated-icon.png",
     "requestedExecutionLevel": "asInvoker",
-    "artifactName": "SmartBlueprint-Pro-${version}-Setup.${ext}"
+    "artifactName": "SmartBlueprint-Pro-${version}-Windows11.${ext}",
+    "publisherName": "SmartBlueprint Pro",
+    "verifyUpdateCodeSignature": false,
+    "signAndEditExecutable": false
   },
   "nsis": {
     "oneClick": false,
