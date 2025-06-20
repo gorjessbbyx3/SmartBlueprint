@@ -39,16 +39,16 @@ export function useWebSocket(url: string, options: UseWebSocketOptions = {}) {
         };
         
         ws.current.onclose = (event) => {
-          console.log("WebSocket disconnected");
+          console.log(`WebSocket disconnected: ${event.code} - ${event.reason}`);
           setIsConnected(false);
           options.onClose?.(event);
           
-          // Attempt to reconnect after 5 seconds
-          if (!event.wasClean) {
+          // Only attempt to reconnect for unexpected closures
+          if (!event.wasClean && event.code !== 1000) {
+            console.log("Attempting to reconnect WebSocket...");
             reconnectTimeoutRef.current = setTimeout(() => {
-              console.log("Attempting to reconnect WebSocket...");
               connect();
-            }, 5000);
+            }, 3000);
           }
         };
         
@@ -56,10 +56,7 @@ export function useWebSocket(url: string, options: UseWebSocketOptions = {}) {
           console.error("WebSocket error:", event);
           setIsConnected(false);
           options.onError?.(event);
-          
-          // Don't attempt reconnection on 403/400 errors
-          // Just log the error and continue without WebSocket
-          console.warn("WebSocket connection failed - continuing without real-time updates");
+          console.warn("WebSocket connection failed - app will work without real-time updates");
         };
       } catch (error) {
         console.error("Failed to create WebSocket connection:", error);

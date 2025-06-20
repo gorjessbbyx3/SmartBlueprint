@@ -33,13 +33,36 @@ type Recommendation = typeof recommendations.$inferSelect;
 export async function registerRoutes(app: Express): Promise<Server> {
   const httpServer = createServer(app);
 
-  // Create WebSocket server
-  const wss = new WebSocketServer({ server: httpServer, path: '/ws' });
+  // Create WebSocket server with enhanced configuration
+  const wss = new WebSocketServer({ 
+    server: httpServer, 
+    path: '/ws',
+    perMessageDeflate: false,
+    maxPayload: 16 * 1024 * 1024 // 16MB
+  });
 
-  // WebSocket connection handling
+  // Enhanced WebSocket connection handling with error recovery
   wss.on('connection', (ws: WebSocket, request) => {
-    console.log('New WebSocket connection established');
+    console.log('New WebSocket connection established from:', request.socket.remoteAddress);
     
+    // Send welcome message to confirm connection
+    ws.send(JSON.stringify({
+      type: 'connection_established',
+      message: 'Connected to SmartBlueprint Pro',
+      timestamp: new Date().toISOString()
+    }));
+
+    // Set up ping/pong for connection health
+    const pingInterval = setInterval(() => {
+      if (ws.readyState === WebSocket.OPEN) {
+        ws.ping();
+      }
+    }, 30000);
+
+    ws.on('pong', () => {
+      // Connection is alive
+    });
+
     ws.on('message', async (message) => {
       try {
         const data = JSON.parse(message.toString());
@@ -146,12 +169,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       } catch (error) {
         console.error('WebSocket message error:', error);
+        // Send error response back to client
+        if (ws.readyState === WebSocket.OPEN) {
+          ws.send(JSON.stringify({
+            type: 'error',
+            message: 'Message processing failed',
+            timestamp: new Date().toISOString()
+          }));
+        }
       }
     });
 
-    ws.on('close', () => {
-      console.log('WebSocket connection closed');
+    ws.on('close', (code, reason) => {
+      console.log(`WebSocket connection closed: ${code} - ${reason}`);
+      clearInterval(pingInterval);
     });
+
+    ws.on('error', (error) => {
+      console.error('WebSocket connection error:', error);
+      clearInterval(pingInterval);
+    });
+  });
+
+  // Handle WebSocket server errors
+  wss.on('error', (error) => {
+    console.error('WebSocket server error:', error);
   });
 
   // Device routes
