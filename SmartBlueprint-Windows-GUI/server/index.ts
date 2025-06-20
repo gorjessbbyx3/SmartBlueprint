@@ -39,36 +39,6 @@ app.use('/api/*', (req: any, res: Response, next: NextFunction) => {
   next();
 });
 
-// Windows GUI Application download - Primary download route (NEW)
-app.get('/download/SmartBlueprint-Pro-Windows-GUI.tar.gz', (req: Request, res: Response) => {
-  console.log('[Download] Windows GUI application package requested');
-  
-  try {
-    const guiPackagePath = path.join(process.cwd(), 'SmartBlueprint-Pro-Windows-GUI.tar.gz');
-    
-    if (fs.existsSync(guiPackagePath)) {
-      res.download(guiPackagePath, 'SmartBlueprint-Pro-Windows-GUI.tar.gz', (err) => {
-        if (err) {
-          console.error('[Download] GUI package download error:', err);
-          if (!res.headersSent) {
-            res.status(500).json({ error: 'Download failed' });
-          }
-        } else {
-          console.log('[Download] Windows GUI package downloaded successfully');
-        }
-      });
-    } else {
-      res.status(404).json({ 
-        error: 'Windows GUI package not found',
-        message: 'Please build the GUI package first'
-      });
-    }
-  } catch (error) {
-    console.error('[Download] Windows GUI package download failed:', error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
-
 // Electron Desktop Application download - Primary download route
 app.get('/download/SmartBlueprint-Pro-Setup.exe', (req: Request, res: Response) => {
   console.log('[Download] Complete Electron desktop application requested');

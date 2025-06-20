@@ -1,0 +1,16 @@
+{
+  "name": "smartblueprint-pro-desktop",
+  "version": "1.0.0",
+  "description": "SmartBlueprint Pro - AI-Powered IoT Device Monitoring",
+  "main": "electron-main.js",
+  "scripts": {
+    "start": "electron .",
+    "test": "node electron-main.js"
+  },
+  "dependencies": {
+    "express": "^4.18.0"
+  },
+  "devDependencies": {
+    "electron": "^25.0.0"
+  }
+}

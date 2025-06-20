@@ -1,0 +1,370 @@
+import { Express, Request, Response } from "express";
+import { createServer, Server } from "http";
+import { WebSocketServer, WebSocket } from "ws";
+import { storage } from "./storage.js";
+import { createInsertSchema } from "drizzle-zod";
+import { devices, floorplans, anomalies, recommendations } from "../shared/schema.js";
+import { z } from "zod";
+import { aiAgentBackend } from "./ai-agent-backend.js";
+import { cloudSyncTunnel } from "./cloud-sync-tunnel.js";
+import { deviceScanner } from "./device-scanner.js";
+import { monitoringService } from "./monitoring-service.js";
+import { advancedSignalProcessor } from "./advanced-signal-processing.js";
+import { AdvancedLocationEngine, LSTMAnomalyDetector, IsolationForestDetector } from "./advanced-ml-models.js";
+import { mlAnalytics } from "./ml-analytics.js";
+
+const insertDeviceSchema = createInsertSchema(devices);
+const insertFloorplanSchema = createInsertSchema(floorplans);
+const insertAnomalySchema = createInsertSchema(anomalies);
+const insertRecommendationSchema = createInsertSchema(recommendations);
+
+type Device = typeof devices.$inferSelect;
+type Floorplan = typeof floorplans.$inferSelect;
+type Anomaly = typeof anomalies.$inferSelect;
+type Recommendation = typeof recommendations.$inferSelect;
+
+export async function registerRoutes(app: Express): Promise<Server> {
+  const httpServer = createServer(app);
+
+  // Create WebSocket server
+  const wss = new WebSocketServer({ server: httpServer, path: '/ws' });
+
+  // WebSocket connection handling
+  wss.on('connection', (ws: WebSocket, request) => {
+    console.log('New WebSocket connection established');
+    
+    ws.on('message', async (message) => {
+      try {
+        const data = JSON.parse(message.toString());
+        console.log('WebSocket message received:', data.type);
+        
+        // Handle different message types
+        switch (data.type) {
+          case 'device_update':
+            // Broadcast device updates to all connected clients
+            wss.clients.forEach((client) => {
+              if (client !== ws && client.readyState === WebSocket.OPEN) {
+                client.send(JSON.stringify(data));
+              }
+            });
+            break;
+          
+          case 'scan_request':
+            // Trigger device scanning
+            try {
+              const devices = await deviceScanner.scanDevices();
+              ws.send(JSON.stringify({
+                type: 'scan_result',
+                devices: devices
+              }));
+            } catch (error) {
+              ws.send(JSON.stringify({
+                type: 'error',
+                message: 'Device scanning failed'
+              }));
+            }
+            break;
+        }
+      } catch (error) {
+        console.error('WebSocket message error:', error);
+      }
+    });
+
+    ws.on('close', () => {
+      console.log('WebSocket connection closed');
+    });
+  });
+
+  // Device routes
+  app.get("/api/devices", async (req: Request, res: Response) => {
+    try {
+      const allDevices = await storage.getDevices();
+      res.json({
+        success: true,
+        devices: allDevices
+      });
+    } catch (error) {
+      console.error('Failed to get devices:', error);
+      res.status(500).json({ 
+        success: false, 
+        message: "Failed to retrieve devices" 
+      });
+    }
+  });
+
+  app.post("/api/devices", async (req: Request, res: Response) => {
+    try {
+      const deviceData = insertDeviceSchema.parse(req.body);
+      const newDevice = await storage.addDevice(deviceData);
+      
+      // Broadcast new device to WebSocket clients
+      wss.clients.forEach((client) => {
+        if (client.readyState === WebSocket.OPEN) {
+          client.send(JSON.stringify({
+            type: 'device_added',
+            device: newDevice
+          }));
+        }
+      });
+      
+      res.json({
+        success: true,
+        device: newDevice
+      });
+    } catch (error) {
+      console.error('Failed to add device:', error);
+      res.status(500).json({ 
+        success: false, 
+        message: "Failed to add device" 
+      });
+    }
+  });
+
+  app.put("/api/devices/:id", async (req: Request, res: Response) => {
+    try {
+      const deviceId = parseInt(req.params.id);
+      const updateData = req.body;
+      
+      const updatedDevice = await storage.updateDevice(deviceId, updateData);
+      
+      // Broadcast device update to WebSocket clients
+      wss.clients.forEach((client) => {
+        if (client.readyState === WebSocket.OPEN) {
+          client.send(JSON.stringify({
+            type: 'device_updated',
+            device: updatedDevice
+          }));
+        }
+      });
+      
+      res.json({
+        success: true,
+        device: updatedDevice
+      });
+    } catch (error) {
+      console.error('Failed to update device:', error);
+      res.status(500).json({ 
+        success: false, 
+        message: "Failed to update device" 
+      });
+    }
+  });
+
+  app.delete("/api/devices/:id", async (req: Request, res: Response) => {
+    try {
+      const deviceId = parseInt(req.params.id);
+      await storage.deleteDevice(deviceId);
+      
+      // Broadcast device deletion to WebSocket clients
+      wss.clients.forEach((client) => {
+        if (client.readyState === WebSocket.OPEN) {
+          client.send(JSON.stringify({
+            type: 'device_deleted',
+            deviceId: deviceId
+          }));
+        }
+      });
+      
+      res.json({
+        success: true,
+        message: "Device deleted successfully"
+      });
+    } catch (error) {
+      console.error('Failed to delete device:', error);
+      res.status(500).json({ 
+        success: false, 
+        message: "Failed to delete device" 
+      });
+    }
+  });
+
+  // Device scanning
+  app.post("/api/devices/scan", async (req: Request, res: Response) => {
+    try {
+      const devices = await deviceScanner.scanDevices();
+      res.json({
+        success: true,
+        devices: devices,
+        message: `Found ${devices.length} devices`
+      });
+    } catch (error) {
+      console.error('Device scan failed:', error);
+      res.status(500).json({ 
+        success: false, 
+        message: "Device scanning failed" 
+      });
+    }
+  });
+
+  // Floorplan routes
+  app.get("/api/floorplans", async (req: Request, res: Response) => {
+    try {
+      const floorplans = await storage.getFloorplans();
+      res.json({
+        success: true,
+        floorplans: floorplans
+      });
+    } catch (error) {
+      console.error('Failed to get floorplans:', error);
+      res.status(500).json({ 
+        success: false, 
+        message: "Failed to retrieve floorplans" 
+      });
+    }
+  });
+
+  app.post("/api/floorplans", async (req: Request, res: Response) => {
+    try {
+      const floorplanData = insertFloorplanSchema.parse(req.body);
+      const newFloorplan = await storage.addFloorplan(floorplanData);
+      
+      res.json({
+        success: true,
+        floorplan: newFloorplan
+      });
+    } catch (error) {
+      console.error('Failed to add floorplan:', error);
+      res.status(500).json({ 
+        success: false, 
+        message: "Failed to add floorplan" 
+      });
+    }
+  });
+
+  // Anomaly routes
+  app.get("/api/anomalies", async (req: Request, res: Response) => {
+    try {
+      const anomalies = await storage.getAnomalies();
+      res.json({
+        success: true,
+        anomalies: anomalies
+      });
+    } catch (error) {
+      console.error('Failed to get anomalies:', error);
+      res.status(500).json({ 
+        success: false, 
+        message: "Failed to retrieve anomalies" 
+      });
+    }
+  });
+
+  // Recommendation routes
+  app.get("/api/recommendations", async (req: Request, res: Response) => {
+    try {
+      const recommendations = await storage.getRecommendations();
+      res.json({
+        success: true,
+        recommendations: recommendations
+      });
+    } catch (error) {
+      console.error('Failed to get recommendations:', error);
+      res.status(500).json({ 
+        success: false, 
+        message: "Failed to retrieve recommendations" 
+      });
+    }
+  });
+
+  // AI Agent routes
+  app.get("/api/ai/agents", async (req: Request, res: Response) => {
+    try {
+      const agents = aiAgentBackend.getAgentStatus();
+      res.json({
+        success: true,
+        agents: agents
+      });
+    } catch (error) {
+      console.error('Failed to get AI agents:', error);
+      res.status(500).json({ 
+        success: false, 
+        message: "Failed to retrieve AI agents" 
+      });
+    }
+  });
+
+  // Desktop Agent Download
+  app.get('/api/download/desktop-agent', (req, res) => {
+    const fs = require('fs');
+    const path = require('path');
+    
+    try {
+      const installerPath = path.join(process.cwd(), 'desktop-agent-installer.js');
+      
+      if (fs.existsSync(installerPath)) {
+        res.setHeader('Content-Type', 'text/plain');
+        res.setHeader('Content-Disposition', 'attachment; filename="smartblueprint-agent-installer.js"');
+        res.sendFile(installerPath);
+      } else {
+        res.status(404).json({ error: "Desktop agent installer not found" });
+      }
+    } catch (error) {
+      console.error('Desktop agent download error:', error);
+      res.status(500).json({ error: "Failed to download desktop agent" });
+    }
+  });
+
+  // System Health Monitoring
+  app.get('/api/system/health', async (req, res) => {
+    try {
+      const devices = await storage.getDevices();
+      const agentStatus = aiAgentBackend.getAgentStatus();
+      const connectedAgents = cloudSyncTunnel.getConnectedAgents();
+      
+      // Calculate AI agents health
+      const totalAgents = agentStatus.length;
+      const activeAgents = agentStatus.filter(agent => agent.status === 'active').length;
+      const aiAgentsStatus = activeAgents === totalAgents ? 'healthy' : 
+                           activeAgents > 0 ? 'warning' : 'critical';
+
+      // Calculate network scanning health
+      const networkScanningActive = connectedAgents.length > 0;
+      
+      // Calculate data integrity score
+      const dataIntegrityScore = devices.length > 0 ? 95 : 70;
+      
+      // Calculate cloud tunnel connectivity
+      const cloudTunnelActive = connectedAgents.length > 0;
+      
+      // Overall system health
+      const overallHealth = aiAgentsStatus === 'healthy' && networkScanningActive && cloudTunnelActive ? 'healthy' :
+                           aiAgentsStatus === 'critical' || (!networkScanningActive && !cloudTunnelActive) ? 'critical' : 'warning';
+
+      res.json({
+        success: true,
+        overallHealth,
+        components: {
+          aiAgents: {
+            status: aiAgentsStatus,
+            total: totalAgents,
+            active: activeAgents,
+            details: agentStatus
+          },
+          networkScanning: {
+            status: networkScanningActive ? 'active' : 'inactive',
+            connectedAgents: connectedAgents.length,
+            details: connectedAgents
+          },
+          dataIntegrity: {
+            status: dataIntegrityScore > 90 ? 'healthy' : dataIntegrityScore > 70 ? 'warning' : 'critical',
+            score: dataIntegrityScore,
+            devicesDetected: devices.length
+          },
+          cloudTunnel: {
+            status: cloudTunnelActive ? 'connected' : 'disconnected',
+            activeConnections: connectedAgents.length
+          }
+        },
+        timestamp: new Date()
+      });
+    } catch (error) {
+      console.error('System health check failed:', error);
+      res.status(500).json({ 
+        success: false, 
+        message: "Failed to check system health",
+        overallHealth: 'critical'
+      });
+    }
+  });
+
+  return httpServer;
+}
