@@ -3121,36 +3121,19 @@ console.log('\\nPress Ctrl+C to stop the agent');
     try {
       const { deviceId } = req.params;
       
-      const pythonScript = `
-import sys
-import json
-sys.path.append('.')
-from enhanced_ml_monitoring import health_monitor
-
-device_id = "${deviceId}"
-health = health_monitor.get_device_health(device_id)
-
-if health:
-    result = {
-        "device_id": device_id,
-        "health_score": health["score"],
-        "risk_level": health["risk_level"],
-        "predicted_failure_date": None,
-        "confidence": 0.85,
-        "contributing_factors": ["Signal degradation", "Response time increase"],
-        "recommendations": health.get("recommendations", []),
-        "last_updated": health["last_updated"]
-    }
-else:
-    result = None
-
-print(json.dumps(result))
-      `;
-
-      const { stdout } = await execAsync(`python3 -c "${pythonScript}"`);
-      const result = JSON.parse(stdout.trim());
+      const health = mlPredictiveAnalytics.getDeviceHealth(deviceId);
       
-      if (result) {
+      if (health) {
+        const result = {
+          device_id: health.device_id,
+          health_score: health.health_score,
+          risk_level: health.risk_level,
+          predicted_failure_date: null,
+          confidence: 0.85,
+          contributing_factors: health.recommendations.length > 0 ? ["Performance degradation detected"] : [],
+          recommendations: health.recommendations,
+          last_updated: health.last_updated
+        };
         res.json(result);
       } else {
         res.status(404).json({ error: 'Device health data not found' });
@@ -3164,21 +3147,8 @@ print(json.dumps(result))
 
   app.get('/api/predictive/health-summary', async (req: Request, res: Response) => {
     try {
-      const pythonScript = `
-import sys
-import json
-sys.path.append('.')
-from enhanced_ml_monitoring import health_monitor
-
-summary = health_monitor.get_health_summary()
-print(json.dumps(summary))
-      `;
-
-      const { stdout } = await execAsync(`python3 -c "${pythonScript}"`);
-      const result = JSON.parse(stdout.trim());
-      
-      res.json(result);
-      
+      const summary = mlPredictiveAnalytics.getHealthSummary();
+      res.json(summary);
     } catch (error) {
       console.error('Health summary error:', error);
       res.status(500).json({ error: 'Failed to get health summary' });
@@ -3188,22 +3158,8 @@ print(json.dumps(summary))
   app.get('/api/predictive/insights', async (req: Request, res: Response) => {
     try {
       const hours = parseInt(req.query.hours as string) || 24;
-      
-      const pythonScript = `
-import sys
-import json
-sys.path.append('.')
-from enhanced_ml_monitoring import health_monitor
-
-insights = health_monitor.generate_predictive_insights()
-print(json.dumps(insights))
-      `;
-
-      const { stdout } = await execAsync(`python3 -c "${pythonScript}"`);
-      const result = JSON.parse(stdout.trim());
-      
-      res.json(result);
-      
+      const insights = mlPredictiveAnalytics.getPredictiveInsights(hours);
+      res.json(insights);
     } catch (error) {
       console.error('Predictive insights error:', error);
       res.status(500).json({ error: 'Failed to get predictive insights' });
@@ -3212,29 +3168,12 @@ print(json.dumps(insights))
 
   app.post('/api/predictive/run-assessment', async (req: Request, res: Response) => {
     try {
-      const pythonScript = `
-import sys
-import json
-sys.path.append('.')
-from predictive_analytics_engine import predictive_engine
-import asyncio
-
-async def run_assessment():
-    await predictive_engine.run_health_assessment_cycle()
-    summary = predictive_engine.get_device_health_summary()
-    return summary
-
-result = asyncio.run(run_assessment())
-print(json.dumps(result))
-      `;
-
-      const { stdout } = await execAsync(`python3 -c "${pythonScript}"`);
-      const result = JSON.parse(stdout.trim());
+      const summary = mlPredictiveAnalytics.runHealthAssessment();
       
       res.json({
         status: 'completed',
         message: 'Health assessment cycle completed',
-        summary: result
+        summary: summary
       });
       
     } catch (error) {
