@@ -22,6 +22,11 @@ import { petRecognitionAI } from "./pet-recognition-ai.js";
 import type { PetDetection, PetDevice, PetBehaviorPattern } from "./pet-recognition-ai.js";
 import { predictiveMaintenanceAI } from "./predictive-maintenance-ai.js";
 import type { FailurePrediction, MaintenanceSchedule, DeviceHealthMetrics } from "./predictive-maintenance-ai.js";
+import { spawn } from "child_process";
+import { exec } from "child_process";
+import { promisify } from "util";
+
+const execAsync = promisify(exec);
 
 const insertDeviceSchema = createInsertSchema(devices);
 const insertFloorplanSchema = createInsertSchema(floorplans);
@@ -3092,6 +3097,172 @@ console.log('\\nPress Ctrl+C to stop the agent');
   });
 
   // Windows Package Info Route
+  // Advanced Predictive Analytics API Endpoints
+  app.post('/api/predictive/add-telemetry', async (req: Request, res: Response) => {
+    try {
+      const { device_id, telemetry } = req.body;
+      
+      if (!device_id || !telemetry) {
+        return res.status(400).json({ error: 'device_id and telemetry are required' });
+      }
+
+      // Call Python predictive analytics engine
+      const pythonScript = `
+import sys
+import json
+sys.path.append('.')
+from predictive_analytics_engine import predictive_engine
+
+# Add telemetry data
+device_id = "${device_id}"
+telemetry = ${JSON.stringify(telemetry)}
+predictive_engine.add_device_telemetry(device_id, telemetry)
+
+print(json.dumps({"status": "success", "message": "Telemetry added"}))
+      `;
+
+      const { stdout } = await execAsync(`python3 -c "${pythonScript}"`);
+      const result = JSON.parse(stdout.trim());
+      
+      res.json(result);
+      
+    } catch (error) {
+      console.error('Predictive telemetry error:', error);
+      res.status(500).json({ error: 'Failed to add telemetry data' });
+    }
+  });
+
+  app.get('/api/predictive/device-health/:deviceId', async (req: Request, res: Response) => {
+    try {
+      const { deviceId } = req.params;
+      
+      const pythonScript = `
+import sys
+import json
+sys.path.append('.')
+from predictive_analytics_engine import predictive_engine
+
+device_id = "${deviceId}"
+health = predictive_engine.device_health.get(device_id)
+
+if health:
+    result = {
+        "device_id": health.device_id,
+        "health_score": health.health_score,
+        "risk_level": health.risk_level,
+        "predicted_failure_date": health.predicted_failure_date.isoformat() if health.predicted_failure_date else None,
+        "confidence": health.confidence,
+        "contributing_factors": health.contributing_factors,
+        "recommendations": health.recommendations,
+        "last_updated": health.last_updated.isoformat()
+    }
+else:
+    result = None
+
+print(json.dumps(result))
+      `;
+
+      const { stdout } = await execAsync(`python3 -c "${pythonScript}"`);
+      const result = JSON.parse(stdout.trim());
+      
+      if (result) {
+        res.json(result);
+      } else {
+        res.status(404).json({ error: 'Device health data not found' });
+      }
+      
+    } catch (error) {
+      console.error('Device health error:', error);
+      res.status(500).json({ error: 'Failed to get device health' });
+    }
+  });
+
+  app.get('/api/predictive/health-summary', async (req: Request, res: Response) => {
+    try {
+      const pythonScript = `
+import sys
+import json
+sys.path.append('.')
+from predictive_analytics_engine import predictive_engine
+
+summary = predictive_engine.get_device_health_summary()
+print(json.dumps(summary))
+      `;
+
+      const { stdout } = await execAsync(`python3 -c "${pythonScript}"`);
+      const result = JSON.parse(stdout.trim());
+      
+      res.json(result);
+      
+    } catch (error) {
+      console.error('Health summary error:', error);
+      res.status(500).json({ error: 'Failed to get health summary' });
+    }
+  });
+
+  app.get('/api/predictive/insights', async (req: Request, res: Response) => {
+    try {
+      const hours = parseInt(req.query.hours as string) || 24;
+      
+      const pythonScript = `
+import sys
+import json
+sys.path.append('.')
+from predictive_analytics_engine import predictive_engine
+import asyncio
+
+async def get_insights():
+    insights = predictive_engine.get_predictive_insights(${hours})
+    return insights
+
+result = asyncio.run(get_insights())
+print(json.dumps(result))
+      `;
+
+      const { stdout } = await execAsync(`python3 -c "${pythonScript}"`);
+      const result = JSON.parse(stdout.trim());
+      
+      res.json(result);
+      
+    } catch (error) {
+      console.error('Predictive insights error:', error);
+      res.status(500).json({ error: 'Failed to get predictive insights' });
+    }
+  });
+
+  app.post('/api/predictive/run-assessment', async (req: Request, res: Response) => {
+    try {
+      const pythonScript = `
+import sys
+import json
+sys.path.append('.')
+from predictive_analytics_engine import predictive_engine
+import asyncio
+
+async def run_assessment():
+    await predictive_engine.run_health_assessment_cycle()
+    summary = predictive_engine.get_device_health_summary()
+    return summary
+
+result = asyncio.run(run_assessment())
+print(json.dumps(result))
+      `;
+
+      const { stdout } = await execAsync(`python3 -c "${pythonScript}"`);
+      const result = JSON.parse(stdout.trim());
+      
+      res.json({
+        status: 'completed',
+        message: 'Health assessment cycle completed',
+        summary: result
+      });
+      
+    } catch (error) {
+      console.error('Assessment cycle error:', error);
+      res.status(500).json({ error: 'Failed to run health assessment' });
+    }
+  });
+
   app.get('/api/windows-package/info', async (req: Request, res: Response) => {
     try {
       const __filename = fileURLToPath(import.meta.url);
