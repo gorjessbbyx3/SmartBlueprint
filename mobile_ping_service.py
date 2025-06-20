@@ -4,17 +4,14 @@ SmartBlueprint Pro - Mobile Ping Service
 WebSocket-based mobile device telemetry collection and processing
 """
 
-import asyncio
 import json
 import logging
 import os
-import time
 from datetime import datetime, timedelta
-from typing import Dict, List, Optional, Any
+from typing import Dict, List, Optional
 import psycopg2
 from psycopg2.extras import RealDictCursor
-import websockets
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
 from dataclasses import dataclass

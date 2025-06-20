@@ -4,20 +4,15 @@ SmartBlueprint Pro - Advanced Signal Processing
 Real-time signal smoothing, multi-point triangulation, and anomaly detection
 """
 
-import asyncio
-import json
 import logging
 import numpy as np
 from datetime import datetime, timedelta
-from typing import Dict, List, Tuple, Optional, Any
+from typing import Dict, List, Tuple, Optional
 from dataclasses import dataclass
 from collections import deque
-import psycopg2
-from psycopg2.extras import RealDictCursor
 from scipy.spatial.distance import euclidean
 from scipy.optimize import minimize
 from sklearn.cluster import DBSCAN
-import websockets
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
