@@ -4,8 +4,13 @@ import { Badge } from "@/components/ui/badge";
 import { Download, Shield, Monitor, Wifi, Zap, CheckCircle } from "lucide-react";
 
 export default function DownloadPage() {
-  const handleDownload = () => {
-    // In production, this would download the actual installer
+  const handleDownloadGUI = () => {
+    // Download the new Windows GUI application
+    window.open('/download/SmartBlueprint-Pro-Windows-GUI.tar.gz', '_blank');
+  };
+
+  const handleDownloadLegacy = () => {
+    // Download the legacy terminal-only version
     window.open('/download/SmartBlueprint-Pro-Setup.exe', '_blank');
   };
 
@@ -26,20 +31,20 @@ export default function DownloadPage() {
         {/* Download Options */}
         <div className="max-w-6xl mx-auto mb-12 grid md:grid-cols-2 gap-8">
           
-          {/* Complete Desktop Application */}
-          <Card className="border-2 border-blue-200 dark:border-blue-800 shadow-xl">
-            <CardHeader className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950 dark:to-indigo-950">
+          {/* Windows GUI Application - NEW PRIMARY OPTION */}
+          <Card className="border-2 border-green-200 dark:border-green-800 shadow-xl">
+            <CardHeader className="bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-950 dark:to-emerald-950">
               <div className="flex items-center justify-between">
                 <div>
-                  <CardTitle className="text-xl text-blue-900 dark:text-blue-100">
-                    Complete Desktop App
+                  <CardTitle className="text-xl text-green-900 dark:text-green-100">
+                    Windows GUI Application
                   </CardTitle>
-                  <CardDescription className="text-blue-700 dark:text-blue-300">
-                    Full web interface + monitoring agent
+                  <CardDescription className="text-green-700 dark:text-green-300">
+                    Native Windows app with visual interface
                   </CardDescription>
                 </div>
-                <Badge variant="secondary" className="text-sm">
-                  Recommended
+                <Badge className="bg-green-600 text-white text-sm">
+                  NEW
                 </Badge>
               </div>
             </CardHeader>
@@ -47,11 +52,74 @@ export default function DownloadPage() {
               <div className="space-y-3 mb-6">
                 <div className="flex items-center gap-2">
                   <CheckCircle className="h-4 w-4 text-green-600" />
-                  <span className="text-sm">Complete web interface</span>
+                  <span className="text-sm">Native Windows application window</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <CheckCircle className="h-4 w-4 text-green-600" />
-                  <span className="text-sm">Integrated network monitoring</span>
+                  <span className="text-sm">Complete React web interface embedded</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <CheckCircle className="h-4 w-4 text-green-600" />
+                  <span className="text-sm">Python ML services run in background</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <CheckCircle className="h-4 w-4 text-green-600" />
+                  <span className="text-sm">No terminal windows visible</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <CheckCircle className="h-4 w-4 text-green-600" />
+                  <span className="text-sm">Menu system with keyboard shortcuts</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <CheckCircle className="h-4 w-4 text-green-600" />
+                  <span className="text-sm">Complete offline operation</span>
+                </div>
+              </div>
+              
+              <Button 
+                onClick={handleDownloadGUI}
+                className="w-full bg-green-600 hover:bg-green-700 text-white"
+                size="lg"
+              >
+                <Download className="mr-2 h-5 w-5" />
+                Download GUI Application
+              </Button>
+              
+              <div className="mt-4 text-xs text-gray-600 dark:text-gray-400 space-y-1">
+                <p>• Electron-wrapped React frontend</p>
+                <p>• Express.js + Python backends</p>
+                <p>• Native Windows integration</p>
+                <p>• Size: ~210KB package</p>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Legacy Desktop Application */}
+          <Card className="border-2 border-blue-200 dark:border-blue-800 shadow-xl opacity-75">
+            <CardHeader className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950 dark:to-indigo-950">
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="text-xl text-blue-900 dark:text-blue-100">
+                    Legacy Terminal Version
+                  </CardTitle>
+                  <CardDescription className="text-blue-700 dark:text-blue-300">
+                    Command-line interface version
+                  </CardDescription>
+                </div>
+                <Badge variant="outline" className="text-sm">
+                  Legacy
+                </Badge>
+              </div>
+            </CardHeader>
+            <CardContent className="p-6">
+              <div className="space-y-3 mb-6">
+                <div className="flex items-center gap-2">
+                  <CheckCircle className="h-4 w-4 text-green-600" />
+                  <span className="text-sm">Terminal-based interface</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <CheckCircle className="h-4 w-4 text-green-600" />
+                  <span className="text-sm">Network monitoring agent</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <CheckCircle className="h-4 w-4 text-green-600" />
@@ -64,11 +132,12 @@ export default function DownloadPage() {
               </div>
               
               <Button 
-                onClick={handleDownload}
+                onClick={handleDownloadLegacy}
                 className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+                variant="outline"
               >
                 <Download className="mr-2 h-4 w-4" />
-                Download Complete App
+                Download Legacy Version
               </Button>
               <p className="text-xs text-slate-500 dark:text-slate-400 mt-2 text-center">
                 ~50 MB • One-click installer
