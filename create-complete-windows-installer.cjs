@@ -821,16 +821,18 @@ title SmartBlueprint Pro - Windows Desktop Installation
 
 echo.
 echo ================================================================
-echo   SmartBlueprint Pro - Windows Desktop Application Setup
+echo   SmartBlueprint Pro - Windows 11 Desktop Application Setup
 echo ================================================================
 echo.
 echo Version: ${this.version}
 echo Publisher: ${this.publisher}
-echo Target: Windows 10/11 Desktop Application
+echo Target: Windows 11 Optimized Desktop Application
 echo Package: Complete Standalone Installation
+echo Compatibility: Windows 11 (Recommended), Windows 10 (Supported)
 echo.
-echo This installer will deploy SmartBlueprint Pro as a native Windows
-echo desktop application with complete offline functionality.
+echo This installer will deploy SmartBlueprint Pro as a native Windows 11
+echo desktop application with complete offline functionality and Windows 11
+echo enhanced features including modern UI integration and performance optimizations.
 echo.
 echo ✓ Professional Windows desktop application
 echo ✓ Complete web interface with local server
@@ -854,30 +856,42 @@ echo.
 echo Initializing Windows deployment process...
 echo.
 
-:: System compatibility verification
-echo [1/8] Verifying Windows system compatibility...
+:: Enhanced Windows 11 compatibility verification
+echo [1/8] Verifying Windows 11 system compatibility...
 for /f "tokens=4-5 delims=. " %%i in ('ver') do set VERSION=%%i.%%j
 echo Detected Windows Version: %VERSION%
 
-if "%VERSION%" geq "10.0" (
-    echo ✅ Windows 10/11 detected - Full compatibility confirmed
-    set WINDOWS_COMPATIBLE=true
-    set DEPLOYMENT_MODE=modern
+:: Check for Windows 11 specific features
+reg query "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion" /v ProductName 2>nul | findstr /i "Windows 11" >nul
+if !errorLevel! equ 0 (
+    echo ✅ Windows 11 detected - Optimized for Windows 11 features
+    set WINDOWS_COMPATIBLE=windows11
+    set DEPLOYMENT_MODE=windows11-optimized
+    set WINDOWS11_FEATURES=true
+    echo Windows 11 Enhanced Features: ✓ Modern UI ✓ Enhanced Security ✓ Performance Optimizations
 ) else (
-    if "%VERSION%" geq "6.1" (
-        echo ⚠️ Windows 7/8 detected - Limited compatibility mode
-        set WINDOWS_COMPATIBLE=legacy
-        set DEPLOYMENT_MODE=legacy
-        echo.
-        echo Note: SmartBlueprint Pro is optimized for Windows 10/11.
-        echo Installation will continue with compatibility adjustments.
+    if "%VERSION%" geq "10.0" (
+        echo ✅ Windows 10 detected - Full compatibility confirmed
+        set WINDOWS_COMPATIBLE=windows10
+        set DEPLOYMENT_MODE=modern
+        set WINDOWS11_FEATURES=false
     ) else (
-        echo ❌ Unsupported Windows version detected
-        echo.
-        echo SmartBlueprint Pro requires Windows 7 or higher.
-        echo Please upgrade your Windows system to continue.
-        pause
-        exit /b 1
+        if "%VERSION%" geq "6.1" (
+            echo ⚠️ Windows 7/8 detected - Limited compatibility mode
+            set WINDOWS_COMPATIBLE=legacy
+            set DEPLOYMENT_MODE=legacy
+            set WINDOWS11_FEATURES=false
+            echo.
+            echo Note: SmartBlueprint Pro is optimized for Windows 11.
+            echo Installation will continue with basic compatibility.
+        ) else (
+            echo ❌ Unsupported Windows version detected
+            echo.
+            echo SmartBlueprint Pro requires Windows 10 or Windows 11.
+            echo Please upgrade your Windows system to continue.
+            pause
+            exit /b 1
+        )
     )
 )
 
