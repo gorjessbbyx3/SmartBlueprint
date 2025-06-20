@@ -73,11 +73,16 @@ app.get('/download/SmartBlueprint-Pro-Setup.exe', (req: Request, res: Response) 
         }
       });
     } else {
-      console.log('[Download] Electron app not found, providing build status');
-      res.status(202).json({ 
-        message: 'Desktop application is being built. Please try again in a few minutes.',
-        status: 'building',
-        note: 'The complete Electron desktop app includes the full web interface and monitoring agent'
+      console.log('[Download] Redirecting to deployed webpage for download');
+      if (DEPLOYED_WEBPAGE_URL) {
+        const downloadUrl = `${DEPLOYED_WEBPAGE_URL}/download/SmartBlueprint-Pro-Setup.exe`;
+        return res.redirect(302, downloadUrl);
+      }
+      
+      res.status(404).json({ 
+        message: 'Desktop application not available on this server. Please visit the main website.',
+        status: 'not_found',
+        note: 'Download available on deployed webpage'
       });
     }
   } catch (error) {
@@ -154,11 +159,25 @@ app.get('/download/desktop-agent-enhanced.js', (req: Request, res: Response) => 
           }
         });
       } else {
-        res.status(404).send('Agent files not found');
+        console.log('[Download] Redirecting agent download to deployed webpage');
+        if (DEPLOYED_WEBPAGE_URL) {
+          const downloadUrl = `${DEPLOYED_WEBPAGE_URL}/download/desktop-agent-enhanced.js`;
+          return res.redirect(302, downloadUrl);
+        }
+        res.status(404).json({
+          message: 'Agent files not available on this server. Please visit the main website.',
+          status: 'not_found',
+          note: 'Download available on deployed webpage'
+        });
       }
     }
   } catch (error) {
     console.error('[Download] Failed to serve enhanced desktop agent');
+    if (DEPLOYED_WEBPAGE_URL) {
+      const downloadUrl = `${DEPLOYED_WEBPAGE_URL}/download/desktop-agent-enhanced.js`;
+      return res.redirect(302, downloadUrl);
+    }
+    res.status(500).send('Download service error');
   }
 });
 
