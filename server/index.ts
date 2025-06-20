@@ -8,6 +8,30 @@ const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
+// Configuration for deployed webpage redirection
+const DEPLOYED_WEBPAGE_URL = process.env.DEPLOYED_WEBPAGE_URL || process.env.REPL_URL;
+
+// Frontend redirection middleware - redirects to deployed webpage
+app.use((req: Request, res: Response, next: NextFunction) => {
+  // Skip redirection for API routes, downloads, and static assets
+  if (req.path.startsWith('/api/') || 
+      req.path.startsWith('/download/') || 
+      req.path.startsWith('/ws') ||
+      req.path.startsWith('/assets/') ||
+      req.path.includes('.')) {
+    return next();
+  }
+
+  // Redirect frontend requests to deployed webpage
+  if (DEPLOYED_WEBPAGE_URL && req.method === 'GET') {
+    const redirectUrl = `${DEPLOYED_WEBPAGE_URL}${req.originalUrl}`;
+    log(`Redirecting frontend request to deployed webpage: ${redirectUrl}`);
+    return res.redirect(302, redirectUrl);
+  }
+
+  next();
+});
+
 // Priority API route handler to prevent Vite middleware interference
 app.use('/api/*', (req: any, res: Response, next: NextFunction) => {
   // Mark this as an API request to prevent HTML responses
