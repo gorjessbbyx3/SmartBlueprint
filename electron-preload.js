@@ -3,14 +3,17 @@ const { contextBridge, ipcRenderer } = require('electron');
 // Expose protected methods that allow the renderer process to use
 // the ipcRenderer without exposing the entire object
 contextBridge.exposeInMainWorld('electronAPI', {
-  getAppVersion: () => ipcRenderer.invoke('get-app-version'),
-  showSaveDialog: () => ipcRenderer.invoke('show-save-dialog'),
-  showOpenDialog: () => ipcRenderer.invoke('show-open-dialog'),
+  getAppInfo: () => ipcRenderer.invoke('get-app-info'),
   
-  // Platform detection
+  // Listen for electron menu actions
+  onElectronAction: (callback) => {
+    window.addEventListener('electron-action', callback);
+  },
+  
+  // Platform information
   platform: process.platform,
   
-  // Node.js version info
+  // Version information
   versions: {
     node: process.versions.node,
     chrome: process.versions.chrome,
@@ -18,29 +21,40 @@ contextBridge.exposeInMainWorld('electronAPI', {
   }
 });
 
-// Expose a safe way to send data to main process
-contextBridge.exposeInMainWorld('smartBlueprint', {
-  isElectron: true,
-  environment: 'desktop',
-  
-  // Safe IPC communication
-  sendMessage: (channel, data) => {
-    const validChannels = ['device-scan', 'export-data', 'import-data'];
-    if (validChannels.includes(channel)) {
-      ipcRenderer.send(channel, data);
+// Add custom styles for Electron app
+document.addEventListener('DOMContentLoaded', () => {
+  const style = document.createElement('style');
+  style.textContent = `
+    /* Electron-specific styles */
+    body {
+      -webkit-app-region: no-drag;
     }
-  },
-  
-  // Listen for messages from main process
-  onMessage: (channel, callback) => {
-    const validChannels = ['scan-complete', 'data-exported', 'data-imported'];
-    if (validChannels.includes(channel)) {
-      ipcRenderer.on(channel, callback);
+    
+    .titlebar {
+      -webkit-app-region: drag;
     }
-  },
-  
-  // Remove listeners
-  removeAllListeners: (channel) => {
-    ipcRenderer.removeAllListeners(channel);
-  }
+    
+    .titlebar button {
+      -webkit-app-region: no-drag;
+    }
+    
+    /* Custom scrollbars for Windows */
+    ::-webkit-scrollbar {
+      width: 8px;
+    }
+    
+    ::-webkit-scrollbar-track {
+      background: #f1f1f1;
+    }
+    
+    ::-webkit-scrollbar-thumb {
+      background: #888;
+      border-radius: 4px;
+    }
+    
+    ::-webkit-scrollbar-thumb:hover {
+      background: #555;
+    }
+  `;
+  document.head.appendChild(style);
 });

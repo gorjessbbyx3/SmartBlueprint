@@ -1,24 +1,24 @@
 {
+  "appId": "com.gorjess.smartblueprint-pro",
   "productName": "SmartBlueprint Pro",
-  "appId": "com.smartblueprint.desktop",
   "directories": {
-    "output": "dist-desktop"
+    "output": "dist-electron"
   },
   "files": [
     "dist/**/*",
     "electron-main.js",
     "electron-preload.js",
-    "desktop-agent-embedded.js",
     "server/**/*",
-    "!server/**/*.ts",
-    "node_modules/**/*",
-    "package.json"
+    "shared/**/*",
+    "*.py",
+    "package.json",
+    "node_modules/**/*"
   ],
   "extraResources": [
     {
-      "from": "assets",
-      "to": "assets",
-      "filter": ["**/*"]
+      "from": ".",
+      "to": ".",
+      "filter": ["*.py", "requirements.txt"]
     }
   ],
   "win": {
@@ -26,55 +26,15 @@
       {
         "target": "nsis",
         "arch": ["x64"]
-      },
-      {
-        "target": "portable",
-        "arch": ["x64"]
       }
     ],
-    "icon": "generated-icon.png",
-    "requestedExecutionLevel": "asInvoker",
-    "artifactName": "SmartBlueprint-Pro-${version}-Windows11.${ext}",
-    "publisherName": "SmartBlueprint Pro",
-    "verifyUpdateCodeSignature": false,
-    "signAndEditExecutable": false
+    "publisherName": "GorJess & Co."
   },
   "nsis": {
     "oneClick": false,
     "allowToChangeInstallationDirectory": true,
-    "installerIcon": "assets/icon.ico",
-    "uninstallerIcon": "assets/icon.ico",
-    "installerHeaderIcon": "assets/icon.ico",
     "createDesktopShortcut": true,
     "createStartMenuShortcut": true,
-    "shortcutName": "SmartBlueprint Pro",
-    "include": "installer.nsh"
-  },
-  "mac": {
-    "target": [
-      {
-        "target": "dmg",
-        "arch": ["x64", "arm64"]
-      }
-    ],
-    "icon": "assets/icon.icns",
-    "category": "public.app-category.productivity",
-    "artifactName": "SmartBlueprint-Pro-${version}-${arch}.${ext}"
-  },
-  "linux": {
-    "target": [
-      {
-        "target": "AppImage",
-        "arch": ["x64"]
-      }
-    ],
-    "icon": "assets/icon.png",
-    "category": "Network",
-    "artifactName": "SmartBlueprint-Pro-${version}-${arch}.${ext}"
-  },
-  "publish": {
-    "provider": "github",
-    "owner": "smartblueprint",
-    "repo": "desktop"
+    "uninstallDisplayName": "SmartBlueprint Pro"
   }
 }
