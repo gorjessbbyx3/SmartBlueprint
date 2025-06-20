@@ -1,8 +1,8 @@
 {
-  "appId": "com.gorjess.smartblueprint-pro",
+  "appId": "com.smartblueprint.desktop",
   "productName": "SmartBlueprint Pro",
   "directories": {
-    "output": "dist-electron"
+    "output": "release"
   },
   "files": [
     "dist/**/*",
@@ -22,16 +22,12 @@
     }
   ],
   "win": {
-    "target": [
-      {
-        "target": "nsis",
-        "arch": ["x64"]
-      }
-    ],
-    "publisherName": "GorJess & Co."
+    "target": "nsis",
+    "icon": "generated-icon.png"
   },
   "nsis": {
-    "oneClick": false,
+    "oneClick": true,
+    "perMachine": false,
     "allowToChangeInstallationDirectory": true,
     "createDesktopShortcut": true,
     "createStartMenuShortcut": true,

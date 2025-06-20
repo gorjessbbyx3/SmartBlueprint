@@ -1,0 +1,16 @@
+{
+  "name": "smart-blueprint-desktop",
+  "version": "1.0.0",
+  "description": "SmartBlueprint Desktop Application",
+  "main": "electron/main.js",
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder"
+  },
+  "author": "Your Company",
+  "license": "MIT",
+  "devDependencies": {
+    "electron": "^27.1.0",
+    "electron-builder": "^24.13.2"
+  }
+}
