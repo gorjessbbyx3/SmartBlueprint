@@ -12,7 +12,7 @@ import socket
 import subprocess
 import time
 from datetime import datetime, timedelta
-from typing import Dict, List, Optional, Set
+from typing import Dict, Optional
 import requests
 import psycopg2
 from psycopg2.extras import RealDictCursor

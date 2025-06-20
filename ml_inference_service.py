@@ -4,24 +4,20 @@ SmartBlueprint Pro - ML Inference Service
 Production-ready FastAPI service for real-time anomaly detection and device analysis
 """
 
-import asyncio
 import json
 import logging
 import os
 from datetime import datetime, timedelta
-from typing import Dict, List, Optional, Any
+from typing import List
 import joblib
 import numpy as np
-import pandas as pd
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException, BackgroundTasks
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
 from sklearn.ensemble import IsolationForest
 from sklearn.preprocessing import StandardScaler
-from sklearn.model_selection import train_test_split
 import psycopg2
 from psycopg2.extras import RealDictCursor
-import websockets
 
 # Configure logging
 logging.basicConfig(

@@ -8,13 +8,10 @@ import asyncio
 import json
 import logging
 import os
-import time
 from datetime import datetime, timedelta
-from typing import Dict, List, Optional, Any
 import psycopg2
 from psycopg2.extras import RealDictCursor
-import websockets
-from fastapi import FastAPI, HTTPException, BackgroundTasks
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
 
