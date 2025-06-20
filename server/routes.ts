@@ -44,13 +44,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Enhanced WebSocket connection handling with error recovery
   wss.on('connection', (ws: WebSocket, request) => {
     console.log('New WebSocket connection established from:', request.socket.remoteAddress);
+    console.log('WebSocket headers:', {
+      origin: request.headers.origin,
+      userAgent: request.headers['user-agent'],
+      upgrade: request.headers.upgrade,
+      connection: request.headers.connection
+    });
     
     // Send welcome message to confirm connection
-    ws.send(JSON.stringify({
-      type: 'connection_established',
-      message: 'Connected to SmartBlueprint Pro',
-      timestamp: new Date().toISOString()
-    }));
+    try {
+      ws.send(JSON.stringify({
+        type: 'connection_established',
+        message: 'Connected to SmartBlueprint Pro',
+        timestamp: new Date().toISOString(),
+        serverTime: Date.now()
+      }));
+      console.log('Welcome message sent to WebSocket client');
+    } catch (error) {
+      console.error('Failed to send welcome message:', error);
+    }
 
     // Set up ping/pong for connection health
     const pingInterval = setInterval(() => {
