@@ -638,6 +638,70 @@ export class IntrusionDetectionService {
     return residentDevice;
   }
 
+  /**
+   * Trigger a movement alert from external sources (e.g., presence detection engine)
+   * This is called when human presence is detected but no resident devices are present
+   */
+  async triggerMovementAlert(
+    location: string,
+    confidence: number,
+    description?: string
+  ): Promise<void> {
+    const settings = await storage.getSecuritySettings();
+
+    // Only trigger alerts if system is armed
+    if (settings?.securityMode === 'disarmed') {
+      console.log('[Security] Movement detected but system is disarmed - ignoring');
+      return;
+    }
+
+    // Check for entry delay
+    if (this.entryDelayTimer) {
+      console.log('[Security] Movement detected during entry delay - waiting for disarm');
+      return;
+    }
+
+    const alertId = `movement_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    const alertDescription = description || `Movement detected in ${location} (confidence: ${(confidence * 100).toFixed(0)}%)`;
+
+    // Determine severity based on security mode and confidence
+    let severity: IntrusionAlert['severity'] = 'warning';
+    if (settings?.securityMode === 'armed_away' && confidence > 0.7) {
+      severity = 'critical';
+    } else if (confidence > 0.5) {
+      severity = 'alert';
+    }
+
+    const alert: IntrusionAlert = {
+      id: alertId,
+      timestamp: new Date(),
+      alertType: 'intrusion',
+      severity,
+      description: alertDescription,
+      requiresAcknowledgment: true,
+    };
+
+    this.activeAlerts.set(alertId, alert);
+    console.log(`[Security] MOVEMENT ALERT: ${alertDescription}`);
+
+    // Create security event
+    const event = await storage.createSecurityEvent({
+      eventType: 'intrusion_detected',
+      severity,
+      description: alertDescription,
+      metadata: {
+        alertId,
+        location,
+        confidence,
+        securityMode: settings?.securityMode,
+        source: 'presence_detection'
+      },
+    });
+
+    this.notifyAlert(alert);
+    this.notifySecurityEvent(event);
+  }
+
   isServiceRunning(): boolean {
     return this.isRunning;
   }

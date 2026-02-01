@@ -25,6 +25,10 @@ import type { FailurePrediction, MaintenanceSchedule, DeviceHealthMetrics } from
 import { mlPredictiveAnalytics } from "./ml-predictive-analytics.js";
 import { intrusionDetection, SecurityMode } from "./intrusion-detection.js";
 import { notificationService } from "./notification-service.js";
+import { humanPresenceEngine, HumanPresenceEvent } from "./human-presence-engine.js";
+import { bluetoothPresence } from "./bluetooth-presence.js";
+import { signalDisruptionDetector } from "./signal-disruption-detector.js";
+import { multiDeviceTriangulation } from "./multi-device-triangulation.js";
 import { wifiPositioning } from "./wifi-positioning.js";
 import { spawn } from "child_process";
 import { exec } from "child_process";
@@ -3643,6 +3647,245 @@ console.log('\\nPress Ctrl+C to stop the agent');
     } catch (error) {
       console.error('Failed to update security settings:', error);
       res.status(500).json({ success: false, message: 'Failed to update settings' });
+    }
+  });
+
+  // ============================================
+  // HUMAN PRESENCE DETECTION API ROUTES
+  // ============================================
+
+  // Get current presence state
+  app.get('/api/presence/state', async (req: Request, res: Response) => {
+    try {
+      const state = humanPresenceEngine.getPresenceState();
+      const sources = Object.fromEntries(humanPresenceEngine.getSourceStatus());
+      res.json({
+        success: true,
+        state,
+        sources,
+        isRunning: humanPresenceEngine.isRunningStatus()
+      });
+    } catch (error) {
+      console.error('Failed to get presence state:', error);
+      res.status(500).json({ success: false, message: 'Failed to get presence state' });
+    }
+  });
+
+  // Check if anyone is home
+  app.get('/api/presence/home', async (req: Request, res: Response) => {
+    try {
+      const anyoneHome = humanPresenceEngine.isAnyoneHome();
+      const residentsPresent = humanPresenceEngine.getResidentsPresent();
+      res.json({
+        success: true,
+        anyoneHome,
+        residentsPresent,
+        isIntrusionDetected: humanPresenceEngine.isIntrusionDetected()
+      });
+    } catch (error) {
+      console.error('Failed to check home status:', error);
+      res.status(500).json({ success: false, message: 'Failed to check home status' });
+    }
+  });
+
+  // Get estimated position from triangulation
+  app.get('/api/presence/position', async (req: Request, res: Response) => {
+    try {
+      const position = humanPresenceEngine.getEstimatedPosition();
+      const zones = humanPresenceEngine.getCurrentZones();
+      res.json({
+        success: true,
+        position,
+        zones,
+        sensors: multiDeviceTriangulation.getActiveSensors()
+      });
+    } catch (error) {
+      console.error('Failed to get position:', error);
+      res.status(500).json({ success: false, message: 'Failed to get position' });
+    }
+  });
+
+  // Get Bluetooth detected devices
+  app.get('/api/presence/bluetooth/devices', async (req: Request, res: Response) => {
+    try {
+      const devices = bluetoothPresence.getKnownDevices();
+      const residentsPresent = bluetoothPresence.getResidentsPresent();
+      res.json({
+        success: true,
+        devices,
+        residentsPresent,
+        isRunning: bluetoothPresence.isRunningStatus()
+      });
+    } catch (error) {
+      console.error('Failed to get Bluetooth devices:', error);
+      res.status(500).json({ success: false, message: 'Failed to get Bluetooth devices' });
+    }
+  });
+
+  // Get signal disruption status
+  app.get('/api/presence/disruption/status', async (req: Request, res: Response) => {
+    try {
+      const baselines = Object.fromEntries(signalDisruptionDetector.getAllDeviceBaselines());
+      res.json({
+        success: true,
+        baselines,
+        isRunning: signalDisruptionDetector.isRunningStatus()
+      });
+    } catch (error) {
+      console.error('Failed to get disruption status:', error);
+      res.status(500).json({ success: false, message: 'Failed to get disruption status' });
+    }
+  });
+
+  // Get triangulation sensors
+  app.get('/api/presence/triangulation/sensors', async (req: Request, res: Response) => {
+    try {
+      const sensors = multiDeviceTriangulation.getSensors();
+      const activeSensors = multiDeviceTriangulation.getActiveSensors();
+      const zones = multiDeviceTriangulation.getZones();
+      const movementHistory = multiDeviceTriangulation.getMovementHistory();
+      res.json({
+        success: true,
+        sensors,
+        activeSensors,
+        zones,
+        movementHistory,
+        lastPosition: multiDeviceTriangulation.getLastPosition(),
+        isRunning: multiDeviceTriangulation.isRunningStatus()
+      });
+    } catch (error) {
+      console.error('Failed to get triangulation sensors:', error);
+      res.status(500).json({ success: false, message: 'Failed to get triangulation data' });
+    }
+  });
+
+  // Add triangulation sensor
+  app.post('/api/presence/triangulation/sensors', async (req: Request, res: Response) => {
+    try {
+      const { id, name, ipAddress, macAddress, room, x, y } = req.body;
+
+      if (!id || !name || !ipAddress) {
+        return res.status(400).json({
+          success: false,
+          message: 'id, name, and ipAddress are required'
+        });
+      }
+
+      await multiDeviceTriangulation.addSensor({
+        id,
+        name,
+        ipAddress,
+        macAddress,
+        location: { room: room || 'Unknown', x: x || 50, y: y || 50 }
+      });
+
+      res.json({ success: true, message: 'Sensor added' });
+    } catch (error) {
+      console.error('Failed to add sensor:', error);
+      res.status(500).json({ success: false, message: 'Failed to add sensor' });
+    }
+  });
+
+  // Update sensor location
+  app.put('/api/presence/triangulation/sensors/:id', async (req: Request, res: Response) => {
+    try {
+      const sensorId = req.params.id;
+      const { room, x, y } = req.body;
+
+      multiDeviceTriangulation.updateSensorLocation(sensorId, {
+        room: room || 'Unknown',
+        x: x || 50,
+        y: y || 50
+      });
+
+      res.json({ success: true, message: 'Sensor updated' });
+    } catch (error) {
+      console.error('Failed to update sensor:', error);
+      res.status(500).json({ success: false, message: 'Failed to update sensor' });
+    }
+  });
+
+  // Remove triangulation sensor
+  app.delete('/api/presence/triangulation/sensors/:id', async (req: Request, res: Response) => {
+    try {
+      const sensorId = req.params.id;
+      multiDeviceTriangulation.removeSensor(sensorId);
+      res.json({ success: true, message: 'Sensor removed' });
+    } catch (error) {
+      console.error('Failed to remove sensor:', error);
+      res.status(500).json({ success: false, message: 'Failed to remove sensor' });
+    }
+  });
+
+  // Start presence detection engine
+  app.post('/api/presence/start', async (req: Request, res: Response) => {
+    try {
+      await humanPresenceEngine.start();
+      res.json({ success: true, message: 'Human presence detection started' });
+    } catch (error) {
+      console.error('Failed to start presence detection:', error);
+      res.status(500).json({ success: false, message: 'Failed to start presence detection' });
+    }
+  });
+
+  // Stop presence detection engine
+  app.post('/api/presence/stop', async (req: Request, res: Response) => {
+    try {
+      await humanPresenceEngine.stop();
+      res.json({ success: true, message: 'Human presence detection stopped' });
+    } catch (error) {
+      console.error('Failed to stop presence detection:', error);
+      res.status(500).json({ success: false, message: 'Failed to stop presence detection' });
+    }
+  });
+
+  // Configure presence detection settings
+  app.put('/api/presence/settings', async (req: Request, res: Response) => {
+    try {
+      const { movementTimeout, intrusionDelay, disruptionThreshold, pollInterval } = req.body;
+
+      if (movementTimeout) {
+        humanPresenceEngine.setMovementTimeout(movementTimeout);
+      }
+      if (intrusionDelay) {
+        humanPresenceEngine.setIntrusionDelay(intrusionDelay);
+      }
+      if (disruptionThreshold) {
+        signalDisruptionDetector.setDisruptionThreshold(disruptionThreshold);
+      }
+      if (pollInterval) {
+        signalDisruptionDetector.setPollInterval(pollInterval);
+      }
+
+      res.json({ success: true, message: 'Settings updated' });
+    } catch (error) {
+      console.error('Failed to update presence settings:', error);
+      res.status(500).json({ success: false, message: 'Failed to update settings' });
+    }
+  });
+
+  // Subscribe to presence events via WebSocket
+  humanPresenceEngine.on('presence', (event: HumanPresenceEvent) => {
+    console.log('[Presence] Broadcasting event via WebSocket:', event.type);
+    wss.clients.forEach((client) => {
+      if (client.readyState === WebSocket.OPEN) {
+        client.send(JSON.stringify({
+          type: 'presence_event',
+          event,
+          timestamp: new Date().toISOString()
+        }));
+      }
+    });
+
+    // If intrusion detected, trigger security alert
+    if (event.type === 'intrusion_detected') {
+      intrusionDetection.triggerMovementAlert(
+        event.location || 'Unknown location',
+        event.confidence,
+        `Unknown presence detected via ${event.sources.join(', ')}`
+      ).catch(err => {
+        console.error('[Presence] Failed to trigger movement alert:', err);
+      });
     }
   });
 
