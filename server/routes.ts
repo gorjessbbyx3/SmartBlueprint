@@ -29,6 +29,7 @@ import { humanPresenceEngine, HumanPresenceEvent } from "./human-presence-engine
 import { bluetoothPresence } from "./bluetooth-presence.js";
 import { signalDisruptionDetector } from "./signal-disruption-detector.js";
 import { multiDeviceTriangulation } from "./multi-device-triangulation.js";
+import { aiDeviceLearning, DeviceLearningEvent } from "./ai-device-learning.js";
 import { wifiPositioning } from "./wifi-positioning.js";
 import { spawn } from "child_process";
 import { exec } from "child_process";
@@ -3887,6 +3888,195 @@ console.log('\\nPress Ctrl+C to stop the agent');
         console.error('[Presence] Failed to trigger movement alert:', err);
       });
     }
+  });
+
+  // ============================================
+  // AI DEVICE LEARNING API ROUTES
+  // ============================================
+
+  // Get current human count and who's home
+  app.get('/api/learning/home-status', async (req: Request, res: Response) => {
+    try {
+      const humanCount = aiDeviceLearning.getHumanCount();
+      const residentsAtHome = aiDeviceLearning.getResidentsAtHome();
+      const allResidents = aiDeviceLearning.getAllResidentPresence();
+
+      res.json({
+        success: true,
+        humanCount,
+        residentsAtHome,
+        allResidents,
+        isRunning: aiDeviceLearning.isRunningStatus()
+      });
+    } catch (error) {
+      console.error('Failed to get home status:', error);
+      res.status(500).json({ success: false, message: 'Failed to get home status' });
+    }
+  });
+
+  // Get unidentified devices (pending identification)
+  app.get('/api/learning/unidentified', async (req: Request, res: Response) => {
+    try {
+      const devices = aiDeviceLearning.getUnidentifiedDevices();
+      const pendingPrompts = aiDeviceLearning.getPendingPrompts();
+
+      res.json({
+        success: true,
+        devices,
+        pendingPrompts,
+        pendingCount: pendingPrompts.length
+      });
+    } catch (error) {
+      console.error('Failed to get unidentified devices:', error);
+      res.status(500).json({ success: false, message: 'Failed to get unidentified devices' });
+    }
+  });
+
+  // Identify a device - assign it to a resident
+  app.post('/api/learning/identify', async (req: Request, res: Response) => {
+    try {
+      const { macAddress, residentId, customName } = req.body;
+
+      if (!macAddress || residentId === undefined) {
+        return res.status(400).json({
+          success: false,
+          message: 'macAddress and residentId are required'
+        });
+      }
+
+      const result = await aiDeviceLearning.identifyDevice(macAddress, residentId, customName);
+
+      // Broadcast the update via WebSocket
+      if (result.success) {
+        wss.clients.forEach((client) => {
+          if (client.readyState === WebSocket.OPEN) {
+            client.send(JSON.stringify({
+              type: 'device_identified',
+              macAddress,
+              residentId,
+              message: result.message,
+              timestamp: new Date().toISOString()
+            }));
+          }
+        });
+      }
+
+      res.json(result);
+    } catch (error) {
+      console.error('Failed to identify device:', error);
+      res.status(500).json({ success: false, message: 'Failed to identify device' });
+    }
+  });
+
+  // Mark device as non-resident (visitor, IoT, etc.)
+  app.post('/api/learning/mark-non-resident', async (req: Request, res: Response) => {
+    try {
+      const { macAddress, category } = req.body;
+
+      if (!macAddress || !category) {
+        return res.status(400).json({
+          success: false,
+          message: 'macAddress and category are required'
+        });
+      }
+
+      const validCategories = ['visitor', 'iot', 'neighbor', 'ignore'];
+      if (!validCategories.includes(category)) {
+        return res.status(400).json({
+          success: false,
+          message: 'Invalid category. Use: visitor, iot, neighbor, or ignore'
+        });
+      }
+
+      const result = await aiDeviceLearning.markAsNonResident(macAddress, category);
+      res.json(result);
+    } catch (error) {
+      console.error('Failed to mark device:', error);
+      res.status(500).json({ success: false, message: 'Failed to mark device' });
+    }
+  });
+
+  // Manually report a device detection (for testing or external integrations)
+  app.post('/api/learning/detect', async (req: Request, res: Response) => {
+    try {
+      const { macAddress, name, deviceType, signalStrength, manufacturer } = req.body;
+
+      if (!macAddress) {
+        return res.status(400).json({
+          success: false,
+          message: 'macAddress is required'
+        });
+      }
+
+      await aiDeviceLearning.onDeviceDetected(
+        macAddress,
+        name || 'Unknown Device',
+        deviceType || 'unknown',
+        signalStrength,
+        manufacturer
+      );
+
+      res.json({ success: true, message: 'Device detection recorded' });
+    } catch (error) {
+      console.error('Failed to record device detection:', error);
+      res.status(500).json({ success: false, message: 'Failed to record detection' });
+    }
+  });
+
+  // Start AI learning service
+  app.post('/api/learning/start', async (req: Request, res: Response) => {
+    try {
+      await aiDeviceLearning.start();
+      res.json({ success: true, message: 'AI device learning service started' });
+    } catch (error) {
+      console.error('Failed to start AI learning:', error);
+      res.status(500).json({ success: false, message: 'Failed to start service' });
+    }
+  });
+
+  // Stop AI learning service
+  app.post('/api/learning/stop', async (req: Request, res: Response) => {
+    try {
+      await aiDeviceLearning.stop();
+      res.json({ success: true, message: 'AI device learning service stopped' });
+    } catch (error) {
+      console.error('Failed to stop AI learning:', error);
+      res.status(500).json({ success: false, message: 'Failed to stop service' });
+    }
+  });
+
+  // Refresh presence status
+  app.post('/api/learning/refresh', async (req: Request, res: Response) => {
+    try {
+      await aiDeviceLearning.refreshPresence();
+      res.json({
+        success: true,
+        humanCount: aiDeviceLearning.getHumanCount(),
+        residentsAtHome: aiDeviceLearning.getResidentsAtHome()
+      });
+    } catch (error) {
+      console.error('Failed to refresh presence:', error);
+      res.status(500).json({ success: false, message: 'Failed to refresh' });
+    }
+  });
+
+  // Subscribe to AI learning events via WebSocket
+  aiDeviceLearning.on('learning', (event: DeviceLearningEvent) => {
+    console.log('[AILearning] Broadcasting event via WebSocket:', event.type);
+    wss.clients.forEach((client) => {
+      if (client.readyState === WebSocket.OPEN) {
+        client.send(JSON.stringify({
+          type: 'learning_event',
+          event,
+          timestamp: new Date().toISOString()
+        }));
+      }
+    });
+  });
+
+  // Auto-start AI learning service
+  aiDeviceLearning.start().catch(err => {
+    console.error('[AILearning] Failed to auto-start:', err);
   });
 
   // Start intrusion detection service

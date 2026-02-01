@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import Sidebar from "@/components/sidebar";
+import DeviceLearningPrompt from "@/components/device-learning-prompt";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useWebSocket } from "@/hooks/use-websocket";
 import { useToast } from "@/hooks/use-toast";
@@ -339,6 +340,9 @@ export default function SecurityDashboard() {
                   </button>
                 ))}
               </div>
+
+              {/* AI Device Learning - Who's Home with device identification */}
+              <DeviceLearningPrompt />
 
               {/* Residents at Home */}
               <div className="bg-white rounded-xl border border-gray-200 p-6">

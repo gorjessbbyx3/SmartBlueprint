@@ -18,6 +18,7 @@ import { EventEmitter } from 'events';
 import { bluetoothPresence, PresenceEvent } from './bluetooth-presence';
 import { signalDisruptionDetector, DisruptionEvent } from './signal-disruption-detector';
 import { multiDeviceTriangulation, TriangulationEvent } from './multi-device-triangulation';
+import { aiDeviceLearning } from './ai-device-learning';
 
 export interface PresenceState {
   anyoneHome: boolean;
@@ -216,9 +217,29 @@ export class HumanPresenceEngine extends EventEmitter {
         break;
 
       case 'detected':
-        // Unknown device detected - could be a visitor or intruder
+        // Unknown device detected - forward to AI learning service
         console.log(`[PresenceEngine] Unknown device detected: ${event.deviceName}`);
+        aiDeviceLearning.onDeviceDetected(
+          event.deviceMac,
+          event.deviceName,
+          'bluetooth',
+          event.rssi
+        ).catch(err => {
+          console.error('[PresenceEngine] Failed to report device to AI learning:', err);
+        });
         break;
+    }
+
+    // Also notify AI learning for resident devices (for tracking)
+    if (event.type === 'arrived' || event.type === 'departed') {
+      aiDeviceLearning.onDeviceDetected(
+        event.deviceMac,
+        event.deviceName,
+        'bluetooth',
+        event.rssi
+      ).catch(err => {
+        console.error('[PresenceEngine] Failed to report resident device:', err);
+      });
     }
 
     if (this.hasStateChanged(previousState)) {
