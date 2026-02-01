@@ -921,7 +921,7 @@ console.log('[Agent] Press Ctrl+C to stop');
                 Device Control
               </Button>
             </Link>
-            <Link href="/security">
+            <Link href="/">
               <Button variant="ghost" size="sm" className="w-full justify-start text-xs">
                 <Shield className="w-4 h-4 mr-2" />
                 Security Center

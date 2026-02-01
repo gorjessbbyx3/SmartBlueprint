@@ -84,7 +84,9 @@ class ErrorBoundary extends Component<
 function Router() {
   return (
     <Switch>
-      <Route path="/" component={Dashboard} />
+      {/* Security Dashboard is the main landing page */}
+      <Route path="/" component={SecurityDashboard} />
+      <Route path="/mapping" component={Dashboard} />
       <Route path="/ai-insights" component={AIInsights} />
       <Route path="/platforms" component={PlatformIntegrations} />
       <Route path="/device-control" component={DeviceControl} />
@@ -100,7 +102,6 @@ function Router() {
       <Route path="/download" component={DownloadPage} />
       <Route path="/terms" component={TermsOfService} />
       <Route path="/privacy" component={PrivacyPolicy} />
-      <Route path="/security" component={SecurityDashboard} />
       <Route component={NotFound} />
     </Switch>
   );

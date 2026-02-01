@@ -25,7 +25,9 @@ import {
   Mail,
   Phone,
   Webhook,
-  Activity
+  Activity,
+  Map,
+  Wifi
 } from "lucide-react";
 
 type SecurityMode = "disarmed" | "armed_home" | "armed_away" | "armed_night";
@@ -257,14 +259,26 @@ export default function SecurityDashboard() {
               </button>
             ))}
           </nav>
-          <div className="absolute bottom-4 left-4 right-4">
-            <a
-              href="/"
-              className="flex items-center space-x-2 text-gray-500 hover:text-gray-700"
-            >
-              <LogOut className="w-4 h-4" />
-              <span className="text-sm">Back to Dashboard</span>
-            </a>
+
+          {/* Quick Links to Other Features */}
+          <div className="p-4 border-t border-gray-200">
+            <p className="text-xs text-gray-400 uppercase mb-2">Features</p>
+            <div className="space-y-1">
+              <a
+                href="/mapping"
+                className="flex items-center space-x-2 px-3 py-2 text-gray-600 hover:bg-gray-100 rounded-lg text-sm"
+              >
+                <Map className="w-4 h-4" />
+                <span>Home Mapping</span>
+              </a>
+              <a
+                href="/device-discovery"
+                className="flex items-center space-x-2 px-3 py-2 text-gray-600 hover:bg-gray-100 rounded-lg text-sm"
+              >
+                <Wifi className="w-4 h-4" />
+                <span>Device Discovery</span>
+              </a>
+            </div>
           </div>
         </div>
       )}
