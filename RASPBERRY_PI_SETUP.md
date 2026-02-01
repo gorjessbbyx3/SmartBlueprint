@@ -15,7 +15,7 @@ This guide walks you through setting up SmartBlueprint Pro on your Raspberry Pi 
 
 - Raspberry Pi OS (Bullseye or newer)
 - Node.js 18+
-- PostgreSQL (or SQLite for simpler setup)
+- SQLite (included - no extra setup needed!)
 
 ---
 
@@ -135,8 +135,21 @@ npm run build
 cat > .env << 'EOF'
 NODE_ENV=production
 PORT=5000
-DATABASE_URL=file:./data/smartblueprint.db
+
+# Enable SQLite for persistent data storage
+USE_SQLITE=true
+
+# Optional: Custom database path (defaults to ./data/smartblueprint.db)
+# SQLITE_DB_PATH=/path/to/custom/database.db
 EOF
+```
+
+> **Data Storage**: All your data (residents, devices, security events, calibration data) is stored in a SQLite database file at `./data/smartblueprint.db`. This file is automatically created on first run.
+
+### 4.5 Create Data Directory
+
+```bash
+mkdir -p data
 ```
 
 ---
@@ -218,6 +231,7 @@ Restart=on-failure
 RestartSec=10
 Environment=NODE_ENV=production
 Environment=PORT=5000
+Environment=USE_SQLITE=true
 
 [Install]
 WantedBy=multi-user.target
@@ -262,7 +276,33 @@ curl -X POST http://localhost:5000/api/departure/exit-zones \
   -d '{"id":"garage","name":"Garage","type":"garage","x":0,"y":25,"radius":20}'
 ```
 
-### 8.3 Enable Notifications
+### 8.3 Backup Your Data
+
+Since all data is stored in a single SQLite file, backing up is easy:
+
+```bash
+# Manual backup
+cp ~/SmartBlueprint/data/smartblueprint.db ~/backups/smartblueprint-$(date +%Y%m%d).db
+
+# Or set up automatic daily backups with cron
+crontab -e
+# Add this line:
+# 0 2 * * * cp /home/pi/SmartBlueprint/data/smartblueprint.db /home/pi/backups/smartblueprint-$(date +\%Y\%m\%d).db
+```
+
+To restore from a backup:
+```bash
+# Stop the service first
+sudo systemctl stop smartblueprint
+
+# Copy backup to data directory
+cp ~/backups/smartblueprint-YYYYMMDD.db ~/SmartBlueprint/data/smartblueprint.db
+
+# Start the service
+sudo systemctl start smartblueprint
+```
+
+### 8.4 Enable Notifications
 
 Configure notification channels for security alerts:
 

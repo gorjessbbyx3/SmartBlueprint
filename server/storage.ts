@@ -865,4 +865,31 @@ export class MemStorage implements IStorage {
   }
 }
 
-export const storage = new MemStorage();
+// Storage initialization - use SQLite for persistence or MemStorage for development
+let storageInstance: IStorage;
+
+function initializeStorage(): IStorage {
+  // Use SQLite if USE_SQLITE env is set or if SQLITE_DB_PATH is provided
+  const useSqlite = process.env.USE_SQLITE === 'true' || process.env.SQLITE_DB_PATH;
+
+  if (useSqlite) {
+    try {
+      // Dynamic import to avoid issues when better-sqlite3 isn't installed
+      const { SQLiteStorage } = require('./sqlite-storage');
+      const dbPath = process.env.SQLITE_DB_PATH;
+      console.log('[Storage] Initializing SQLite storage for persistent data...');
+      return new SQLiteStorage(dbPath);
+    } catch (err: any) {
+      console.warn('[Storage] SQLite not available, falling back to in-memory storage:', err.message);
+      console.warn('[Storage] Data will NOT persist across restarts!');
+      return new MemStorage();
+    }
+  }
+
+  console.log('[Storage] Using in-memory storage (data will not persist)');
+  return new MemStorage();
+}
+
+storageInstance = initializeStorage();
+
+export const storage = storageInstance;
