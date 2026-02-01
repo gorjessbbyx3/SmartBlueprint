@@ -13,6 +13,7 @@ import UserOnboarding from "@/pages/user-onboarding";
 import DownloadPage from "@/pages/download";
 import TermsOfService from "@/pages/terms-of-service";
 import PrivacyPolicy from "@/pages/privacy-policy";
+import HelpPage from "@/pages/help";
 import NotFound from "@/pages/not-found";
 import { Component, ErrorInfo, ReactNode } from "react";
 
@@ -103,6 +104,9 @@ function Router() {
       {/* Legal Pages */}
       <Route path="/terms" component={TermsOfService} />
       <Route path="/privacy" component={PrivacyPolicy} />
+
+      {/* Help & Documentation */}
+      <Route path="/help" component={HelpPage} />
 
       <Route component={NotFound} />
     </Switch>

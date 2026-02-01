@@ -15,7 +15,7 @@ import { NetworkDeviceDiscovery } from "./network-device-discovery";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useAIActions } from "@/hooks/use-ai-actions";
-import { Home, TrendingUp, Activity, Pen, Wifi, ExternalLink, Download, Monitor, Shield } from "lucide-react";
+import { Home, TrendingUp, Activity, Pen, Wifi, ExternalLink, Download, Monitor, Shield, HelpCircle } from "lucide-react";
 import { Link } from "wouter";
 
 interface SidebarProps {
@@ -925,6 +925,12 @@ console.log('[Agent] Press Ctrl+C to stop');
               <Button variant="ghost" size="sm" className="w-full justify-start text-xs">
                 <TrendingUp className="w-4 h-4 mr-2" />
                 Security Analytics
+              </Button>
+            </Link>
+            <Link href="/help">
+              <Button variant="ghost" size="sm" className="w-full justify-start text-xs">
+                <HelpCircle className="w-4 h-4 mr-2" />
+                Help & Documentation
               </Button>
             </Link>
           </div>

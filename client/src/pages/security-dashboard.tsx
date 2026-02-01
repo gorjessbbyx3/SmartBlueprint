@@ -28,7 +28,8 @@ import {
   Webhook,
   Activity,
   Map,
-  Wifi
+  Wifi,
+  HelpCircle
 } from "lucide-react";
 
 type SecurityMode = "disarmed" | "armed_home" | "armed_away" | "armed_night";
@@ -278,6 +279,13 @@ export default function SecurityDashboard() {
               >
                 <Wifi className="w-4 h-4" />
                 <span>Device Discovery</span>
+              </a>
+              <a
+                href="/help"
+                className="flex items-center space-x-2 px-3 py-2 text-gray-600 hover:bg-gray-100 rounded-lg text-sm"
+              >
+                <HelpCircle className="w-4 h-4" />
+                <span>Help & Docs</span>
               </a>
             </div>
           </div>
