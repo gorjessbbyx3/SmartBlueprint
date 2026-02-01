@@ -15,7 +15,7 @@ import { NetworkDeviceDiscovery } from "./network-device-discovery";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useAIActions } from "@/hooks/use-ai-actions";
-import { Brain, Home, Zap, TrendingUp, Activity, AlertTriangle, Pen, Wifi, MapPin, ExternalLink, Gamepad2, Download, Monitor, Shield } from "lucide-react";
+import { Home, TrendingUp, Activity, Pen, Wifi, ExternalLink, Download, Monitor, Shield } from "lucide-react";
 import { Link } from "wouter";
 
 interface SidebarProps {
@@ -177,12 +177,12 @@ export default function Sidebar({
         </button>
       </div>
 
-      {/* AI Insights Quick Access */}
+      {/* Security Status Quick Access */}
       <div className="p-4 border-b border-gray-200">
-        <Link href="/ai-insights">
+        <Link href="/">
           <Button variant="outline" className="w-full justify-start" size="sm">
-            <Brain className="w-4 h-4 mr-2" />
-            AI Insights Dashboard
+            <Shield className="w-4 h-4 mr-2" />
+            Security Dashboard
             <ExternalLink className="w-3 h-3 ml-auto" />
           </Button>
         </Link>
@@ -903,28 +903,28 @@ console.log('[Agent] Press Ctrl+C to stop');
       <div className="border-t border-gray-200 p-4">
         <div className="space-y-3">
           <div className="space-y-2">
-            <Link href="/ai-insights">
-              <Button variant="ghost" size="sm" className="w-full justify-start text-xs">
-                <Brain className="w-4 h-4 mr-2" />
-                AI Insights & Analytics
-              </Button>
-            </Link>
-            <Link href="/platforms">
-              <Button variant="ghost" size="sm" className="w-full justify-start text-xs">
-                <Home className="w-4 h-4 mr-2" />
-                Platform Integrations
-              </Button>
-            </Link>
-            <Link href="/device-control">
-              <Button variant="ghost" size="sm" className="w-full justify-start text-xs">
-                <Gamepad2 className="w-4 h-4 mr-2" />
-                Device Control
-              </Button>
-            </Link>
             <Link href="/">
               <Button variant="ghost" size="sm" className="w-full justify-start text-xs">
                 <Shield className="w-4 h-4 mr-2" />
-                Security Center
+                Security Dashboard
+              </Button>
+            </Link>
+            <Link href="/devices">
+              <Button variant="ghost" size="sm" className="w-full justify-start text-xs">
+                <Wifi className="w-4 h-4 mr-2" />
+                Device Management
+              </Button>
+            </Link>
+            <Link href="/network">
+              <Button variant="ghost" size="sm" className="w-full justify-start text-xs">
+                <Activity className="w-4 h-4 mr-2" />
+                Network View
+              </Button>
+            </Link>
+            <Link href="/analytics">
+              <Button variant="ghost" size="sm" className="w-full justify-start text-xs">
+                <TrendingUp className="w-4 h-4 mr-2" />
+                Security Analytics
               </Button>
             </Link>
           </div>

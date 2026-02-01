@@ -5,17 +5,35 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Separator } from "@/components/ui/separator";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { 
-  Wifi, 
-  Printer, 
-  Gamepad2, 
-  Tv, 
-  Router, 
-  Laptop, 
-  Smartphone, 
+import { Link } from "wouter";
+import {
+  Wifi,
+  Printer,
+  Gamepad2,
+  Tv,
+  Router,
+  Laptop,
+  Smartphone,
   HardDrive,
   Speaker,
   Camera,
@@ -23,7 +41,17 @@ import {
   Scan,
   RefreshCw,
   Network,
-  Activity
+  Activity,
+  Shield,
+  ShieldCheck,
+  ShieldAlert,
+  ShieldX,
+  UserPlus,
+  AlertTriangle,
+  CheckCircle,
+  XCircle,
+  Clock,
+  ArrowLeft
 } from "lucide-react";
 
 interface DiscoveredDevice {
@@ -38,18 +66,14 @@ interface DiscoveredDevice {
   services: string[];
   isOnline: boolean;
   lastSeen: Date;
+  isTrusted?: boolean;
+  assignedTo?: string;
   capabilities: {
     hasmDNS: boolean;
     hasUPnP: boolean;
     hasSSDP: boolean;
     hasHTTP: boolean;
     supportedServices: string[];
-  };
-  classification?: {
-    original: string;
-    enhanced: string;
-    confidence: number;
-    matchedKeywords: string[];
   };
 }
 
@@ -102,27 +126,28 @@ const deviceTypeColors = {
   unknown: "bg-slate-100 text-slate-800 dark:bg-slate-900 dark:text-slate-300"
 };
 
-export default function DeviceDiscoveryPage() {
+export default function DeviceManagementPage() {
   const [isScanning, setIsScanning] = useState(false);
-  const [selectedDevice, setSelectedDevice] = useState<DiscoveredDevice | null>(null);
+  const [trustDialogOpen, setTrustDialogOpen] = useState(false);
+  const [selectedDevice, setSelectedDevice] = useState<any>(null);
+  const [deviceNickname, setDeviceNickname] = useState("");
+  const [assignedResident, setAssignedResident] = useState("");
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
+  // Fetch residents for assignment
+  const { data: residents = [] } = useQuery<any[]>({
+    queryKey: ['/api/security/residents'],
+  });
+
+  // Fetch trusted devices
+  const { data: trustedDevices = [] } = useQuery<any[]>({
+    queryKey: ['/api/security/resident-devices'],
+  });
+
   // Fetch direct WiFi device discovery
-  const { data: discoveryData, isLoading: isLoadingDiscovery } = useQuery<DiscoveryResult>({
+  const { data: discoveryData } = useQuery<DiscoveryResult>({
     queryKey: ['/api/devices/discover-direct'],
-    enabled: false // Only run when manually triggered
-  });
-
-  // Fetch mDNS services
-  const { data: mdnsData, isLoading: isLoadingMDNS } = useQuery({
-    queryKey: ['/api/telemetry/mdns-discovery'],
-    enabled: false
-  });
-
-  // Fetch SSDP devices
-  const { data: ssdpData, isLoading: isLoadingSSSDP } = useQuery({
-    queryKey: ['/api/telemetry/ssdp-discovery'],
     enabled: false
   });
 
@@ -136,13 +161,13 @@ export default function DeviceDiscoveryPage() {
     onSuccess: (data) => {
       queryClient.setQueryData(['/api/devices/discover-direct'], data);
       toast({
-        title: "Discovery Complete",
+        title: "Network Scan Complete",
         description: `Found ${data.discovery?.summary?.totalDiscovered || 0} devices on the network`,
       });
     },
     onError: (error) => {
       toast({
-        title: "Discovery Failed",
+        title: "Scan Failed",
         description: error.message,
         variant: "destructive",
       });
@@ -152,21 +177,57 @@ export default function DeviceDiscoveryPage() {
     }
   });
 
-  // Device classification mutation
-  const classifyMutation = useMutation({
-    mutationFn: async (devices: any[]) => {
-      const response = await fetch('/api/devices/classify', {
+  // Trust device mutation
+  const trustDeviceMutation = useMutation({
+    mutationFn: async (deviceData: { mac: string; name: string; residentId?: number }) => {
+      const response = await fetch('/api/security/resident-devices', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ devices })
+        body: JSON.stringify({
+          macAddress: deviceData.mac,
+          deviceName: deviceData.name,
+          residentId: deviceData.residentId,
+          deviceType: 'network_device',
+          isPrimary: false
+        })
       });
-      if (!response.ok) throw new Error('Classification failed');
+      if (!response.ok) throw new Error('Failed to trust device');
       return response.json();
     },
-    onSuccess: (data) => {
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/security/resident-devices'] });
       toast({
-        title: "Classification Complete",
-        description: `Classified ${data.summary?.classified || 0} devices`,
+        title: "Device Trusted",
+        description: "This device is now registered as a trusted device.",
+      });
+      setTrustDialogOpen(false);
+      setSelectedDevice(null);
+      setDeviceNickname("");
+      setAssignedResident("");
+    },
+    onError: (error) => {
+      toast({
+        title: "Failed to Trust Device",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  });
+
+  // Remove trusted device mutation
+  const removeTrustMutation = useMutation({
+    mutationFn: async (deviceId: number) => {
+      const response = await fetch(`/api/security/resident-devices/${deviceId}`, {
+        method: 'DELETE',
+      });
+      if (!response.ok) throw new Error('Failed to remove device');
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/security/resident-devices'] });
+      toast({
+        title: "Device Removed",
+        description: "This device is no longer trusted.",
       });
     }
   });
@@ -176,14 +237,20 @@ export default function DeviceDiscoveryPage() {
     discoveryMutation.mutate();
   };
 
-  const handleRefreshMDNS = () => {
-    queryClient.invalidateQueries({ queryKey: ['/api/telemetry/mdns-discovery'] });
-    queryClient.refetchQueries({ queryKey: ['/api/telemetry/mdns-discovery'] });
+  const handleTrustDevice = (device: any) => {
+    setSelectedDevice(device);
+    setDeviceNickname(device.name || device.hostname || '');
+    setTrustDialogOpen(true);
   };
 
-  const handleRefreshSSSDP = () => {
-    queryClient.invalidateQueries({ queryKey: ['/api/telemetry/ssdp-discovery'] });
-    queryClient.refetchQueries({ queryKey: ['/api/telemetry/ssdp-discovery'] });
+  const handleConfirmTrust = () => {
+    if (selectedDevice) {
+      trustDeviceMutation.mutate({
+        mac: selectedDevice.mac || selectedDevice.addresses?.[0] || 'unknown',
+        name: deviceNickname || selectedDevice.name,
+        residentId: assignedResident ? parseInt(assignedResident) : undefined
+      });
+    }
   };
 
   const getDeviceIcon = (deviceType: string) => {
@@ -195,273 +262,491 @@ export default function DeviceDiscoveryPage() {
     return deviceTypeColors[deviceType as keyof typeof deviceTypeColors] || deviceTypeColors.unknown;
   };
 
-  const formatConfidence = (confidence: number) => {
-    return `${(confidence * 100).toFixed(1)}%`;
+  // Check if a device MAC is trusted
+  const isDeviceTrusted = (mac: string) => {
+    return trustedDevices.some((td: any) => td.macAddress === mac);
   };
 
-  const renderDeviceCard = (device: any, protocol: string) => (
-    <Card key={`${protocol}-${device.name || device.st}`} className="hover:shadow-md transition-shadow">
-      <CardHeader className="pb-3">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            {getDeviceIcon(device.deviceType || 'unknown')}
-            <CardTitle className="text-lg">{device.name || device.st || 'Unknown Device'}</CardTitle>
-          </div>
-          <Badge className={getDeviceTypeColor(device.deviceType || 'unknown')}>
-            {device.deviceType || 'unknown'}
-          </Badge>
-        </div>
-        <CardDescription>
-          {device.host || device.server || device.ip || 'No hostname'}
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-3">
-        <div className="grid grid-cols-2 gap-4 text-sm">
-          <div>
-            <span className="font-medium">Protocol:</span>
-            <Badge variant="outline" className="ml-2">{protocol}</Badge>
-          </div>
-          <div>
-            <span className="font-medium">Port:</span>
-            <span className="ml-2">{device.port || 'N/A'}</span>
-          </div>
-        </div>
-        
-        {device.addresses && (
-          <div className="text-sm">
-            <span className="font-medium">Addresses:</span>
-            <div className="mt-1 flex flex-wrap gap-1">
-              {device.addresses.map((addr: string, idx: number) => (
-                <Badge key={idx} variant="secondary" className="text-xs">
-                  {addr}
-                </Badge>
-              ))}
-            </div>
-          </div>
-        )}
+  const allDiscoveredDevices = [
+    ...(discoveryData?.discovery.mdns.services || []).map(s => ({ ...s, protocol: 'mDNS' })),
+    ...(discoveryData?.discovery.ssdp.devices || []).map(d => ({ ...d, protocol: 'SSDP' }))
+  ];
 
-        {device.classification && (
-          <div className="text-sm">
-            <span className="font-medium">Classification Confidence:</span>
-            <div className="mt-1">
-              <Progress value={device.classification.confidence * 100} className="h-2" />
-              <span className="text-xs text-muted-foreground">
-                {formatConfidence(device.classification.confidence)}
-              </span>
-            </div>
-          </div>
-        )}
-
-        {device.type && (
-          <div className="text-sm">
-            <span className="font-medium">Service Type:</span>
-            <span className="ml-2 font-mono text-xs">{device.type}</span>
-          </div>
-        )}
-      </CardContent>
-    </Card>
-  );
+  const unknownDevices = allDiscoveredDevices.filter(d => !isDeviceTrusted(d.mac || d.addresses?.[0]));
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">Direct WiFi Device Discovery</h1>
-          <p className="text-muted-foreground mt-2">
-            Discover and monitor all WiFi devices including printers, game systems, and network equipment
-          </p>
+    <div className="min-h-screen bg-gray-50">
+      {/* Header */}
+      <div className="bg-white border-b">
+        <div className="container mx-auto px-6 py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <Link href="/">
+                <Button variant="ghost" size="sm">
+                  <ArrowLeft className="h-4 w-4 mr-2" />
+                  Security Dashboard
+                </Button>
+              </Link>
+              <Separator orientation="vertical" className="h-6" />
+              <div>
+                <h1 className="text-2xl font-bold flex items-center gap-2">
+                  <Shield className="h-6 w-6 text-blue-600" />
+                  Device Trust Management
+                </h1>
+                <p className="text-sm text-muted-foreground">
+                  Manage trusted devices to distinguish family members from intruders
+                </p>
+              </div>
+            </div>
+            <Button
+              onClick={handleStartDiscovery}
+              disabled={isScanning || discoveryMutation.isPending}
+              className="flex items-center gap-2"
+            >
+              {isScanning || discoveryMutation.isPending ? (
+                <RefreshCw className="h-4 w-4 animate-spin" />
+              ) : (
+                <Scan className="h-4 w-4" />
+              )}
+              {isScanning ? 'Scanning Network...' : 'Scan for Devices'}
+            </Button>
+          </div>
         </div>
-        <Button 
-          onClick={handleStartDiscovery} 
-          disabled={isScanning || discoveryMutation.isPending}
-          className="flex items-center gap-2"
-        >
-          {isScanning || discoveryMutation.isPending ? (
-            <RefreshCw className="h-4 w-4 animate-spin" />
-          ) : (
-            <Scan className="h-4 w-4" />
-          )}
-          {isScanning ? 'Scanning...' : 'Start Discovery'}
-        </Button>
       </div>
 
-      {discoveryData && (
-        <Alert>
-          <Activity className="h-4 w-4" />
-          <AlertDescription>
-            Discovery complete: Found {discoveryData.discovery.summary.totalDiscovered} devices 
-            ({discoveryData.discovery.summary.byProtocol.mDNS} mDNS, {discoveryData.discovery.summary.byProtocol.SSDP} SSDP)
-          </AlertDescription>
-        </Alert>
-      )}
+      <div className="container mx-auto p-6 space-y-6">
+        {/* Security Status Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Trusted Devices</CardTitle>
+              <ShieldCheck className="h-4 w-4 text-green-600" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-green-600">
+                {trustedDevices.length}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Registered household devices
+              </p>
+            </CardContent>
+          </Card>
 
-      <Tabs defaultValue="overview" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-4">
-          <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="mdns">mDNS Devices</TabsTrigger>
-          <TabsTrigger value="ssdp">SSDP Devices</TabsTrigger>
-          <TabsTrigger value="telemetry">Telemetry</TabsTrigger>
-        </TabsList>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Unknown Devices</CardTitle>
+              <ShieldAlert className="h-4 w-4 text-amber-600" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-amber-600">
+                {unknownDevices.length}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Require review
+              </p>
+            </CardContent>
+          </Card>
 
-        <TabsContent value="overview" className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Total Discovered</CardTitle>
-                <Network className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">
-                  {discoveryData?.discovery.summary.totalDiscovered || 0}
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  All network protocols
-                </p>
-              </CardContent>
-            </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Residents</CardTitle>
+              <UserPlus className="h-4 w-4 text-blue-600" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">
+                {Array.isArray(residents) ? residents.length : 0}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Registered household members
+              </p>
+            </CardContent>
+          </Card>
 
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">mDNS Services</CardTitle>
-                <Wifi className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">
-                  {discoveryData?.discovery.mdns.count || 0}
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  Bonjour/Zeroconf devices
-                </p>
-              </CardContent>
-            </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Network Scan</CardTitle>
+              <Activity className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">
+                {discoveryData?.discovery.summary.totalDiscovered || 0}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Total discovered
+              </p>
+            </CardContent>
+          </Card>
+        </div>
 
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">SSDP Devices</CardTitle>
-                <Router className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">
-                  {discoveryData?.discovery.ssdp.count || 0}
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  UPnP devices
-                </p>
-              </CardContent>
-            </Card>
-          </div>
+        {/* Alert for unknown devices */}
+        {unknownDevices.length > 0 && (
+          <Alert variant="default" className="border-amber-200 bg-amber-50">
+            <AlertTriangle className="h-4 w-4 text-amber-600" />
+            <AlertTitle className="text-amber-800">Unknown Devices Detected</AlertTitle>
+            <AlertDescription className="text-amber-700">
+              {unknownDevices.length} device(s) on your network are not registered.
+              Review them below and mark trusted devices to improve intrusion detection accuracy.
+            </AlertDescription>
+          </Alert>
+        )}
 
-          {discoveryData && discoveryData.discovery.summary.totalDiscovered === 0 && (
-            <Alert>
+        <Tabs defaultValue="trusted" className="space-y-4">
+          <TabsList className="grid w-full grid-cols-3">
+            <TabsTrigger value="trusted" className="flex items-center gap-2">
+              <ShieldCheck className="h-4 w-4" />
+              Trusted Devices ({trustedDevices.length})
+            </TabsTrigger>
+            <TabsTrigger value="unknown" className="flex items-center gap-2">
+              <ShieldAlert className="h-4 w-4" />
+              Unknown Devices ({unknownDevices.length})
+            </TabsTrigger>
+            <TabsTrigger value="all" className="flex items-center gap-2">
               <Network className="h-4 w-4" />
-              <AlertDescription>
-                No devices discovered yet. This is normal in cloud environments. In a real local network, 
-                the desktop agent would discover printers, game consoles, smart TVs, and other WiFi devices.
-              </AlertDescription>
-            </Alert>
-          )}
-        </TabsContent>
+              All Network Devices
+            </TabsTrigger>
+          </TabsList>
 
-        <TabsContent value="mdns" className="space-y-4">
-          <div className="flex items-center justify-between">
-            <h3 className="text-lg font-semibold">mDNS Services</h3>
-            <Button variant="outline" size="sm" onClick={handleRefreshMDNS}>
-              <RefreshCw className="h-4 w-4 mr-2" />
-              Refresh
-            </Button>
-          </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {discoveryData?.discovery.mdns.services.map((service, index) => 
-              renderDeviceCard(service, 'mDNS')
-            )}
-          </div>
-
-          {(!discoveryData?.discovery.mdns.services.length) && (
-            <div className="text-center py-8 text-muted-foreground">
-              No mDNS services discovered. Run discovery to find devices like printers, 
-              AirPlay devices, and file sharing services.
-            </div>
-          )}
-        </TabsContent>
-
-        <TabsContent value="ssdp" className="space-y-4">
-          <div className="flex items-center justify-between">
-            <h3 className="text-lg font-semibold">SSDP Devices</h3>
-            <Button variant="outline" size="sm" onClick={handleRefreshSSSDP}>
-              <RefreshCw className="h-4 w-4 mr-2" />
-              Refresh
-            </Button>
-          </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {discoveryData?.discovery.ssdp.devices.map((device, index) => 
-              renderDeviceCard(device, 'SSDP')
-            )}
-          </div>
-
-          {(!discoveryData?.discovery.ssdp.devices.length) && (
-            <div className="text-center py-8 text-muted-foreground">
-              No SSDP devices discovered. Run discovery to find UPnP devices like 
-              media servers, routers, and smart TVs.
-            </div>
-          )}
-        </TabsContent>
-
-        <TabsContent value="telemetry" className="space-y-4">
-          <h3 className="text-lg font-semibold">Device Telemetry & Classification</h3>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base">Device Type Distribution</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  {Object.entries(deviceTypeIcons).map(([type, Icon]) => (
-                    <div key={type} className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <Icon className="h-4 w-4" />
-                        <span className="capitalize">{type.replace('_', ' ')}</span>
+          {/* Trusted Devices Tab */}
+          <TabsContent value="trusted" className="space-y-4">
+            {trustedDevices.length === 0 ? (
+              <Card className="p-8 text-center">
+                <div className="flex flex-col items-center gap-4">
+                  <ShieldCheck className="h-12 w-12 text-gray-300" />
+                  <div>
+                    <h3 className="text-lg font-semibold">No Trusted Devices Yet</h3>
+                    <p className="text-muted-foreground mt-2">
+                      Scan your network and mark devices as trusted to help the system
+                      distinguish family members from potential intruders.
+                    </p>
+                  </div>
+                  <Button onClick={handleStartDiscovery} disabled={isScanning}>
+                    <Scan className="h-4 w-4 mr-2" />
+                    Scan Network
+                  </Button>
+                </div>
+              </Card>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {trustedDevices.map((device: any) => (
+                  <Card key={device.id} className="border-green-200">
+                    <CardHeader className="pb-3">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <div className="p-2 bg-green-100 rounded-lg">
+                            <ShieldCheck className="h-5 w-5 text-green-600" />
+                          </div>
+                          <div>
+                            <CardTitle className="text-base">{device.deviceName}</CardTitle>
+                            <CardDescription className="text-xs font-mono">
+                              {device.macAddress}
+                            </CardDescription>
+                          </div>
+                        </div>
+                        <Badge className="bg-green-100 text-green-800">Trusted</Badge>
                       </div>
-                      <Badge variant="outline">0</Badge>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-2 text-sm">
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Type:</span>
+                          <span className="capitalize">{device.deviceType?.replace('_', ' ') || 'Unknown'}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Primary:</span>
+                          <span>{device.isPrimary ? 'Yes' : 'No'}</span>
+                        </div>
+                        <Separator className="my-2" />
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="w-full text-red-600 hover:text-red-700 hover:bg-red-50"
+                          onClick={() => removeTrustMutation.mutate(device.id)}
+                        >
+                          <XCircle className="h-4 w-4 mr-2" />
+                          Remove Trust
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </TabsContent>
 
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base">Protocol Coverage</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <span>mDNS (Bonjour)</span>
-                    <Badge variant="outline">
-                      {discoveryData?.discovery.mdns.count || 0}
-                    </Badge>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span>SSDP (UPnP)</span>
-                    <Badge variant="outline">
-                      {discoveryData?.discovery.ssdp.count || 0}
-                    </Badge>
-                  </div>
-                  <Separator />
-                  <div className="flex items-center justify-between font-medium">
-                    <span>Total Coverage</span>
-                    <Badge>
-                      {discoveryData?.discovery.summary.totalDiscovered || 0}
-                    </Badge>
+          {/* Unknown Devices Tab */}
+          <TabsContent value="unknown" className="space-y-4">
+            {unknownDevices.length === 0 ? (
+              <Card className="p-8 text-center">
+                <div className="flex flex-col items-center gap-4">
+                  <CheckCircle className="h-12 w-12 text-green-500" />
+                  <div>
+                    <h3 className="text-lg font-semibold">All Clear!</h3>
+                    <p className="text-muted-foreground mt-2">
+                      All discovered devices have been reviewed. Run a new scan to check for new devices.
+                    </p>
                   </div>
                 </div>
-              </CardContent>
-            </Card>
+              </Card>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {unknownDevices.map((device, index) => (
+                  <Card key={`unknown-${index}`} className="border-amber-200">
+                    <CardHeader className="pb-3">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <div className="p-2 bg-amber-100 rounded-lg">
+                            {getDeviceIcon(device.deviceType || 'unknown')}
+                          </div>
+                          <div>
+                            <CardTitle className="text-base">
+                              {device.name || device.hostname || 'Unknown Device'}
+                            </CardTitle>
+                            <CardDescription className="text-xs font-mono">
+                              {device.mac || device.addresses?.[0] || 'No MAC'}
+                            </CardDescription>
+                          </div>
+                        </div>
+                        <Badge variant="outline" className="border-amber-300 text-amber-700">
+                          Unknown
+                        </Badge>
+                      </div>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-2 text-sm">
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Protocol:</span>
+                          <Badge variant="outline">{device.protocol}</Badge>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Type:</span>
+                          <span className={`px-2 py-1 rounded text-xs ${getDeviceTypeColor(device.deviceType || 'unknown')}`}>
+                            {device.deviceType || 'unknown'}
+                          </span>
+                        </div>
+                        {device.host && (
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">Host:</span>
+                            <span className="text-xs">{device.host}</span>
+                          </div>
+                        )}
+                        <Separator className="my-2" />
+                        <Button
+                          className="w-full bg-green-600 hover:bg-green-700"
+                          size="sm"
+                          onClick={() => handleTrustDevice(device)}
+                        >
+                          <ShieldCheck className="h-4 w-4 mr-2" />
+                          Mark as Trusted
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </TabsContent>
+
+          {/* All Devices Tab */}
+          <TabsContent value="all" className="space-y-4">
+            <div className="flex items-center justify-between">
+              <p className="text-sm text-muted-foreground">
+                Showing all {allDiscoveredDevices.length} discovered devices on your network
+              </p>
+              <Button variant="outline" size="sm" onClick={handleStartDiscovery} disabled={isScanning}>
+                <RefreshCw className={`h-4 w-4 mr-2 ${isScanning ? 'animate-spin' : ''}`} />
+                Rescan
+              </Button>
+            </div>
+
+            {allDiscoveredDevices.length === 0 ? (
+              <Card className="p-8 text-center">
+                <div className="flex flex-col items-center gap-4">
+                  <Network className="h-12 w-12 text-gray-300" />
+                  <div>
+                    <h3 className="text-lg font-semibold">No Devices Found</h3>
+                    <p className="text-muted-foreground mt-2">
+                      Run a network scan to discover devices. In a cloud environment,
+                      only limited discovery is available. Use the desktop agent for full network scanning.
+                    </p>
+                  </div>
+                </div>
+              </Card>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {allDiscoveredDevices.map((device, index) => {
+                  const isTrusted = isDeviceTrusted(device.mac || device.addresses?.[0]);
+                  return (
+                    <Card key={`all-${index}`} className={isTrusted ? 'border-green-200' : 'border-gray-200'}>
+                      <CardHeader className="pb-3">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            {getDeviceIcon(device.deviceType || 'unknown')}
+                            <CardTitle className="text-base">
+                              {device.name || device.hostname || 'Unknown Device'}
+                            </CardTitle>
+                          </div>
+                          {isTrusted ? (
+                            <Badge className="bg-green-100 text-green-800">
+                              <ShieldCheck className="h-3 w-3 mr-1" />
+                              Trusted
+                            </Badge>
+                          ) : (
+                            <Badge variant="outline">
+                              <ShieldAlert className="h-3 w-3 mr-1" />
+                              Unknown
+                            </Badge>
+                          )}
+                        </div>
+                        <CardDescription>
+                          {device.host || device.ip || 'No hostname'}
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent className="space-y-2 text-sm">
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Protocol:</span>
+                          <Badge variant="outline">{device.protocol}</Badge>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Type:</span>
+                          <Badge className={getDeviceTypeColor(device.deviceType || 'unknown')}>
+                            {device.deviceType || 'unknown'}
+                          </Badge>
+                        </div>
+                        {device.addresses && (
+                          <div className="flex flex-wrap gap-1 mt-2">
+                            {device.addresses.slice(0, 2).map((addr: string, idx: number) => (
+                              <Badge key={idx} variant="secondary" className="text-xs">
+                                {addr}
+                              </Badge>
+                            ))}
+                          </div>
+                        )}
+                        {!isTrusted && (
+                          <>
+                            <Separator className="my-2" />
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="w-full"
+                              onClick={() => handleTrustDevice(device)}
+                            >
+                              <ShieldCheck className="h-4 w-4 mr-2" />
+                              Mark as Trusted
+                            </Button>
+                          </>
+                        )}
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+              </div>
+            )}
+          </TabsContent>
+        </Tabs>
+
+        {/* How it works section */}
+        <Card className="mt-8">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Shield className="h-5 w-5" />
+              How Device Trust Works
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="flex flex-col items-center text-center p-4">
+                <div className="p-3 bg-blue-100 rounded-full mb-3">
+                  <Scan className="h-6 w-6 text-blue-600" />
+                </div>
+                <h4 className="font-semibold mb-2">1. Scan Network</h4>
+                <p className="text-sm text-muted-foreground">
+                  The system discovers all devices connected to your WiFi network using mDNS and SSDP protocols.
+                </p>
+              </div>
+              <div className="flex flex-col items-center text-center p-4">
+                <div className="p-3 bg-green-100 rounded-full mb-3">
+                  <ShieldCheck className="h-6 w-6 text-green-600" />
+                </div>
+                <h4 className="font-semibold mb-2">2. Mark Trusted</h4>
+                <p className="text-sm text-muted-foreground">
+                  Register your family's devices (phones, laptops, tablets) so the system knows they belong.
+                </p>
+              </div>
+              <div className="flex flex-col items-center text-center p-4">
+                <div className="p-3 bg-red-100 rounded-full mb-3">
+                  <AlertTriangle className="h-6 w-6 text-red-600" />
+                </div>
+                <h4 className="font-semibold mb-2">3. Get Alerts</h4>
+                <p className="text-sm text-muted-foreground">
+                  When an unknown device appears while security is armed, you'll receive an intrusion alert.
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Trust Device Dialog */}
+      <Dialog open={trustDialogOpen} onOpenChange={setTrustDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <ShieldCheck className="h-5 w-5 text-green-600" />
+              Trust This Device
+            </DialogTitle>
+            <DialogDescription>
+              Register this device as a trusted household device.
+              It will no longer trigger intrusion alerts.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Device Name</Label>
+              <Input
+                value={deviceNickname}
+                onChange={(e) => setDeviceNickname(e.target.value)}
+                placeholder="e.g., Dad's iPhone, Living Room TV"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>MAC Address</Label>
+              <Input
+                value={selectedDevice?.mac || selectedDevice?.addresses?.[0] || 'Unknown'}
+                disabled
+                className="font-mono text-sm"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Assign to Resident (Optional)</Label>
+              <Select value={assignedResident} onValueChange={setAssignedResident}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select a resident..." />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">No specific owner</SelectItem>
+                  {Array.isArray(residents) && residents.map((resident: any) => (
+                    <SelectItem key={resident.id} value={resident.id.toString()}>
+                      {resident.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
-        </TabsContent>
-      </Tabs>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setTrustDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              onClick={handleConfirmTrust}
+              disabled={trustDeviceMutation.isPending}
+              className="bg-green-600 hover:bg-green-700"
+            >
+              {trustDeviceMutation.isPending ? 'Saving...' : 'Trust Device'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

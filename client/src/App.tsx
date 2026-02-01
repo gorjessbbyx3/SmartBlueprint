@@ -3,24 +3,16 @@ import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import Dashboard from "@/pages/dashboard";
-import SimpleDashboard from "@/pages/simple-dashboard";
-import AIInsights from "@/pages/ai-insights";
-import PlatformIntegrations from "@/pages/platform-integrations";
-import DeviceControl from "@/pages/device-control";
+import SecurityDashboard from "@/pages/security-dashboard";
+import HomeMap from "@/pages/dashboard";
 import DeviceDiscovery from "@/pages/device-discovery";
-import PingMonitoring from "@/pages/ping-monitoring";
-import UserOnboarding from "@/pages/user-onboarding";
-import PetRecognition from "@/pages/pet-recognition";
-import PredictiveMaintenance from "@/pages/predictive-maintenance";
-import PredictiveAnalytics from "@/pages/predictive-analytics";
-import AdvancedAnalytics from "@/pages/advanced-analytics";
 import NetworkTopology from "@/pages/network-topology";
-import MobilePingDashboard from "@/pages/mobile-ping-dashboard";
+import PingMonitoring from "@/pages/ping-monitoring";
+import AdvancedAnalytics from "@/pages/advanced-analytics";
+import UserOnboarding from "@/pages/user-onboarding";
 import DownloadPage from "@/pages/download";
 import TermsOfService from "@/pages/terms-of-service";
 import PrivacyPolicy from "@/pages/privacy-policy";
-import SecurityDashboard from "@/pages/security-dashboard";
 import NotFound from "@/pages/not-found";
 import { Component, ErrorInfo, ReactNode } from "react";
 
@@ -84,24 +76,34 @@ class ErrorBoundary extends Component<
 function Router() {
   return (
     <Switch>
-      {/* Security Dashboard is the main landing page */}
+      {/* Security Dashboard - main landing page for home security */}
       <Route path="/" component={SecurityDashboard} />
-      <Route path="/mapping" component={Dashboard} />
-      <Route path="/ai-insights" component={AIInsights} />
-      <Route path="/platforms" component={PlatformIntegrations} />
-      <Route path="/device-control" component={DeviceControl} />
-      <Route path="/device-discovery" component={DeviceDiscovery} />
-      <Route path="/ping-monitoring" component={PingMonitoring} />
-      <Route path="/onboarding" component={UserOnboarding} />
-      <Route path="/pet-recognition" component={PetRecognition} />
-      <Route path="/predictive-maintenance" component={PredictiveMaintenance} />
-      <Route path="/predictive-analytics" component={PredictiveAnalytics} />
-      <Route path="/advanced-analytics" component={AdvancedAnalytics} />
-      <Route path="/network-topology" component={NetworkTopology} />
-      <Route path="/mobile-ping" component={MobilePingDashboard} />
+
+      {/* Home Security Map - WiFi signal visualization and room mapping */}
+      <Route path="/map" component={HomeMap} />
+
+      {/* Device Management - discover and manage trusted devices */}
+      <Route path="/devices" component={DeviceDiscovery} />
+
+      {/* Network View - see network topology and connections */}
+      <Route path="/network" component={NetworkTopology} />
+
+      {/* Device Monitoring - real-time device health and status */}
+      <Route path="/monitoring" component={PingMonitoring} />
+
+      {/* Security Analytics - event analysis and insights */}
+      <Route path="/analytics" component={AdvancedAnalytics} />
+
+      {/* Setup - initial configuration and calibration */}
+      <Route path="/setup" component={UserOnboarding} />
+
+      {/* Mobile App Download */}
       <Route path="/download" component={DownloadPage} />
+
+      {/* Legal Pages */}
       <Route path="/terms" component={TermsOfService} />
       <Route path="/privacy" component={PrivacyPolicy} />
+
       <Route component={NotFound} />
     </Switch>
   );
