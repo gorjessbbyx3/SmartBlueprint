@@ -30,6 +30,8 @@ import { bluetoothPresence } from "./bluetooth-presence.js";
 import { signalDisruptionDetector } from "./signal-disruption-detector.js";
 import { multiDeviceTriangulation } from "./multi-device-triangulation.js";
 import { aiDeviceLearning, DeviceLearningEvent } from "./ai-device-learning.js";
+import { smartDepartureDetection, DepartureEvent } from "./smart-departure-detection.js";
+import { homeWalkthroughCalibration, CalibrationEvent } from "./home-walkthrough-calibration.js";
 import { wifiPositioning } from "./wifi-positioning.js";
 import { spawn } from "child_process";
 import { exec } from "child_process";
@@ -4077,6 +4079,260 @@ console.log('\\nPress Ctrl+C to stop the agent');
   // Auto-start AI learning service
   aiDeviceLearning.start().catch(err => {
     console.error('[AILearning] Failed to auto-start:', err);
+  });
+
+  // ============================================
+  // SMART DEPARTURE DETECTION API ROUTES
+  // ============================================
+
+  // Get exit zones
+  app.get('/api/departure/exit-zones', async (req: Request, res: Response) => {
+    try {
+      const zones = smartDepartureDetection.getExitZones();
+      res.json({ success: true, zones, isRunning: smartDepartureDetection.isRunningStatus() });
+    } catch (error) {
+      console.error('Failed to get exit zones:', error);
+      res.status(500).json({ success: false, message: 'Failed to get exit zones' });
+    }
+  });
+
+  // Add or update exit zone
+  app.post('/api/departure/exit-zones', async (req: Request, res: Response) => {
+    try {
+      const { id, name, type, x, y, radius } = req.body;
+
+      if (!id || !name || !type || x === undefined || y === undefined) {
+        return res.status(400).json({
+          success: false,
+          message: 'id, name, type, x, and y are required'
+        });
+      }
+
+      smartDepartureDetection.addExitZone({
+        id,
+        name,
+        type,
+        position: { x, y },
+        radius: radius || 15
+      });
+
+      res.json({ success: true, message: `Exit zone "${name}" added` });
+    } catch (error) {
+      console.error('Failed to add exit zone:', error);
+      res.status(500).json({ success: false, message: 'Failed to add exit zone' });
+    }
+  });
+
+  // Update exit zone
+  app.put('/api/departure/exit-zones/:id', async (req: Request, res: Response) => {
+    try {
+      const zoneId = req.params.id;
+      const updates = req.body;
+
+      if (updates.x !== undefined && updates.y !== undefined) {
+        updates.position = { x: updates.x, y: updates.y };
+      }
+
+      smartDepartureDetection.updateExitZone(zoneId, updates);
+      res.json({ success: true, message: 'Exit zone updated' });
+    } catch (error) {
+      console.error('Failed to update exit zone:', error);
+      res.status(500).json({ success: false, message: 'Failed to update exit zone' });
+    }
+  });
+
+  // Remove exit zone
+  app.delete('/api/departure/exit-zones/:id', async (req: Request, res: Response) => {
+    try {
+      smartDepartureDetection.removeExitZone(req.params.id);
+      res.json({ success: true, message: 'Exit zone removed' });
+    } catch (error) {
+      console.error('Failed to remove exit zone:', error);
+      res.status(500).json({ success: false, message: 'Failed to remove exit zone' });
+    }
+  });
+
+  // Get device trajectories
+  app.get('/api/departure/trajectories', async (req: Request, res: Response) => {
+    try {
+      const trajectories = smartDepartureDetection.getAllTrajectories();
+      res.json({ success: true, trajectories });
+    } catch (error) {
+      console.error('Failed to get trajectories:', error);
+      res.status(500).json({ success: false, message: 'Failed to get trajectories' });
+    }
+  });
+
+  // Subscribe to smart departure events via WebSocket
+  smartDepartureDetection.on('departure', (event: DepartureEvent) => {
+    console.log('[SmartDeparture] Broadcasting event via WebSocket:', event.type);
+    wss.clients.forEach((client) => {
+      if (client.readyState === WebSocket.OPEN) {
+        client.send(JSON.stringify({
+          type: 'departure_event',
+          event,
+          timestamp: new Date().toISOString()
+        }));
+      }
+    });
+  });
+
+  // ============================================
+  // HOME WALK-THROUGH CALIBRATION API ROUTES
+  // ============================================
+
+  // Start calibration session
+  app.post('/api/calibration/start', async (req: Request, res: Response) => {
+    try {
+      const { deviceMac, deviceName } = req.body;
+
+      if (!deviceMac || !deviceName) {
+        return res.status(400).json({
+          success: false,
+          message: 'deviceMac and deviceName are required'
+        });
+      }
+
+      const session = homeWalkthroughCalibration.startCalibration(deviceMac, deviceName);
+      res.json({ success: true, session });
+    } catch (error: any) {
+      console.error('Failed to start calibration:', error);
+      res.status(400).json({ success: false, message: error.message });
+    }
+  });
+
+  // Record a calibration point
+  app.post('/api/calibration/point', async (req: Request, res: Response) => {
+    try {
+      const { name, type, x, y, roomId, isExit, exitType } = req.body;
+
+      if (!name || !type || x === undefined || y === undefined) {
+        return res.status(400).json({
+          success: false,
+          message: 'name, type, x, and y are required'
+        });
+      }
+
+      const point = await homeWalkthroughCalibration.recordPoint(
+        name,
+        type,
+        { x, y },
+        { roomId, isExit, exitType }
+      );
+
+      // Broadcast point recorded via WebSocket
+      wss.clients.forEach((client) => {
+        if (client.readyState === WebSocket.OPEN) {
+          client.send(JSON.stringify({
+            type: 'calibration_point',
+            point,
+            timestamp: new Date().toISOString()
+          }));
+        }
+      });
+
+      res.json({ success: true, point });
+    } catch (error: any) {
+      console.error('Failed to record point:', error);
+      res.status(400).json({ success: false, message: error.message });
+    }
+  });
+
+  // Complete calibration session
+  app.post('/api/calibration/complete', async (req: Request, res: Response) => {
+    try {
+      const session = homeWalkthroughCalibration.completeCalibration();
+      res.json({
+        success: true,
+        session,
+        summary: {
+          points: session.points.length,
+          rooms: session.rooms.length,
+          exits: session.exitZones.length
+        }
+      });
+    } catch (error: any) {
+      console.error('Failed to complete calibration:', error);
+      res.status(400).json({ success: false, message: error.message });
+    }
+  });
+
+  // Cancel calibration session
+  app.post('/api/calibration/cancel', async (req: Request, res: Response) => {
+    try {
+      homeWalkthroughCalibration.cancelCalibration();
+      res.json({ success: true, message: 'Calibration cancelled' });
+    } catch (error) {
+      console.error('Failed to cancel calibration:', error);
+      res.status(500).json({ success: false, message: 'Failed to cancel' });
+    }
+  });
+
+  // Get calibration status
+  app.get('/api/calibration/status', async (req: Request, res: Response) => {
+    try {
+      const activeSession = homeWalkthroughCalibration.getActiveSession();
+      const rooms = homeWalkthroughCalibration.getLearnedRooms();
+      const pointCount = homeWalkthroughCalibration.getCalibrationPointCount();
+
+      res.json({
+        success: true,
+        isInProgress: homeWalkthroughCalibration.isCalibrationInProgress(),
+        activeSession,
+        learnedRooms: rooms,
+        totalPoints: pointCount
+      });
+    } catch (error) {
+      console.error('Failed to get calibration status:', error);
+      res.status(500).json({ success: false, message: 'Failed to get status' });
+    }
+  });
+
+  // Get completed calibration sessions
+  app.get('/api/calibration/sessions', async (req: Request, res: Response) => {
+    try {
+      const sessions = homeWalkthroughCalibration.getCompletedSessions();
+      res.json({ success: true, sessions });
+    } catch (error) {
+      console.error('Failed to get sessions:', error);
+      res.status(500).json({ success: false, message: 'Failed to get sessions' });
+    }
+  });
+
+  // Estimate current location based on signal readings
+  app.post('/api/calibration/locate', async (req: Request, res: Response) => {
+    try {
+      const { readings } = req.body; // { sensorId: rssi, ... }
+
+      if (!readings || typeof readings !== 'object') {
+        return res.status(400).json({
+          success: false,
+          message: 'readings object is required'
+        });
+      }
+
+      const readingsMap = new Map(Object.entries(readings).map(([k, v]) => [k, v as number]));
+      const result = homeWalkthroughCalibration.estimateLocation(readingsMap);
+
+      res.json({ success: true, location: result });
+    } catch (error) {
+      console.error('Failed to estimate location:', error);
+      res.status(500).json({ success: false, message: 'Failed to estimate location' });
+    }
+  });
+
+  // Subscribe to calibration events via WebSocket
+  homeWalkthroughCalibration.on('calibration', (event: CalibrationEvent) => {
+    console.log('[Calibration] Broadcasting event via WebSocket:', event.type);
+    wss.clients.forEach((client) => {
+      if (client.readyState === WebSocket.OPEN) {
+        client.send(JSON.stringify({
+          type: 'calibration_event',
+          event,
+          timestamp: new Date().toISOString()
+        }));
+      }
+    });
   });
 
   // Start intrusion detection service

@@ -11,6 +11,7 @@
 
 import { EventEmitter } from 'events';
 import { storage } from './storage';
+import { smartDepartureDetection, DepartureEvent } from './smart-departure-detection';
 
 export interface UnidentifiedDevice {
   id: string;
@@ -91,6 +92,14 @@ export class AIDeviceLearningService extends EventEmitter {
 
     // Load existing resident devices and their presence status
     await this.loadResidentDevices();
+
+    // Start smart departure detection
+    await smartDepartureDetection.start();
+
+    // Listen for smart departure events
+    smartDepartureDetection.on('departure', (event: DepartureEvent) => {
+      this.handleSmartDepartureEvent(event);
+    });
 
     // Start periodic presence checking
     this.checkInterval = setInterval(() => {
@@ -313,6 +322,81 @@ export class AIDeviceLearningService extends EventEmitter {
           }).catch(err => console.error('[AILearning] Failed to log departure:', err));
         }
       }
+    }
+  }
+
+  /**
+   * Handle smart departure events - when AI detects someone leaving via exit analysis
+   */
+  private handleSmartDepartureEvent(event: DepartureEvent): void {
+    if (!event.residentId) return;
+
+    const presence = this.residentPresence.get(event.residentId);
+    if (!presence) return;
+
+    switch (event.type) {
+      case 'approaching_exit':
+        // Log that they're heading towards exit
+        console.log(`[AILearning] ${event.residentName} heading towards ${event.exitZone?.name || 'exit'}`);
+        this.emit('learning', {
+          type: 'pattern_learned',
+          residentId: event.residentId,
+          residentName: event.residentName,
+          message: `${event.residentName} heading towards ${event.exitZone?.name || 'exit'}`,
+          timestamp: event.timestamp
+        } as DeviceLearningEvent);
+        break;
+
+      case 'entered_exit_zone':
+        // They're at the door
+        console.log(`[AILearning] ${event.residentName} at ${event.exitZone?.name || 'exit'}`);
+        break;
+
+      case 'signal_fading':
+      case 'departed':
+        // Smart departure detected - they left!
+        if (presence.isHome && event.confidence > 0.6) {
+          presence.isHome = false;
+          this.humanCount = Math.max(0, this.humanCount - 1);
+
+          const exitName = event.exitZone?.name || 'exit';
+          const confidenceStr = `${Math.round(event.confidence * 100)}%`;
+
+          this.emit('learning', {
+            type: 'resident_departed',
+            residentId: event.residentId,
+            residentName: event.residentName,
+            humanCount: this.humanCount,
+            message: `${event.residentName} left via ${exitName} (${confidenceStr} confident)`,
+            timestamp: event.timestamp
+          } as DeviceLearningEvent);
+
+          this.emit('learning', {
+            type: 'human_count_changed',
+            humanCount: this.humanCount,
+            message: `${this.humanCount} ${this.humanCount === 1 ? 'person' : 'people'} at home`,
+            timestamp: event.timestamp
+          } as DeviceLearningEvent);
+
+          console.log(`[AILearning] SMART DEPARTURE: ${event.residentName} left via ${exitName}! Human count: ${this.humanCount}`);
+
+          // Update presence history with smart detection method
+          storage.createPresenceHistory({
+            residentId: event.residentId,
+            eventType: 'departed',
+            detectionMethod: 'smart_exit_detection',
+            metadata: {
+              exitZone: event.exitZone?.name,
+              confidence: event.confidence
+            }
+          }).catch(err => console.error('[AILearning] Failed to log smart departure:', err));
+        }
+        break;
+
+      case 'departure_cancelled':
+        // They moved away from exit - false alarm
+        console.log(`[AILearning] ${event.residentName} moved away from exit`);
+        break;
     }
   }
 

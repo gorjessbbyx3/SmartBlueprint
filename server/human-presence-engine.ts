@@ -19,6 +19,8 @@ import { bluetoothPresence, PresenceEvent } from './bluetooth-presence';
 import { signalDisruptionDetector, DisruptionEvent } from './signal-disruption-detector';
 import { multiDeviceTriangulation, TriangulationEvent } from './multi-device-triangulation';
 import { aiDeviceLearning } from './ai-device-learning';
+import { smartDepartureDetection } from './smart-departure-detection';
+import { storage } from './storage';
 
 export interface PresenceState {
   anyoneHome: boolean;
@@ -276,13 +278,39 @@ export class HumanPresenceEngine extends EventEmitter {
     } as HumanPresenceEvent);
   }
 
-  private handleTriangulationEvent(event: TriangulationEvent): void {
+  private async handleTriangulationEvent(event: TriangulationEvent): Promise<void> {
     const source = this.sources.get('triangulation')!;
     source.lastEvent = event.timestamp;
 
     this.presenceState.lastMovementTime = event.timestamp;
     this.presenceState.estimatedPosition = event.estimatedPosition;
     this.presenceState.currentZones = event.affectedZones;
+
+    // Forward position to smart departure detection for resident tracking
+    // This enables exit zone tracking and smart departure detection
+    for (const residentId of this.presenceState.residentsPresent) {
+      try {
+        // Get resident's device info
+        const devices = await storage.getResidentDevices(residentId);
+        const residents = await storage.getResidents();
+        const resident = residents.find(r => r.id === residentId);
+
+        if (devices.length > 0 && resident) {
+          // Use estimated RSSI based on confidence (rough approximation)
+          const estimatedRssi = -40 - (1 - event.confidence) * 40;
+
+          smartDepartureDetection.updateDevicePosition(
+            devices[0].macAddress,
+            event.estimatedPosition,
+            estimatedRssi,
+            residentId,
+            resident.name
+          );
+        }
+      } catch (err) {
+        // Continue tracking other residents
+      }
+    }
 
     // If no residents present but movement detected, potential intrusion
     if (this.presenceState.residentsPresent.length === 0 && event.confidence > 0.4) {
