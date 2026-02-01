@@ -1,7 +1,7 @@
-import { 
-  devices, 
-  floorplans, 
-  anomalies, 
+import {
+  devices,
+  floorplans,
+  anomalies,
   recommendations,
   rooms,
   deviceTelemetry,
@@ -10,7 +10,13 @@ import {
   platformDevices,
   predictiveAlerts,
   fusionResults,
-  type Device, 
+  residents,
+  residentDevices,
+  securitySettings,
+  securityEvents,
+  notificationChannels,
+  presenceHistory,
+  type Device,
   type InsertDevice,
   type Floorplan,
   type InsertFloorplan,
@@ -31,7 +37,19 @@ import {
   type PredictiveAlert,
   type InsertPredictiveAlert,
   type FusionResult,
-  type InsertFusionResult
+  type InsertFusionResult,
+  type Resident,
+  type InsertResident,
+  type ResidentDevice,
+  type InsertResidentDevice,
+  type SecuritySettings,
+  type InsertSecuritySettings,
+  type SecurityEvent,
+  type InsertSecurityEvent,
+  type NotificationChannel,
+  type InsertNotificationChannel,
+  type PresenceHistory,
+  type InsertPresenceHistory
 } from "@shared/schema";
 
 export interface IStorage {
@@ -100,6 +118,42 @@ export interface IStorage {
   // Fusion result operations
   getFusionResults(): Promise<FusionResult[]>;
   createFusionResult(result: InsertFusionResult): Promise<FusionResult>;
+
+  // Security system operations
+  // Resident operations
+  getResidents(): Promise<Resident[]>;
+  getResident(id: number): Promise<Resident | undefined>;
+  createResident(resident: InsertResident): Promise<Resident>;
+  updateResident(id: number, updates: Partial<InsertResident>): Promise<Resident | undefined>;
+  deleteResident(id: number): Promise<boolean>;
+
+  // Resident device operations
+  getResidentDevices(residentId?: number): Promise<ResidentDevice[]>;
+  getResidentDeviceByMac(macAddress: string): Promise<ResidentDevice | undefined>;
+  createResidentDevice(device: InsertResidentDevice): Promise<ResidentDevice>;
+  updateResidentDevice(id: number, updates: Partial<InsertResidentDevice>): Promise<ResidentDevice | undefined>;
+  deleteResidentDevice(id: number): Promise<boolean>;
+
+  // Security settings operations
+  getSecuritySettings(): Promise<SecuritySettings | undefined>;
+  updateSecuritySettings(updates: Partial<InsertSecuritySettings>): Promise<SecuritySettings>;
+
+  // Security event operations
+  getSecurityEvents(limit?: number): Promise<SecurityEvent[]>;
+  getUnacknowledgedEvents(): Promise<SecurityEvent[]>;
+  createSecurityEvent(event: InsertSecurityEvent): Promise<SecurityEvent>;
+  acknowledgeSecurityEvent(id: number, acknowledgedBy: number): Promise<boolean>;
+
+  // Notification channel operations
+  getNotificationChannels(residentId?: number): Promise<NotificationChannel[]>;
+  createNotificationChannel(channel: InsertNotificationChannel): Promise<NotificationChannel>;
+  updateNotificationChannel(id: number, updates: Partial<InsertNotificationChannel>): Promise<NotificationChannel | undefined>;
+  deleteNotificationChannel(id: number): Promise<boolean>;
+
+  // Presence history operations
+  getPresenceHistory(residentId?: number, limit?: number): Promise<PresenceHistory[]>;
+  createPresenceHistory(entry: InsertPresenceHistory): Promise<PresenceHistory>;
+  getResidentsAtHome(): Promise<Resident[]>;
 }
 
 export class MemStorage implements IStorage {
@@ -114,6 +168,14 @@ export class MemStorage implements IStorage {
   private platformDevices: Map<number, PlatformDevice> = new Map();
   private predictiveAlerts: Map<number, PredictiveAlert> = new Map();
   private fusionResults: Map<number, FusionResult> = new Map();
+  // Security system storage
+  private residentsMap: Map<number, Resident> = new Map();
+  private residentDevicesMap: Map<number, ResidentDevice> = new Map();
+  private securitySettingsData: SecuritySettings | null = null;
+  private securityEventsMap: Map<number, SecurityEvent> = new Map();
+  private notificationChannelsMap: Map<number, NotificationChannel> = new Map();
+  private presenceHistoryMap: Map<number, PresenceHistory> = new Map();
+
   private currentDeviceId = 1;
   private currentFloorplanId = 1;
   private currentAnomalyId = 1;
@@ -125,6 +187,12 @@ export class MemStorage implements IStorage {
   private currentPlatformDeviceId = 1;
   private currentAlertId = 1;
   private currentFusionId = 1;
+  // Security system IDs
+  private currentResidentId = 1;
+  private currentResidentDeviceId = 1;
+  private currentSecurityEventId = 1;
+  private currentNotificationChannelId = 1;
+  private currentPresenceHistoryId = 1;
 
   constructor() {
     // Initialize empty storage - devices will be discovered through network scanning
@@ -557,6 +625,243 @@ export class MemStorage implements IStorage {
     };
     this.fusionResults.set(fusionResult.id, fusionResult);
     return fusionResult;
+  }
+
+  // ============================================
+  // SECURITY SYSTEM OPERATIONS
+  // ============================================
+
+  // Resident operations
+  async getResidents(): Promise<Resident[]> {
+    return Array.from(this.residentsMap.values()).filter(r => r.isActive);
+  }
+
+  async getResident(id: number): Promise<Resident | undefined> {
+    return this.residentsMap.get(id);
+  }
+
+  async createResident(insertResident: InsertResident): Promise<Resident> {
+    const resident: Resident = {
+      id: this.currentResidentId++,
+      ...insertResident,
+      role: insertResident.role ?? 'resident',
+      isActive: insertResident.isActive ?? true,
+      createdAt: new Date(),
+      lastSeen: null,
+    };
+    this.residentsMap.set(resident.id, resident);
+    return resident;
+  }
+
+  async updateResident(id: number, updates: Partial<InsertResident>): Promise<Resident | undefined> {
+    const resident = this.residentsMap.get(id);
+    if (resident) {
+      Object.assign(resident, updates);
+      return resident;
+    }
+    return undefined;
+  }
+
+  async deleteResident(id: number): Promise<boolean> {
+    const resident = this.residentsMap.get(id);
+    if (resident) {
+      resident.isActive = false;
+      return true;
+    }
+    return false;
+  }
+
+  // Resident device operations
+  async getResidentDevices(residentId?: number): Promise<ResidentDevice[]> {
+    const allDevices = Array.from(this.residentDevicesMap.values()).filter(d => d.isActive);
+    if (residentId) {
+      return allDevices.filter(d => d.residentId === residentId);
+    }
+    return allDevices;
+  }
+
+  async getResidentDeviceByMac(macAddress: string): Promise<ResidentDevice | undefined> {
+    return Array.from(this.residentDevicesMap.values())
+      .find(d => d.macAddress === macAddress && d.isActive);
+  }
+
+  async createResidentDevice(insertDevice: InsertResidentDevice): Promise<ResidentDevice> {
+    const device: ResidentDevice = {
+      id: this.currentResidentDeviceId++,
+      ...insertDevice,
+      isPrimary: insertDevice.isPrimary ?? false,
+      isActive: insertDevice.isActive ?? true,
+      createdAt: new Date(),
+    };
+    this.residentDevicesMap.set(device.id, device);
+    return device;
+  }
+
+  async updateResidentDevice(id: number, updates: Partial<InsertResidentDevice>): Promise<ResidentDevice | undefined> {
+    const device = this.residentDevicesMap.get(id);
+    if (device) {
+      Object.assign(device, updates);
+      return device;
+    }
+    return undefined;
+  }
+
+  async deleteResidentDevice(id: number): Promise<boolean> {
+    const device = this.residentDevicesMap.get(id);
+    if (device) {
+      device.isActive = false;
+      return true;
+    }
+    return false;
+  }
+
+  // Security settings operations
+  async getSecuritySettings(): Promise<SecuritySettings | undefined> {
+    if (!this.securitySettingsData) {
+      // Initialize default security settings
+      this.securitySettingsData = {
+        id: 1,
+        securityMode: 'disarmed',
+        autoArmEnabled: false,
+        autoArmDelay: 300,
+        entryDelay: 30,
+        exitDelay: 60,
+        silentAlarm: false,
+        lastModeChange: new Date(),
+        changedBy: null,
+        updatedAt: new Date(),
+      };
+    }
+    return this.securitySettingsData;
+  }
+
+  async updateSecuritySettings(updates: Partial<InsertSecuritySettings>): Promise<SecuritySettings> {
+    const current = await this.getSecuritySettings();
+    if (current) {
+      Object.assign(current, updates);
+      current.updatedAt = new Date();
+      if (updates.securityMode) {
+        current.lastModeChange = new Date();
+      }
+      this.securitySettingsData = current;
+    }
+    return this.securitySettingsData!;
+  }
+
+  // Security event operations
+  async getSecurityEvents(limit = 100): Promise<SecurityEvent[]> {
+    return Array.from(this.securityEventsMap.values())
+      .sort((a, b) => b.createdAt!.getTime() - a.createdAt!.getTime())
+      .slice(0, limit);
+  }
+
+  async getUnacknowledgedEvents(): Promise<SecurityEvent[]> {
+    return Array.from(this.securityEventsMap.values())
+      .filter(e => !e.isAcknowledged)
+      .sort((a, b) => b.createdAt!.getTime() - a.createdAt!.getTime());
+  }
+
+  async createSecurityEvent(insertEvent: InsertSecurityEvent): Promise<SecurityEvent> {
+    const event: SecurityEvent = {
+      id: this.currentSecurityEventId++,
+      ...insertEvent,
+      isAcknowledged: insertEvent.isAcknowledged ?? false,
+      acknowledgedBy: null,
+      acknowledgedAt: null,
+      createdAt: new Date(),
+    };
+    this.securityEventsMap.set(event.id, event);
+    return event;
+  }
+
+  async acknowledgeSecurityEvent(id: number, acknowledgedBy: number): Promise<boolean> {
+    const event = this.securityEventsMap.get(id);
+    if (event) {
+      event.isAcknowledged = true;
+      event.acknowledgedBy = acknowledgedBy;
+      event.acknowledgedAt = new Date();
+      return true;
+    }
+    return false;
+  }
+
+  // Notification channel operations
+  async getNotificationChannels(residentId?: number): Promise<NotificationChannel[]> {
+    const allChannels = Array.from(this.notificationChannelsMap.values());
+    if (residentId) {
+      return allChannels.filter(c => c.residentId === residentId);
+    }
+    return allChannels;
+  }
+
+  async createNotificationChannel(insertChannel: InsertNotificationChannel): Promise<NotificationChannel> {
+    const channel: NotificationChannel = {
+      id: this.currentNotificationChannelId++,
+      ...insertChannel,
+      isEnabled: insertChannel.isEnabled ?? true,
+      notifyOnIntrusion: insertChannel.notifyOnIntrusion ?? true,
+      notifyOnModeChange: insertChannel.notifyOnModeChange ?? false,
+      notifyOnDeviceOffline: insertChannel.notifyOnDeviceOffline ?? false,
+      notifyOnResidentActivity: insertChannel.notifyOnResidentActivity ?? false,
+      createdAt: new Date(),
+    };
+    this.notificationChannelsMap.set(channel.id, channel);
+    return channel;
+  }
+
+  async updateNotificationChannel(id: number, updates: Partial<InsertNotificationChannel>): Promise<NotificationChannel | undefined> {
+    const channel = this.notificationChannelsMap.get(id);
+    if (channel) {
+      Object.assign(channel, updates);
+      return channel;
+    }
+    return undefined;
+  }
+
+  async deleteNotificationChannel(id: number): Promise<boolean> {
+    return this.notificationChannelsMap.delete(id);
+  }
+
+  // Presence history operations
+  async getPresenceHistory(residentId?: number, limit = 100): Promise<PresenceHistory[]> {
+    let history = Array.from(this.presenceHistoryMap.values())
+      .sort((a, b) => b.timestamp!.getTime() - a.timestamp!.getTime());
+
+    if (residentId) {
+      history = history.filter(h => h.residentId === residentId);
+    }
+    return history.slice(0, limit);
+  }
+
+  async createPresenceHistory(insertEntry: InsertPresenceHistory): Promise<PresenceHistory> {
+    const entry: PresenceHistory = {
+      id: this.currentPresenceHistoryId++,
+      ...insertEntry,
+      timestamp: new Date(),
+    };
+    this.presenceHistoryMap.set(entry.id, entry);
+
+    // Update resident's lastSeen
+    if (insertEntry.residentId) {
+      const resident = this.residentsMap.get(insertEntry.residentId);
+      if (resident) {
+        resident.lastSeen = new Date();
+      }
+    }
+    return entry;
+  }
+
+  async getResidentsAtHome(): Promise<Resident[]> {
+    const residentsAtHome: Resident[] = [];
+    const residents = await this.getResidents();
+
+    for (const resident of residents) {
+      const history = await this.getPresenceHistory(resident.id, 1);
+      if (history.length > 0 && history[0].eventType === 'arrived') {
+        residentsAtHome.push(resident);
+      }
+    }
+    return residentsAtHome;
   }
 }
 

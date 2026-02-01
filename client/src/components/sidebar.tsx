@@ -15,7 +15,7 @@ import { NetworkDeviceDiscovery } from "./network-device-discovery";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useAIActions } from "@/hooks/use-ai-actions";
-import { Brain, Home, Zap, TrendingUp, Activity, AlertTriangle, Pen, Wifi, MapPin, ExternalLink, Gamepad2, Download, Monitor } from "lucide-react";
+import { Brain, Home, Zap, TrendingUp, Activity, AlertTriangle, Pen, Wifi, MapPin, ExternalLink, Gamepad2, Download, Monitor, Shield } from "lucide-react";
 import { Link } from "wouter";
 
 interface SidebarProps {
@@ -919,6 +919,12 @@ console.log('[Agent] Press Ctrl+C to stop');
               <Button variant="ghost" size="sm" className="w-full justify-start text-xs">
                 <Gamepad2 className="w-4 h-4 mr-2" />
                 Device Control
+              </Button>
+            </Link>
+            <Link href="/security">
+              <Button variant="ghost" size="sm" className="w-full justify-start text-xs">
+                <Shield className="w-4 h-4 mr-2" />
+                Security Center
               </Button>
             </Link>
           </div>

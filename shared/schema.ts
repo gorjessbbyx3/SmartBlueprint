@@ -131,6 +131,90 @@ export const fusionResults = pgTable("fusion_results", {
   metadata: jsonb("metadata") // Additional fusion data
 });
 
+// ============================================
+// SECURITY SYSTEM TABLES
+// ============================================
+
+// Authorized residents who live in the home
+export const residents = pgTable("residents", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  email: text("email"),
+  phone: text("phone"),
+  pin: text("pin"), // Optional PIN for arming/disarming
+  role: text("role").notNull().default("resident"), // "owner", "resident", "guest"
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  lastSeen: timestamp("last_seen"),
+});
+
+// Devices associated with each resident (phones, wearables, etc.)
+export const residentDevices = pgTable("resident_devices", {
+  id: serial("id").primaryKey(),
+  residentId: integer("resident_id").references(() => residents.id),
+  deviceId: integer("device_id").references(() => devices.id),
+  macAddress: text("mac_address").notNull(),
+  deviceName: text("device_name").notNull(),
+  deviceType: text("device_type").notNull(), // "phone", "watch", "laptop", etc.
+  isPrimary: boolean("is_primary").default(false), // Primary device for presence detection
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Security system settings
+export const securitySettings = pgTable("security_settings", {
+  id: serial("id").primaryKey(),
+  securityMode: text("security_mode").notNull().default("disarmed"), // "disarmed", "armed_home", "armed_away", "armed_night"
+  autoArmEnabled: boolean("auto_arm_enabled").default(false),
+  autoArmDelay: integer("auto_arm_delay").default(300), // Seconds to wait before auto-arming
+  entryDelay: integer("entry_delay").default(30), // Seconds before triggering alarm on entry
+  exitDelay: integer("exit_delay").default(60), // Seconds to exit after arming
+  silentAlarm: boolean("silent_alarm").default(false),
+  lastModeChange: timestamp("last_mode_change").defaultNow(),
+  changedBy: integer("changed_by").references(() => residents.id),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Security events log (intrusions, mode changes, alerts)
+export const securityEvents = pgTable("security_events", {
+  id: serial("id").primaryKey(),
+  eventType: text("event_type").notNull(), // "intrusion_detected", "mode_change", "resident_arrived", "resident_left", "unknown_device", "alarm_triggered"
+  severity: text("severity").notNull(), // "info", "warning", "alert", "critical"
+  description: text("description").notNull(),
+  deviceId: integer("device_id").references(() => devices.id),
+  residentId: integer("resident_id").references(() => residents.id),
+  roomId: integer("room_id").references(() => rooms.id),
+  metadata: jsonb("metadata"), // Additional event data
+  isAcknowledged: boolean("is_acknowledged").default(false),
+  acknowledgedBy: integer("acknowledged_by").references(() => residents.id),
+  acknowledgedAt: timestamp("acknowledged_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Notification channels configuration
+export const notificationChannels = pgTable("notification_channels", {
+  id: serial("id").primaryKey(),
+  residentId: integer("resident_id").references(() => residents.id),
+  channelType: text("channel_type").notNull(), // "email", "sms", "push", "webhook"
+  destination: text("destination").notNull(), // email address, phone number, webhook URL
+  isEnabled: boolean("is_enabled").default(true),
+  notifyOnIntrusion: boolean("notify_on_intrusion").default(true),
+  notifyOnModeChange: boolean("notify_on_mode_change").default(false),
+  notifyOnDeviceOffline: boolean("notify_on_device_offline").default(false),
+  notifyOnResidentActivity: boolean("notify_on_resident_activity").default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Presence history for tracking who was home when
+export const presenceHistory = pgTable("presence_history", {
+  id: serial("id").primaryKey(),
+  residentId: integer("resident_id").references(() => residents.id),
+  eventType: text("event_type").notNull(), // "arrived", "left"
+  detectedVia: text("detected_via"), // "device_connected", "manual", "geofence"
+  deviceId: integer("device_id").references(() => devices.id),
+  timestamp: timestamp("timestamp").defaultNow(),
+});
+
 // Platform integration schemas moved to end to avoid conflicts
 
 export const insertDeviceSchema = createInsertSchema(devices).omit({
@@ -187,6 +271,40 @@ export const insertFusionResultSchema = createInsertSchema(fusionResults).omit({
   timestamp: true,
 });
 
+// Security system insert schemas
+export const insertResidentSchema = createInsertSchema(residents).omit({
+  id: true,
+  createdAt: true,
+  lastSeen: true,
+});
+
+export const insertResidentDeviceSchema = createInsertSchema(residentDevices).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertSecuritySettingsSchema = createInsertSchema(securitySettings).omit({
+  id: true,
+  lastModeChange: true,
+  updatedAt: true,
+});
+
+export const insertSecurityEventSchema = createInsertSchema(securityEvents).omit({
+  id: true,
+  createdAt: true,
+  acknowledgedAt: true,
+});
+
+export const insertNotificationChannelSchema = createInsertSchema(notificationChannels).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertPresenceHistorySchema = createInsertSchema(presenceHistory).omit({
+  id: true,
+  timestamp: true,
+});
+
 export type Device = typeof devices.$inferSelect;
 export type InsertDevice = z.infer<typeof insertDeviceSchema>;
 export type Floorplan = typeof floorplans.$inferSelect;
@@ -209,3 +327,17 @@ export type PredictiveAlert = typeof predictiveAlerts.$inferSelect;
 export type InsertPredictiveAlert = z.infer<typeof insertPredictiveAlertSchema>;
 export type FusionResult = typeof fusionResults.$inferSelect;
 export type InsertFusionResult = z.infer<typeof insertFusionResultSchema>;
+
+// Security system types
+export type Resident = typeof residents.$inferSelect;
+export type InsertResident = z.infer<typeof insertResidentSchema>;
+export type ResidentDevice = typeof residentDevices.$inferSelect;
+export type InsertResidentDevice = z.infer<typeof insertResidentDeviceSchema>;
+export type SecuritySettings = typeof securitySettings.$inferSelect;
+export type InsertSecuritySettings = z.infer<typeof insertSecuritySettingsSchema>;
+export type SecurityEvent = typeof securityEvents.$inferSelect;
+export type InsertSecurityEvent = z.infer<typeof insertSecurityEventSchema>;
+export type NotificationChannel = typeof notificationChannels.$inferSelect;
+export type InsertNotificationChannel = z.infer<typeof insertNotificationChannelSchema>;
+export type PresenceHistory = typeof presenceHistory.$inferSelect;
+export type InsertPresenceHistory = z.infer<typeof insertPresenceHistorySchema>;

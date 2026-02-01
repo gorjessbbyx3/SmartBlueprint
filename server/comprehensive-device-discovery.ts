@@ -448,7 +448,7 @@ export class ComprehensiveDeviceDiscovery {
       socket.on('message', (msg, rinfo) => {
         try {
           const response = msg.toString();
-          const device = this.parseSSDP Response(response, rinfo.address);
+          const device = this.parseSSDPResponse(response, rinfo.address);
           if (device) {
             this.addDiscoveredDevice(device);
           }
@@ -742,7 +742,7 @@ export class ComprehensiveDeviceDiscovery {
     return devices;
   }
 
-  private parseSSDP Response(response: string, ip: string): DiscoveredNetworkDevice | null {
+  private parseSSDPResponse(response: string, ip: string): DiscoveredNetworkDevice | null {
     try {
       const lines = response.split('\r\n');
       const headers: { [key: string]: string } = {};
@@ -777,7 +777,7 @@ export class ComprehensiveDeviceDiscovery {
 
   private parseUPnPResponse(response: string, ip: string): DiscoveredNetworkDevice | null {
     // Similar to SSDP but specifically for UPnP devices
-    return this.parseSSDP Response(response, ip);
+    return this.parseSSDPResponse(response, ip);
   }
 
   // Device creation helpers

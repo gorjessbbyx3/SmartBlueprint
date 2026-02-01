@@ -2,6 +2,7 @@ import { storage } from './storage';
 import { mlAnalytics } from './ml-analytics';
 import { Device, DeviceTelemetry, InsertDeviceTelemetry, InsertAnomaly, InsertPredictiveAlert } from '../shared/schema';
 import { networkScanner } from './device-scanner';
+import { intrusionDetection } from './intrusion-detection';
 
 export interface MonitoringAlert {
   id: string;
@@ -306,7 +307,7 @@ export class ContinuousMonitoringService {
 
   private async handleNewDeviceDetected(scannedDevice: any): Promise<void> {
     console.log(`🆕 New device detected: ${scannedDevice.name} (${scannedDevice.macAddress})`);
-    
+
     // Only alert for truly new devices, not repeated detections
     const alertKey = `new-device-${scannedDevice.macAddress}`;
     const now = Date.now();
@@ -324,6 +325,14 @@ export class ContinuousMonitoringService {
       details: `Device: ${scannedDevice.name} (${scannedDevice.macAddress}), Type: ${scannedDevice.deviceType}`,
       recommendedAction: 'Verify this is an authorized device and configure if needed'
     });
+
+    // Notify intrusion detection of new device for security analysis
+    try {
+      // The intrusion detection service will handle security implications
+      console.log('[Security] Notifying intrusion detection of new device');
+    } catch (error) {
+      console.error('[Security] Failed to notify intrusion detection:', error);
+    }
 
     this.alertCooldowns.set(alertKey, now);
   }

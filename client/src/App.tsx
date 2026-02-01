@@ -20,6 +20,7 @@ import MobilePingDashboard from "@/pages/mobile-ping-dashboard";
 import DownloadPage from "@/pages/download";
 import TermsOfService from "@/pages/terms-of-service";
 import PrivacyPolicy from "@/pages/privacy-policy";
+import SecurityDashboard from "@/pages/security-dashboard";
 import NotFound from "@/pages/not-found";
 import { Component, ErrorInfo, ReactNode } from "react";
 
@@ -99,6 +100,7 @@ function Router() {
       <Route path="/download" component={DownloadPage} />
       <Route path="/terms" component={TermsOfService} />
       <Route path="/privacy" component={PrivacyPolicy} />
+      <Route path="/security" component={SecurityDashboard} />
       <Route component={NotFound} />
     </Switch>
   );

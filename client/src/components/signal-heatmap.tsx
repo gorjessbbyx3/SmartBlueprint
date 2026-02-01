@@ -88,22 +88,39 @@ export default function SignalHeatmap({
     }
   }, [heatmapIntensity]);
 
-  // Calculate interpolated signal strength using inverse distance weighting
+  // Path loss model constants for realistic WiFi signal propagation
+  const PATH_LOSS_EXPONENT = 3.0; // Typical indoor environment (2-4 range)
+  const METERS_PER_PIXEL = 0.05; // Assumes 20 pixels per meter (typical home scale)
+
+  // Calculate signal strength using log-distance path loss model
+  const calculateSignalAtDistance = useCallback((sourceRSSI: number, distancePixels: number): number => {
+    const distanceMeters = distancePixels * METERS_PER_PIXEL;
+    if (distanceMeters < 0.1) return sourceRSSI;
+
+    // Log-distance path loss: signal degrades logarithmically with distance
+    const pathLoss = 10 * PATH_LOSS_EXPONENT * Math.log10(distanceMeters);
+    return sourceRSSI - pathLoss;
+  }, []);
+
+  // Calculate interpolated signal strength using path loss model
   const interpolateSignalStrength = useCallback((x: number, y: number, points: HeatmapPoint[]): number => {
-    let totalWeight = 0;
-    let weightedSum = 0;
-    
+    if (points.length === 0) return -100;
+
+    // Find the strongest signal at this point from all sources
+    let maxSignal = -100;
+
     for (const point of points) {
+      if (point.interpolated) continue; // Only use actual device measurements
+
       const distance = Math.sqrt(Math.pow(x - point.x, 2) + Math.pow(y - point.y, 2));
-      if (distance < 1) return point.strength; // Very close, use exact value
-      
-      const weight = 1 / Math.pow(distance / interpolationRadius, 2);
-      totalWeight += weight;
-      weightedSum += point.strength * weight;
+
+      // Use path loss model for realistic signal propagation
+      const estimatedSignal = calculateSignalAtDistance(point.strength, distance);
+      maxSignal = Math.max(maxSignal, estimatedSignal);
     }
-    
-    return totalWeight > 0 ? weightedSum / totalWeight : -100;
-  }, [interpolationRadius]);
+
+    return maxSignal;
+  }, [calculateSignalAtDistance]);
 
   // Generate heatmap data from device RSSI values
   const generateHeatmapData = useCallback(() => {

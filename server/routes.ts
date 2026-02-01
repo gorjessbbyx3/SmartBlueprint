@@ -23,6 +23,9 @@ import type { PetDetection, PetDevice, PetBehaviorPattern } from "./pet-recognit
 import { predictiveMaintenanceAI } from "./predictive-maintenance-ai.js";
 import type { FailurePrediction, MaintenanceSchedule, DeviceHealthMetrics } from "./predictive-maintenance-ai.js";
 import { mlPredictiveAnalytics } from "./ml-predictive-analytics.js";
+import { intrusionDetection, SecurityMode } from "./intrusion-detection.js";
+import { notificationService } from "./notification-service.js";
+import { wifiPositioning } from "./wifi-positioning.js";
 import { spawn } from "child_process";
 import { exec } from "child_process";
 import { promisify } from "util";
@@ -3252,12 +3255,568 @@ console.log('\\nPress Ctrl+C to stop the agent');
       }
 
       res.json(packageInfo);
-      
+
     } catch (error) {
       console.error('Package info error:', error);
       res.status(500).json({
         error: 'Failed to get package information'
       });
+    }
+  });
+
+  // ============================================
+  // SECURITY SYSTEM API ROUTES
+  // ============================================
+
+  // Get security status
+  app.get('/api/security/status', async (req: Request, res: Response) => {
+    try {
+      const status = await intrusionDetection.getSecurityStatus();
+      res.json({ success: true, ...status });
+    } catch (error) {
+      console.error('Failed to get security status:', error);
+      res.status(500).json({ success: false, message: 'Failed to get security status' });
+    }
+  });
+
+  // Set security mode
+  app.post('/api/security/mode', async (req: Request, res: Response) => {
+    try {
+      const { mode, pin } = req.body;
+      const validModes: SecurityMode[] = ['disarmed', 'armed_home', 'armed_away', 'armed_night'];
+
+      if (!validModes.includes(mode)) {
+        return res.status(400).json({ success: false, message: 'Invalid security mode' });
+      }
+
+      // TODO: Validate PIN if provided
+      const settings = await intrusionDetection.setSecurityMode(mode);
+
+      // Broadcast mode change via WebSocket
+      wss.clients.forEach((client) => {
+        if (client.readyState === WebSocket.OPEN) {
+          client.send(JSON.stringify({
+            type: 'security_mode_change',
+            mode: settings.securityMode,
+            timestamp: new Date().toISOString()
+          }));
+        }
+      });
+
+      res.json({ success: true, settings });
+    } catch (error) {
+      console.error('Failed to set security mode:', error);
+      res.status(500).json({ success: false, message: 'Failed to set security mode' });
+    }
+  });
+
+  // Get residents
+  app.get('/api/security/residents', async (req: Request, res: Response) => {
+    try {
+      const residents = await storage.getResidents();
+      res.json({ success: true, residents });
+    } catch (error) {
+      console.error('Failed to get residents:', error);
+      res.status(500).json({ success: false, message: 'Failed to get residents' });
+    }
+  });
+
+  // Create resident
+  app.post('/api/security/residents', async (req: Request, res: Response) => {
+    try {
+      const { name, email, phone, pin, role } = req.body;
+
+      if (!name) {
+        return res.status(400).json({ success: false, message: 'Name is required' });
+      }
+
+      const resident = await storage.createResident({
+        name,
+        email: email || null,
+        phone: phone || null,
+        pin: pin || null,
+        role: role || 'resident',
+      });
+
+      res.json({ success: true, resident });
+    } catch (error) {
+      console.error('Failed to create resident:', error);
+      res.status(500).json({ success: false, message: 'Failed to create resident' });
+    }
+  });
+
+  // Update resident
+  app.put('/api/security/residents/:id', async (req: Request, res: Response) => {
+    try {
+      const residentId = parseInt(req.params.id);
+      const updates = req.body;
+
+      const resident = await storage.updateResident(residentId, updates);
+      if (!resident) {
+        return res.status(404).json({ success: false, message: 'Resident not found' });
+      }
+
+      res.json({ success: true, resident });
+    } catch (error) {
+      console.error('Failed to update resident:', error);
+      res.status(500).json({ success: false, message: 'Failed to update resident' });
+    }
+  });
+
+  // Delete resident
+  app.delete('/api/security/residents/:id', async (req: Request, res: Response) => {
+    try {
+      const residentId = parseInt(req.params.id);
+      const success = await storage.deleteResident(residentId);
+
+      if (!success) {
+        return res.status(404).json({ success: false, message: 'Resident not found' });
+      }
+
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Failed to delete resident:', error);
+      res.status(500).json({ success: false, message: 'Failed to delete resident' });
+    }
+  });
+
+  // Get resident devices
+  app.get('/api/security/residents/:id/devices', async (req: Request, res: Response) => {
+    try {
+      const residentId = parseInt(req.params.id);
+      const devices = await storage.getResidentDevices(residentId);
+      res.json({ success: true, devices });
+    } catch (error) {
+      console.error('Failed to get resident devices:', error);
+      res.status(500).json({ success: false, message: 'Failed to get resident devices' });
+    }
+  });
+
+  // Register device for resident
+  app.post('/api/security/residents/:id/devices', async (req: Request, res: Response) => {
+    try {
+      const residentId = parseInt(req.params.id);
+      const { macAddress, deviceName, deviceType, isPrimary } = req.body;
+
+      if (!macAddress || !deviceName || !deviceType) {
+        return res.status(400).json({
+          success: false,
+          message: 'macAddress, deviceName, and deviceType are required'
+        });
+      }
+
+      const device = await intrusionDetection.registerResidentDevice(
+        residentId,
+        macAddress,
+        deviceName,
+        deviceType,
+        isPrimary || false
+      );
+
+      res.json({ success: true, device });
+    } catch (error) {
+      console.error('Failed to register device:', error);
+      res.status(500).json({ success: false, message: 'Failed to register device' });
+    }
+  });
+
+  // Delete resident device
+  app.delete('/api/security/devices/:id', async (req: Request, res: Response) => {
+    try {
+      const deviceId = parseInt(req.params.id);
+      const success = await storage.deleteResidentDevice(deviceId);
+
+      if (!success) {
+        return res.status(404).json({ success: false, message: 'Device not found' });
+      }
+
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Failed to delete device:', error);
+      res.status(500).json({ success: false, message: 'Failed to delete device' });
+    }
+  });
+
+  // Get security events
+  app.get('/api/security/events', async (req: Request, res: Response) => {
+    try {
+      const limit = parseInt(req.query.limit as string) || 100;
+      const events = await storage.getSecurityEvents(limit);
+      res.json({ success: true, events });
+    } catch (error) {
+      console.error('Failed to get security events:', error);
+      res.status(500).json({ success: false, message: 'Failed to get security events' });
+    }
+  });
+
+  // Get unacknowledged events
+  app.get('/api/security/events/unacknowledged', async (req: Request, res: Response) => {
+    try {
+      const events = await storage.getUnacknowledgedEvents();
+      res.json({ success: true, events });
+    } catch (error) {
+      console.error('Failed to get unacknowledged events:', error);
+      res.status(500).json({ success: false, message: 'Failed to get events' });
+    }
+  });
+
+  // Acknowledge security event
+  app.post('/api/security/events/:id/acknowledge', async (req: Request, res: Response) => {
+    try {
+      const eventId = parseInt(req.params.id);
+      const { acknowledgedBy } = req.body;
+
+      const success = await storage.acknowledgeSecurityEvent(eventId, acknowledgedBy || 1);
+      if (!success) {
+        return res.status(404).json({ success: false, message: 'Event not found' });
+      }
+
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Failed to acknowledge event:', error);
+      res.status(500).json({ success: false, message: 'Failed to acknowledge event' });
+    }
+  });
+
+  // Acknowledge alert
+  app.post('/api/security/alerts/:id/acknowledge', async (req: Request, res: Response) => {
+    try {
+      const alertId = req.params.id;
+      const success = await intrusionDetection.acknowledgeAlert(alertId);
+
+      if (!success) {
+        return res.status(404).json({ success: false, message: 'Alert not found' });
+      }
+
+      // Broadcast alert acknowledgment via WebSocket
+      wss.clients.forEach((client) => {
+        if (client.readyState === WebSocket.OPEN) {
+          client.send(JSON.stringify({
+            type: 'alert_acknowledged',
+            alertId,
+            timestamp: new Date().toISOString()
+          }));
+        }
+      });
+
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Failed to acknowledge alert:', error);
+      res.status(500).json({ success: false, message: 'Failed to acknowledge alert' });
+    }
+  });
+
+  // Get notification channels
+  app.get('/api/security/notifications', async (req: Request, res: Response) => {
+    try {
+      const residentId = req.query.residentId ? parseInt(req.query.residentId as string) : undefined;
+      const channels = await storage.getNotificationChannels(residentId);
+      res.json({ success: true, channels });
+    } catch (error) {
+      console.error('Failed to get notification channels:', error);
+      res.status(500).json({ success: false, message: 'Failed to get notification channels' });
+    }
+  });
+
+  // Create notification channel
+  app.post('/api/security/notifications', async (req: Request, res: Response) => {
+    try {
+      const {
+        residentId,
+        channelType,
+        destination,
+        notifyOnIntrusion,
+        notifyOnModeChange,
+        notifyOnDeviceOffline,
+        notifyOnResidentActivity
+      } = req.body;
+
+      if (!channelType || !destination) {
+        return res.status(400).json({
+          success: false,
+          message: 'channelType and destination are required'
+        });
+      }
+
+      const validTypes = ['email', 'sms', 'push', 'webhook'];
+      if (!validTypes.includes(channelType)) {
+        return res.status(400).json({
+          success: false,
+          message: 'Invalid channel type'
+        });
+      }
+
+      const channel = await storage.createNotificationChannel({
+        residentId: residentId || null,
+        channelType,
+        destination,
+        notifyOnIntrusion: notifyOnIntrusion ?? true,
+        notifyOnModeChange: notifyOnModeChange ?? false,
+        notifyOnDeviceOffline: notifyOnDeviceOffline ?? false,
+        notifyOnResidentActivity: notifyOnResidentActivity ?? false,
+      });
+
+      res.json({ success: true, channel });
+    } catch (error) {
+      console.error('Failed to create notification channel:', error);
+      res.status(500).json({ success: false, message: 'Failed to create notification channel' });
+    }
+  });
+
+  // Update notification channel
+  app.put('/api/security/notifications/:id', async (req: Request, res: Response) => {
+    try {
+      const channelId = parseInt(req.params.id);
+      const updates = req.body;
+
+      const channel = await storage.updateNotificationChannel(channelId, updates);
+      if (!channel) {
+        return res.status(404).json({ success: false, message: 'Channel not found' });
+      }
+
+      res.json({ success: true, channel });
+    } catch (error) {
+      console.error('Failed to update notification channel:', error);
+      res.status(500).json({ success: false, message: 'Failed to update channel' });
+    }
+  });
+
+  // Delete notification channel
+  app.delete('/api/security/notifications/:id', async (req: Request, res: Response) => {
+    try {
+      const channelId = parseInt(req.params.id);
+      const success = await storage.deleteNotificationChannel(channelId);
+
+      if (!success) {
+        return res.status(404).json({ success: false, message: 'Channel not found' });
+      }
+
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Failed to delete notification channel:', error);
+      res.status(500).json({ success: false, message: 'Failed to delete channel' });
+    }
+  });
+
+  // Test notification channel
+  app.post('/api/security/notifications/:id/test', async (req: Request, res: Response) => {
+    try {
+      const channelId = parseInt(req.params.id);
+      const result = await notificationService.testChannel(channelId);
+      res.json({ success: result.success, result });
+    } catch (error) {
+      console.error('Failed to test notification channel:', error);
+      res.status(500).json({ success: false, message: 'Failed to test channel' });
+    }
+  });
+
+  // Get presence history
+  app.get('/api/security/presence', async (req: Request, res: Response) => {
+    try {
+      const residentId = req.query.residentId ? parseInt(req.query.residentId as string) : undefined;
+      const limit = parseInt(req.query.limit as string) || 100;
+      const history = await storage.getPresenceHistory(residentId, limit);
+      res.json({ success: true, history });
+    } catch (error) {
+      console.error('Failed to get presence history:', error);
+      res.status(500).json({ success: false, message: 'Failed to get presence history' });
+    }
+  });
+
+  // Get security settings
+  app.get('/api/security/settings', async (req: Request, res: Response) => {
+    try {
+      const settings = await storage.getSecuritySettings();
+      res.json({ success: true, settings });
+    } catch (error) {
+      console.error('Failed to get security settings:', error);
+      res.status(500).json({ success: false, message: 'Failed to get settings' });
+    }
+  });
+
+  // Update security settings
+  app.put('/api/security/settings', async (req: Request, res: Response) => {
+    try {
+      const updates = req.body;
+      const settings = await storage.updateSecuritySettings(updates);
+      res.json({ success: true, settings });
+    } catch (error) {
+      console.error('Failed to update security settings:', error);
+      res.status(500).json({ success: false, message: 'Failed to update settings' });
+    }
+  });
+
+  // Start intrusion detection service
+  app.post('/api/security/start', async (req: Request, res: Response) => {
+    try {
+      await intrusionDetection.start();
+      res.json({ success: true, message: 'Intrusion detection service started' });
+    } catch (error) {
+      console.error('Failed to start intrusion detection:', error);
+      res.status(500).json({ success: false, message: 'Failed to start service' });
+    }
+  });
+
+  // Stop intrusion detection service
+  app.post('/api/security/stop', async (req: Request, res: Response) => {
+    try {
+      await intrusionDetection.stop();
+      res.json({ success: true, message: 'Intrusion detection service stopped' });
+    } catch (error) {
+      console.error('Failed to stop intrusion detection:', error);
+      res.status(500).json({ success: false, message: 'Failed to stop service' });
+    }
+  });
+
+  // Subscribe to security alerts via WebSocket
+  intrusionDetection.onAlert((alert) => {
+    console.log('[Security] Broadcasting alert via WebSocket:', alert.alertType);
+    wss.clients.forEach((client) => {
+      if (client.readyState === WebSocket.OPEN) {
+        client.send(JSON.stringify({
+          type: 'security_alert',
+          alert,
+          timestamp: new Date().toISOString()
+        }));
+      }
+    });
+
+    // Send notifications
+    notificationService.sendIntrusionAlert(alert).catch(err => {
+      console.error('[Security] Failed to send alert notifications:', err);
+    });
+  });
+
+  // Subscribe to security events via WebSocket
+  intrusionDetection.onSecurityEvent((event) => {
+    console.log('[Security] Broadcasting event via WebSocket:', event.eventType);
+    wss.clients.forEach((client) => {
+      if (client.readyState === WebSocket.OPEN) {
+        client.send(JSON.stringify({
+          type: 'security_event',
+          event,
+          timestamp: new Date().toISOString()
+        }));
+      }
+    });
+
+    // Send notifications for significant events
+    if (['intrusion_detected', 'alarm_triggered', 'mode_change'].includes(event.eventType)) {
+      notificationService.sendSecurityEventNotification(event).catch(err => {
+        console.error('[Security] Failed to send event notifications:', err);
+      });
+    }
+  });
+
+  // Auto-start intrusion detection service
+  intrusionDetection.start().catch(err => {
+    console.error('[Security] Failed to auto-start intrusion detection:', err);
+  });
+
+  // ============================================
+  // WIFI POSITIONING API ROUTES
+  // ============================================
+
+  // Calculate positions for all devices
+  app.post('/api/positioning/calculate', async (req: Request, res: Response) => {
+    try {
+      const { floorplanWidth, floorplanHeight, scale } = req.body;
+
+      if (floorplanWidth && floorplanHeight) {
+        wifiPositioning.setFloorplanDimensions(floorplanWidth, floorplanHeight, scale);
+      }
+
+      const positions = await wifiPositioning.calculateDevicePositions();
+      const positionsArray = Array.from(positions.entries()).map(([deviceId, position]) => ({
+        deviceId,
+        ...position
+      }));
+
+      // Update device positions in storage
+      for (const [deviceId, position] of positions) {
+        await storage.updateDevice(deviceId, { x: position.x, y: position.y });
+      }
+
+      // Broadcast updated positions
+      wss.clients.forEach((client) => {
+        if (client.readyState === WebSocket.OPEN) {
+          client.send(JSON.stringify({
+            type: 'positions_updated',
+            positions: positionsArray,
+            timestamp: new Date().toISOString()
+          }));
+        }
+      });
+
+      res.json({ success: true, positions: positionsArray });
+    } catch (error) {
+      console.error('Failed to calculate positions:', error);
+      res.status(500).json({ success: false, message: 'Failed to calculate positions' });
+    }
+  });
+
+  // Register an access point for triangulation
+  app.post('/api/positioning/access-points', async (req: Request, res: Response) => {
+    try {
+      const { id, macAddress, name, x, y, txPower } = req.body;
+
+      if (!macAddress || x === undefined || y === undefined) {
+        return res.status(400).json({
+          success: false,
+          message: 'macAddress, x, and y are required'
+        });
+      }
+
+      wifiPositioning.registerAccessPoint({
+        id: id || macAddress,
+        macAddress,
+        name: name || 'Access Point',
+        x,
+        y,
+        txPower: txPower || -40
+      });
+
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Failed to register access point:', error);
+      res.status(500).json({ success: false, message: 'Failed to register access point' });
+    }
+  });
+
+  // Generate heatmap data
+  app.get('/api/positioning/heatmap', async (req: Request, res: Response) => {
+    try {
+      const gridSize = parseInt(req.query.gridSize as string) || 40;
+      const devices = await storage.getDevices();
+      const heatmapData = wifiPositioning.generateHeatmapData(devices, gridSize);
+
+      res.json({ success: true, heatmapData });
+    } catch (error) {
+      console.error('Failed to generate heatmap:', error);
+      res.status(500).json({ success: false, message: 'Failed to generate heatmap' });
+    }
+  });
+
+  // Assign devices to rooms
+  app.post('/api/positioning/assign-rooms', async (req: Request, res: Response) => {
+    try {
+      const devices = await storage.getDevices();
+      const assignments: { deviceId: number; roomId: number; roomName: string; confidence: number }[] = [];
+
+      for (const device of devices) {
+        const assignment = await wifiPositioning.assignDeviceToRoom(device);
+        if (assignment) {
+          assignments.push({
+            deviceId: device.id,
+            ...assignment
+          });
+        }
+      }
+
+      res.json({ success: true, assignments });
+    } catch (error) {
+      console.error('Failed to assign rooms:', error);
+      res.status(500).json({ success: false, message: 'Failed to assign rooms' });
     }
   });
 
